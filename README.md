@@ -112,6 +112,29 @@ buyer. Saving makes a new version; old versions never change.
    current proforma (farms in box order, margin and unit price formulas, other costs, grand total). The
    packing list is the same without prices. A proforma won't download while a line has no grower price.
 
+## QC scanning
+
+**Scan boxes** (QC, Senior QC, Admin, Consolidator) is made for Android phones. Pick the shipment, then
+scan each box's QR code with the camera (Chrome's built-in reader, or jsQR where that's missing), type
+the 8-digit box id, or use a handheld scanner.
+
+- **A scan receives the box** and ticks it on the packing list, and shows **"Box 42 of 180"** in big type
+  with the farm box number, farm, variety and stems. A wrong shipment, void or returned box, or a label
+  that isn't ours gives a vibration, a sound and a message in words.
+- **Results**, with reasons from the Pacific Floral Japan quality and claim policy:
+  - **Pass**: ready for its label.
+  - **Minor**: passes; the reason and note are recorded.
+  - **Major**: fails; fix it at ConsolFlora, then a **Senior QC** (or Admin) clears it.
+  - **Critical: BACK TO FARM**: the box leaves the shipment (later boxes move up a number while the shipment
+    is open) and a **BACK TO FARM sticker** prints (PDF or ZPL, same size as the buyer's label). Pests always
+    mean Critical.
+- **Photos** can be added to any flagged box as evidence for claims. The farm sees its returned boxes, with
+  reasons and photos, under **My purchase orders → Sent back to you**.
+- **Connection drops:** scans, results and photos made without a connection wait on the phone (they survive
+  a reload) and send by themselves; each has an id made on the phone, so nothing is recorded twice.
+- The shipment page uses the same severities: **Flag…** for several boxes at once, and the sticker button
+  on returned boxes.
+
 ## Project layout
 
 ```
@@ -126,6 +149,7 @@ src/
   components/labels/      label designer (canvas, inspector, settings, versions)
   lib/orders/             orders, POs and boxes API, label printing, proforma and packing list Excel
   components/orders/      order lines, farm POs, boxes table, statuses
+  lib/qc/, components/qc/ QC scanning: QR reading, send queue, BACK TO FARM sticker, scan page parts
   server/                 server functions (run as the signed-in user, RLS applies)
 supabase/migrations/      schema, RLS policies, import function
 docs/backend.md           what the backend must provide
@@ -139,7 +163,7 @@ docs/backend.md           what the backend must provide
 | 1 | Import page | Done |
 | 2 | Label designer | Done |
 | 3 | Boxes on POs and packing lists | Done |
-| 4 | QC scanner | Not started |
+| 4 | QC scanner | Done |
 | 5 | Shipment screen | Not started |
 | 6 | Floricode | Not started |
 | 7 | Legal and consent | Not started |

@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { FileSpreadsheet, Lock } from 'lucide-react'
+import { FileSpreadsheet, Lock, ScanLine } from 'lucide-react'
 import {
   closeShipment,
   productLabel,
@@ -17,13 +17,13 @@ import {
 } from '~/lib/orders/api'
 import { downloadOrderSheet } from '~/lib/orders/download-sheet'
 import { useAuth } from '~/lib/auth'
-import { STAFF_ROLES, hasAnyRole } from '~/lib/roles'
+import { QC_CLEAR_ROLES, QC_ROLES, STAFF_ROLES, hasAnyRole } from '~/lib/roles'
 import { RequireRole } from '~/components/layout/require-role'
 import { rolesFor } from '~/components/layout/nav'
 import { BoxesTable } from '~/components/orders/boxes-table'
 import { Tip } from '~/components/tips/tips'
 import { Alert } from '~/components/ui/alert'
-import { Button } from '~/components/ui/button'
+import { Button, buttonVariants } from '~/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Dialog } from '~/components/ui/dialog'
 import { Spinner } from '~/components/ui/spinner'
@@ -39,6 +39,15 @@ export const Route = createFileRoute('/_app/shipments/$shipmentId')({
   ),
 })
 
+/** The scan page opens on this shipment. */
+function rememberScanShipment(id: string) {
+  try {
+    localStorage.setItem('qc.shipment', id)
+  } catch {
+    /* not remembered; the scan page asks */
+  }
+}
+
 function ShipmentPage() {
   const { shipmentId } = Route.useParams()
   const { roles } = useAuth()
@@ -53,7 +62,8 @@ function ShipmentPage() {
   const staff = hasAnyRole(roles, STAFF_ROLES)
   const can = {
     receive: staff,
-    qc: hasAnyRole(roles, ['admin', 'consolidator', 'qc']),
+    qc: hasAnyRole(roles, QC_ROLES),
+    clearQc: hasAnyRole(roles, QC_CLEAR_ROLES),
     print: hasAnyRole(roles, ['admin', 'consolidator', 'qc']),
     void: staff,
   }
@@ -89,11 +99,18 @@ function ShipmentPage() {
             {shipment.mawb && <> · MAWB {shipment.mawb}</>}
           </p>
         </div>
-        {staff && shipment.status === 'open' && (
-          <Button variant="outline" onClick={() => setClosing(true)}>
-            <Lock aria-hidden="true" /> Close shipment
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {can.qc && (
+            <Link to="/qc/scan" className={buttonVariants({ variant: 'outline' })} onClick={() => rememberScanShipment(shipment.id)}>
+              <ScanLine aria-hidden="true" /> Scan boxes
+            </Link>
+          )}
+          {staff && shipment.status === 'open' && (
+            <Button variant="outline" onClick={() => setClosing(true)}>
+              <Lock aria-hidden="true" /> Close shipment
+            </Button>
+          )}
+        </div>
       </div>
 
       <Tip id="shipments.detail" title="From boxes to labels">
@@ -188,7 +205,7 @@ function BuyerSection({
   buyerId: string
   orders: Order[]
   boxes: Box[]
-  can: { receive: boolean; qc: boolean; print: boolean; void: boolean }
+  can: { receive: boolean; qc: boolean; print: boolean; void: boolean; clearQc: boolean }
   canDownload: boolean
   farmName: (id: string) => string
   productName: (id: string) => string

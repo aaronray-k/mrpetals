@@ -101,7 +101,7 @@ export function qrModules(text: string, errorCorrection: QrFormatter['errorCorre
   )
 }
 
-function textOp(el: { x: number; y: number; w: number; h: number }, raw: string, fontPt: number, bold: boolean, align: Align, color: 'black' | 'white' = 'black'): DrawOp | null {
+export function textOp(el: { x: number; y: number; w: number; h: number }, raw: string, fontPt: number, bold: boolean, align: Align, color: 'black' | 'white' = 'black'): DrawOp | null {
   const text = printableText(raw, bold)
   if (!text.trim()) return null
   const fit = fitText(text, ptToMm(fontPt), bold, el.w)

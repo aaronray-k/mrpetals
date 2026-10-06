@@ -18,6 +18,8 @@ from the database is in `supabase/migrations`; this file lists the rest.
 
   Admins can grant roles to others the same way (an RLS policy allows Admin to insert and delete
   `user_roles`). A role management screen is not built yet.
+- **Senior QC** users get both roles, `qc` and `senior_qc`. Only Senior QC and Admin can clear a box that
+  failed QC as Major.
 - **Linking Farm and Customer users.** These users only see their own data. Link them with SQL
   (users can't change their own link; the column is not writable through the API):
 
@@ -88,7 +90,30 @@ Still needed from the backend:
 - **The self-order platform** will call `create_customer_order` (or an equivalent that marks the order
   `source = 'self_order'`); its screens are a later item. HAWB per buyer is part of item 5.
 
+## Item 4: QC scanner
+
+Provided by `20261006000005_senior_qc_role.sql` and `20261006000006_qc.sql`.
+
+| Object | Purpose |
+|---|---|
+| `senior_qc` role | Clears Major QC failures. Granted by Admin, together with `qc`. |
+| `qc_reasons` | Reasons from the Pacific Floral Japan claim policy. Pests are marked "always Critical". Add or retire reasons with SQL (`active = false`). |
+| `boxes.qc_severity`, `boxes.qc_reasons`, status `back_to_farm` | The QC result per box. |
+| `qc_events` | Every scan and result, with the phone's time and an id made on the phone (a resend is recorded once). |
+| `qc_photos` + Storage bucket `qc-photos` | Photo evidence, stored as `<box id>/<file>.jpg`. QC roles upload; QC, Finance, staff and the box's farm can view. |
+| `back_to_farm_stickers` | Log of BACK TO FARM sticker prints. |
+| `qc_scan`, `qc_record`, `back_to_farm_sticker` | Scan (receives the box), record a result, sticker data. `set_qc_result` from item 3 still works. |
+
+Still needed from the backend:
+
+- **Supabase Storage** must be running (it is part of the standard self-hosted stack). The migration creates
+  the private `qc-photos` bucket and its policies on `storage.objects`. Allow uploads of at least 5 MB
+  (photos are shrunk to 1600 px on the phone first).
+- **HTTPS** for the app: Android Chrome only opens the camera on secure pages.
+- Buyer claims (a buyer submits a claim with photos; staff review it; costs are charged to the farm) are a
+  separate item. They will reuse the QC photos and reasons.
+
 ## Not needed yet
 
 - Odoo: no calls until the shipment and fulfilment items.
-- Storage bucket: needed for item 5 (shipment documents).
+- Another Storage bucket: needed for item 5 (shipment documents).

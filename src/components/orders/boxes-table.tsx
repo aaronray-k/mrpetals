@@ -1,13 +1,18 @@
 import * as React from 'react'
-import { Ban, CheckCircle2, Printer, RotateCcw, Truck, XCircle } from 'lucide-react'
-import { receiveBoxes, setQcResult, voidBox, type Box } from '~/lib/orders/api'
+import { Ban, CheckCircle2, Printer, RotateCcw, Truck, Undo2, XCircle } from 'lucide-react'
+import { receiveBoxes, voidBox, type Box } from '~/lib/orders/api'
+import { printBackToFarmSticker, qcRecord, useQcReasons } from '~/lib/qc/api'
+import { BoxPhotosButton } from '~/components/qc/box-photos'
+import { QcBadge, reasonLabels } from '~/components/qc/qc-badge'
+import { QcResultForm } from '~/components/qc/qc-result-form'
+import { Dialog } from '~/components/ui/dialog'
 import { printBoxLabels, type PrintFormat } from '~/lib/orders/print-boxes'
 import { Button } from '~/components/ui/button'
 import { TBody, TD, TH, THead, TR, Table } from '~/components/ui/table'
 import { useToast } from '~/components/ui/toaster'
 import { cn } from '~/lib/utils'
 import { ReasonDialog } from './reason-dialog'
-import { LabelStatus, QcStatus, ReceivedStatus, boxNumber } from './status'
+import { LabelStatus, ReceivedStatus, boxNumber } from './status'
 
 const FORMATS: { id: string; label: string; format: PrintFormat }[] = [
   { id: 'pdf', label: 'PDF', format: { kind: 'pdf' } },
@@ -30,7 +35,7 @@ export function BoxesTable({
   boxes: Box[]
   farmName: (id: string) => string
   productName: (id: string) => string
-  can: { receive: boolean; qc: boolean; print: boolean; void: boolean }
+  can: { receive: boolean; qc: boolean; print: boolean; void: boolean; clearQc?: boolean }
   /** Start of downloaded label file names, e.g. "SHP-2026-0001-PFJ-labels". */
   fileBase: string
   onChanged: () => void
@@ -50,7 +55,9 @@ export function BoxesTable({
   const toReceive = chosen.filter((b) => isActive(b) && !b.received_at)
   const toQc = chosen.filter((b) => isActive(b) && !!b.received_at)
   // Passing never overwrites a QC failure by accident: failed boxes pass only when they are all that is selected (re-inspection).
-  const toPass = toQc.every((b) => b.qc_status === 'failed') ? toQc : toQc.filter((b) => b.qc_status !== 'failed')
+  // Failed boxes pass only on purpose (all of the selection) and only for Senior QC or Admin.
+  const toPass = can.clearQc && toQc.every((b) => b.qc_status === 'failed') ? toQc : toQc.filter((b) => b.qc_status !== 'failed')
+  const reasons = useQcReasons()
   const toPrint = chosen.filter(readyToPrint)
   const toReprint = chosen.filter((b) => isActive(b) && !!b.last_printed_at && !!b.received_at && b.qc_status === 'passed')
   const toVoid = chosen.filter(isActive)
@@ -78,6 +85,12 @@ export function BoxesTable({
     } finally {
       setBusy(false)
     }
+  }
+
+  async function qc(ids: number[], result: 'pass' | 'minor' | 'major' | 'critical', codes: string[], note: string | null) {
+    const r = await qcRecord(crypto.randomUUID(), ids, result, codes, note, new Date().toISOString())
+    if (!r.ok) throw new Error(r.retry ? 'No connection. Try again.' : r.message)
+    return r.data
   }
 
   const n = (count: number, one: string, many = one.endsWith('x') ? `${one}es` : `${one}s`) => `${count} ${count === 1 ? one : many}`
@@ -126,11 +139,11 @@ export function BoxesTable({
           )}
           {can.qc && (
             <>
-              <Button size="sm" variant="outline" disabled={busy || !toPass.length} onClick={() => run('QC passed', async () => `${n(await setQcResult(toPass.map((b) => b.id), true), 'box')} passed.`)}>
+              <Button size="sm" variant="outline" disabled={busy || !toPass.length} onClick={() => run('QC passed', async () => `${n(await qc(toPass.map((b) => b.id), 'pass', [], null), 'box')} passed.`)}>
                 <CheckCircle2 aria-hidden="true" /> QC passed ({toPass.length})
               </Button>
               <Button size="sm" variant="outline" disabled={busy || !toQc.length} onClick={() => setDialog('qc-fail')}>
-                <XCircle aria-hidden="true" /> QC failed…
+                <XCircle aria-hidden="true" /> Flag…
               </Button>
             </>
           )}
@@ -197,9 +210,9 @@ export function BoxesTable({
                   <input
                     type="checkbox"
                     className="size-6 accent-accent"
-                    aria-label={`Select box ${b.status === 'void' ? b.id : boxNumber(b.buyer_box_no, b.buyer_box_total)}`}
+                    aria-label={`Select box ${b.status === 'active' ? boxNumber(b.buyer_box_no, b.buyer_box_total) : b.id}`}
                     checked={selected.has(b.id)}
-                    disabled={b.status === 'void'}
+                    disabled={b.status !== 'active'}
                     onChange={() => toggle(b.id)}
                   />
                 </TD>
@@ -208,12 +221,16 @@ export function BoxesTable({
                     <span className="inline-flex items-center gap-1">
                       <Ban className="size-4" aria-hidden="true" /> Void
                     </span>
+                  ) : b.status === 'back_to_farm' ? (
+                    <span className="inline-flex items-center gap-1 text-destructive">
+                      <Undo2 className="size-4" aria-hidden="true" /> Back to farm
+                    </span>
                   ) : (
                     boxNumber(b.buyer_box_no, b.buyer_box_total)
                   )}
                 </TD>
                 <TD className="whitespace-nowrap">
-                  {b.status === 'void' ? (
+                  {b.status !== 'active' ? (
                     <span className="text-sm">{b.void_reason}</span>
                   ) : (
                     <>
@@ -228,11 +245,30 @@ export function BoxesTable({
                 <TD className="whitespace-nowrap">
                   <ReceivedStatus box={b} />
                 </TD>
-                <TD className="min-w-28">
-                  <QcStatus box={b} />
+                <TD className="min-w-40">
+                  {b.status === 'void' ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : (
+                    <div className="grid justify-items-start gap-1">
+                      <QcBadge box={b} />
+                      {b.qc_reasons.length > 0 && <span className="text-sm">{reasonLabels(b.qc_reasons, reasons.data).join(', ')}</span>}
+                      {b.qc_note && <span className="text-sm text-muted-foreground">{b.qc_note}</span>}
+                      <BoxPhotosButton boxId={b.id} count={b.photo_count} />
+                    </div>
+                  )}
                 </TD>
                 <TD className="whitespace-nowrap">
-                  <LabelStatus box={b} />
+                  {b.status === 'back_to_farm' ? (
+                    can.qc ? (
+                      <Button size="sm" variant="outline" onClick={() => run('Sticker ready', async () => void (await printBackToFarmSticker(b.id, format)))}>
+                        <Printer aria-hidden="true" /> BACK TO FARM sticker<span className="sr-only"> for box {b.id}</span>
+                      </Button>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )
+                  ) : (
+                    <LabelStatus box={b} />
+                  )}
                 </TD>
               </TR>
             ))}
@@ -269,20 +305,27 @@ export function BoxesTable({
           onChanged()
         }}
       />
-      <ReasonDialog
+      <Dialog
         open={dialog === 'qc-fail'}
         onClose={() => setDialog(null)}
-        title={`QC failed for ${n(toQc.length, 'box')}`}
-        label="What did QC find?"
-        confirmLabel="Record QC failure"
-        destructive
-        onConfirm={async (note) => {
-          await setQcResult(toQc.map((b) => b.id), false, note)
-          toast({ kind: 'success', title: 'QC failure recorded' })
-          setSelected(new Set())
-          onChanged()
-        }}
-      />
+        title={`Flag ${n(toQc.length, 'box')}`}
+        description="Photos can be added box by box on the Scan boxes page."
+        className="w-[min(44rem,calc(100vw-2rem))]"
+      >
+        {reasons.data && (
+          <QcResultForm
+            initial="major"
+            reasons={reasons.data}
+            allowPhotos={false}
+            busy={busy}
+            onCancel={() => setDialog(null)}
+            onSubmit={(input) => {
+              setDialog(null)
+              void run('QC recorded', async () => `${n(await qc(toQc.map((b) => b.id), input.result, input.reasons, input.note), 'box')} flagged ${input.result}.`)
+            }}
+          />
+        )}
+      </Dialog>
     </div>
   )
 }

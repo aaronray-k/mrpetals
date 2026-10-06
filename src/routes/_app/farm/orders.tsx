@@ -1,9 +1,12 @@
 import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2, Undo2, XCircle } from 'lucide-react'
 import { productLabel, respondPo, useFarmPurchaseOrders, type PurchaseOrder } from '~/lib/orders/api'
 import { formatDateTime } from '~/lib/utils'
+import { useQcReasons, useReturnedBoxes } from '~/lib/qc/api'
+import { BoxPhotosButton } from '~/components/qc/box-photos'
+import { reasonLabels } from '~/components/qc/qc-badge'
 import { PageHeader } from '~/components/layout/app-shell'
 import { RequireRole } from '~/components/layout/require-role'
 import { rolesFor } from '~/components/layout/nav'
@@ -53,6 +56,7 @@ function FarmOrdersPage() {
             {(q.error as Error).message}
           </Alert>
         )}
+        <ReturnedBoxes />
         {q.data &&
           GROUPS.map((g) => {
             const list = q.data.filter((po) => po.status === g.status)
@@ -154,5 +158,39 @@ function FarmPoCard({ po, onChanged }: { po: FarmPo; onChanged: () => void }) {
         }}
       />
     </Card>
+  )
+}
+
+/** Boxes ConsolFlora's QC sent back, with the reasons from the claim policy and the photos. */
+function ReturnedBoxes() {
+  const q = useReturnedBoxes()
+  const reasons = useQcReasons()
+  if (!q.data?.length) return null
+  return (
+    <section aria-labelledby="returned-title" className="grid gap-3">
+      <h2 id="returned-title" className="flex items-center gap-2 text-xl font-bold">
+        <Undo2 className="size-5 text-destructive" aria-hidden="true" /> Sent back to you <span className="text-muted-foreground">({q.data.length})</span>
+      </h2>
+      <p className="text-sm text-muted-foreground">These boxes failed ConsolFlora's QC and come back with a BACK TO FARM sticker. See the claim policy.</p>
+      <ul className="grid gap-2">
+        {q.data.map((b) => (
+          <li key={b.id} className="grid gap-1 rounded-lg border border-destructive/40 bg-card p-3">
+            <p className="font-semibold">
+              {b.products ? `${b.products.variety} · ${b.products.stem_length_cm} cm · ${b.products.grade}` : 'Box'} · {b.stems} stems
+            </p>
+            <p className="text-sm">
+              Box ID <span className="font-mono">{b.id}</span>
+              {b.purchase_order_lines?.purchase_orders && <> · {b.purchase_order_lines.purchase_orders.po_number}</>}
+              {b.qc_at && <> · {formatDateTime(b.qc_at)}</>}
+            </p>
+            <p>
+              <strong>Reason:</strong> {reasonLabels(b.qc_reasons, reasons.data).join(', ')}
+            </p>
+            {b.qc_note && <p className="text-sm">QC note: {b.qc_note}</p>}
+            <BoxPhotosButton boxId={b.id} count={b.photo_count} />
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }

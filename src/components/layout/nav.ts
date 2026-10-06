@@ -1,4 +1,4 @@
-import { Boxes, Building2, ClipboardList, FileSpreadsheet, Flower2, LayoutDashboard, Percent, Plane, Store, Tags, Truck, type LucideIcon } from 'lucide-react'
+import { Boxes, Building2, ClipboardList, FileSpreadsheet, Flower2, LayoutDashboard, Percent, Plane, ScanLine, Store, Tags, Truck, type LucideIcon } from 'lucide-react'
 import { ROLES, type Role } from '~/lib/roles'
 
 export interface NavItem {
@@ -24,17 +24,18 @@ export const NAV: NavGroup[] = [
     label: 'Orders and shipping',
     items: [
       { to: '/orders', label: 'Orders', icon: ClipboardList, tip: 'Buyer orders, split across farms', roles: ['admin', 'consolidator', 'finance'] },
-      { to: '/shipments', label: 'Shipments', icon: Plane, tip: 'Flights, boxes, labels and packing lists', roles: ['admin', 'consolidator', 'finance', 'qc'] },
+      { to: '/qc/scan', label: 'Scan boxes', icon: ScanLine, tip: 'QC: scan, check and send back boxes', roles: ['qc', 'senior_qc', 'admin', 'consolidator'] },
+      { to: '/shipments', label: 'Shipments', icon: Plane, tip: 'Flights, boxes, labels and packing lists', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
       { to: '/farm/orders', label: 'My purchase orders', icon: Truck, tip: 'Confirm what ConsolFlora ordered from you', roles: ['farm'] },
     ],
   },
   {
     label: 'Master data',
     items: [
-      { to: '/farms', label: 'Farms', icon: Building2, tip: 'Growers, sales agents and payment terms', roles: ['admin', 'consolidator', 'finance', 'qc'] },
+      { to: '/farms', label: 'Farms', icon: Building2, tip: 'Growers, sales agents and payment terms', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
       { to: '/customers', label: 'Customers', icon: Store, tip: 'Buyers, incoterms and credit limits', roles: ['admin', 'consolidator', 'finance'] },
-      { to: '/products', label: 'Products', icon: Flower2, tip: 'Varieties, grades and stem lengths', roles: ['admin', 'consolidator', 'finance', 'qc', 'farm'] },
-      { to: '/box-types', label: 'Box types', icon: Boxes, tip: 'Box sizes and volumetric weight', roles: ['admin', 'consolidator', 'qc'] },
+      { to: '/products', label: 'Products', icon: Flower2, tip: 'Varieties, grades and stem lengths', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc', 'farm'] },
+      { to: '/box-types', label: 'Box types', icon: Boxes, tip: 'Box sizes and volumetric weight', roles: ['admin', 'consolidator', 'qc', 'senior_qc'] },
       { to: '/margins', label: 'Margins', icon: Percent, tip: 'ConsolFlora margin per stem, by incoterm', roles: ['admin', 'consolidator', 'finance'] },
     ],
   },

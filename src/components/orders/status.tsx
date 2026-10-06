@@ -45,27 +45,6 @@ export function ReceivedStatus({ box }: { box: Pick<Box, 'received_at' | 'status
   )
 }
 
-export function QcStatus({ box }: { box: Pick<Box, 'qc_status' | 'qc_note' | 'status'> }) {
-  if (box.status === 'void') return <span className="text-muted-foreground">—</span>
-  if (box.qc_status === 'passed')
-    return (
-      <span className="inline-flex items-center gap-1 text-success">
-        <CheckCircle2 className="size-4" aria-hidden="true" /> Passed
-      </span>
-    )
-  if (box.qc_status === 'failed')
-    return (
-      <span className="inline-flex items-start gap-1 text-destructive" title={box.qc_note ?? undefined}>
-        <XCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> Failed{box.qc_note ? `: ${box.qc_note}` : ''}
-      </span>
-    )
-  return (
-    <span className="inline-flex items-center gap-1 text-muted-foreground">
-      <Clock className="size-4" aria-hidden="true" /> Pending
-    </span>
-  )
-}
-
 export function LabelStatus({ box }: { box: Pick<Box, 'last_printed_at' | 'last_print_kind' | 'label_out_of_date' | 'status'> }) {
   if (box.status === 'void') return <span className="text-muted-foreground">—</span>
   if (!box.last_printed_at) return <span className="text-muted-foreground">Not printed</span>

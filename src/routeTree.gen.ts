@@ -25,6 +25,7 @@ import { Route as AppLabelsTemplateIdRouteImport } from './routes/_app/labels/$t
 import { Route as AppOrdersIndexRouteImport } from './routes/_app/orders/index'
 import { Route as AppOrdersOrderIdRouteImport } from './routes/_app/orders/$orderId'
 import { Route as AppOrdersNewRouteImport } from './routes/_app/orders/new'
+import { Route as AppQcScanRouteImport } from './routes/_app/qc/scan'
 import { Route as AppShipmentsIndexRouteImport } from './routes/_app/shipments/index'
 import { Route as AppShipmentsShipmentIdRouteImport } from './routes/_app/shipments/$shipmentId'
 
@@ -107,6 +108,11 @@ const AppOrdersNewRoute = AppOrdersNewRouteImport.update({
   path: '/orders/new',
   getParentRoute: () => AppRoute,
 } as any)
+const AppQcScanRoute = AppQcScanRouteImport.update({
+  id: '/qc/scan',
+  path: '/qc/scan',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppShipmentsIndexRoute = AppShipmentsIndexRouteImport.update({
   id: '/shipments/',
   path: '/shipments/',
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/orders/new': typeof AppOrdersNewRoute
+  '/qc/scan': typeof AppQcScanRoute
   '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/labels/': typeof AppLabelsIndexRoute
   '/orders/': typeof AppOrdersIndexRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/orders/new': typeof AppOrdersNewRoute
+  '/qc/scan': typeof AppQcScanRoute
   '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/labels': typeof AppLabelsIndexRoute
   '/orders': typeof AppOrdersIndexRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/_app/labels/$templateId': typeof AppLabelsTemplateIdRoute
   '/_app/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/_app/orders/new': typeof AppOrdersNewRoute
+  '/_app/qc/scan': typeof AppQcScanRoute
   '/_app/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/_app/labels/': typeof AppLabelsIndexRoute
   '/_app/orders/': typeof AppOrdersIndexRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/labels/$templateId'
     | '/orders/$orderId'
     | '/orders/new'
+    | '/qc/scan'
     | '/shipments/$shipmentId'
     | '/labels/'
     | '/orders/'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/labels/$templateId'
     | '/orders/$orderId'
     | '/orders/new'
+    | '/qc/scan'
     | '/shipments/$shipmentId'
     | '/labels'
     | '/orders'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/_app/labels/$templateId'
     | '/_app/orders/$orderId'
     | '/_app/orders/new'
+    | '/_app/qc/scan'
     | '/_app/shipments/$shipmentId'
     | '/_app/labels/'
     | '/_app/orders/'
@@ -358,6 +370,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOrdersNewRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/qc/scan': {
+      id: '/_app/qc/scan'
+      path: '/qc/scan'
+      fullPath: '/qc/scan'
+      preLoaderRoute: typeof AppQcScanRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/shipments/': {
       id: '/_app/shipments/'
       path: '/shipments'
@@ -387,6 +406,7 @@ interface AppRouteChildren {
   AppLabelsTemplateIdRoute: typeof AppLabelsTemplateIdRoute
   AppOrdersOrderIdRoute: typeof AppOrdersOrderIdRoute
   AppOrdersNewRoute: typeof AppOrdersNewRoute
+  AppQcScanRoute: typeof AppQcScanRoute
   AppShipmentsShipmentIdRoute: typeof AppShipmentsShipmentIdRoute
   AppLabelsIndexRoute: typeof AppLabelsIndexRoute
   AppOrdersIndexRoute: typeof AppOrdersIndexRoute
@@ -405,6 +425,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLabelsTemplateIdRoute: AppLabelsTemplateIdRoute,
   AppOrdersOrderIdRoute: AppOrdersOrderIdRoute,
   AppOrdersNewRoute: AppOrdersNewRoute,
+  AppQcScanRoute: AppQcScanRoute,
   AppShipmentsShipmentIdRoute: AppShipmentsShipmentIdRoute,
   AppLabelsIndexRoute: AppLabelsIndexRoute,
   AppOrdersIndexRoute: AppOrdersIndexRoute,

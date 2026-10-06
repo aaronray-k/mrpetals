@@ -130,10 +130,12 @@ export interface Box {
   farm_id: string
   product_id: string
   stems: number
-  status: 'active' | 'void'
+  status: 'active' | 'void' | 'back_to_farm'
   void_reason: string | null
   received_at: string | null
   qc_status: 'pending' | 'passed' | 'failed'
+  qc_severity: 'minor' | 'major' | 'critical' | null
+  qc_reasons: string[]
   qc_note: string | null
   buyer_box_no: number | null
   buyer_box_total: number | null
@@ -142,6 +144,9 @@ export interface Box {
   last_printed_at: string | null
   last_print_kind: 'print' | 'reprint' | null
   label_out_of_date: boolean
+  /** Scanned at QC at least once. */
+  scanned: boolean
+  photo_count: number
 }
 
 export interface MarginRule {
@@ -267,6 +272,7 @@ export function useShipments() {
 export function useShipment(id: string) {
   return useQuery({
     queryKey: shipmentKeys.one(id),
+    enabled: !!id,
     queryFn: async () => {
       const supabase = getSupabase()
       const [shipment, orders, boxes] = await Promise.all([
@@ -425,9 +431,6 @@ export const assignBoxes = (poId: string) => rpc<number>('assign_boxes', { p_po_
 
 export const voidBox = (boxId: number, reason: string) => rpc<void>('void_box', { p_box_id: boxId, p_reason: reason })
 export const receiveBoxes = (ids: number[]) => rpc<number>('receive_boxes', { p_box_ids: ids })
-export const setQcResult = (ids: number[], passed: boolean, note?: string) =>
-  rpc<number>('set_qc_result', { p_box_ids: ids, p_passed: passed, p_note: note ?? null })
-
 export interface PrintRow {
   box_id: number
   kind: 'print' | 'reprint'
