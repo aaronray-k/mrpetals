@@ -39,12 +39,13 @@ async function setUpDatabase() {
       await client.query('insert into preview.applied (name) values ($1)', [file])
       await client.query('commit')
     }
-    if (!done.has('seed')) {
-      console.log('demo data')
-      const seed = fs.readFileSync(path.join(here, 'seed.sql'), 'utf8').replaceAll(":'demo_password'", client.escapeLiteral(DEMO_PASSWORD))
+    for (const [name, file] of [['seed', 'seed.sql'], ['seed-ordering', 'seed-ordering.sql']]) {
+      if (done.has(name)) continue
+      console.log(`demo data: ${file}`)
+      const seed = fs.readFileSync(path.join(here, file), 'utf8').replaceAll(":'demo_password'", client.escapeLiteral(DEMO_PASSWORD))
       await client.query('begin')
       await client.query(seed)
-      await client.query("insert into preview.applied (name) values ('seed')")
+      await client.query('insert into preview.applied (name) values ($1)', [name])
       await client.query('commit')
     }
     // PostgREST picks up new functions and tables.
@@ -88,3 +89,15 @@ run('app', path.join(root, 'node_modules', '.bin', 'srvx'), ['serve', '--prod', 
 })
 
 createGateway({ pool, jwtSecret: JWT_SECRET, restPort: REST_PORT, appPort: APP_PORT }).listen(PORT, () => console.log(`preview on ${PORT}`))
+
+// Scheduler: creates the coming week's standing orders every hour (Supabase pg_cron does this in production).
+async function standingOrders() {
+  try {
+    const { rows } = await pool.query('select public.generate_standing_orders() as n')
+    if (rows[0].n) console.log(`standing orders: ${rows[0].n} created`)
+  } catch (e) {
+    console.error('standing orders:', e.message)
+  }
+}
+void standingOrders()
+setInterval(standingOrders, 60 * 60 * 1000)

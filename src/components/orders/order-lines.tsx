@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { AlertTriangle, CheckCircle2, Pencil, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Pencil, Plus, Star, Trash2 } from 'lucide-react'
 import {
   allocateLine,
   productLabel,
@@ -14,6 +14,7 @@ import {
   type ProductRef,
   type PurchaseOrder,
 } from '~/lib/orders/api'
+import { useFarmOptions } from '~/lib/ordering/api'
 import { Button } from '~/components/ui/button'
 import { Dialog } from '~/components/ui/dialog'
 import { Field, Input, Label, Select } from '~/components/ui/input'
@@ -71,6 +72,14 @@ export function OrderLineCard({
           <p className="text-sm text-muted-foreground">
             {product?.product_code}
             {line.notes && <> · {line.notes}</>}
+          </p>
+          <p className="text-sm">
+            {line.bunching === 'consolflora'
+              ? 'ConsolFlora decides bunching, sleeves and labels'
+              : line.bunching === 'custom'
+                ? `${line.stems_per_bunch} stems per bunch${line.sleeves ? ', sleeves' : ''}${line.bunch_labels ? ', bunch labels' : ''}`
+                : `Standard bunching${product ? ` (${product.stems_per_bunch} per bunch)` : ''}`}
+            {canSeeMoney && line.quoted_price_per_stem != null && <> · buyer pays {line.quoted_price_per_stem.toFixed(3)} per stem</>}
           </p>
         </div>
         <p className="flex items-center gap-1.5 text-sm font-semibold tabular-nums" role="status">
@@ -281,8 +290,15 @@ function AddFarmForm({
   const toast = useToast()
   const rates = refs.packRates.filter((r) => r.product_id === product.id)
   const farms = refs.farms.filter((f) => !takenFarmIds.includes(f.id) && !lockedFarmIds.includes(f.id))
-  const defaultFarm = farms.find((f) => f.id === product.default_farm_id)?.id ?? ''
-  const [farmId, setFarmId] = React.useState(defaultFarm)
+  const options = useFarmOptions(line.id)
+  const recommended = options.data?.find((o) => o.recommended && farms.some((f) => f.id === o.farm_id)) ?? options.data?.find((o) => farms.some((f) => f.id === o.farm_id))
+  const [farmId, setFarmId] = React.useState('')
+  // Start on the recommended farm (pinned by Admin, else the cheapest still free), or the product's usual farm.
+  React.useEffect(() => {
+    if (farmId || !options.data) return
+    setFarmId(recommended?.farm_id ?? farms.find((f) => f.id === product.default_farm_id)?.id ?? '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options.data, recommended?.farm_id])
   const [stems, setStems] = React.useState(String(left))
   const [boxTypeId, setBoxTypeId] = React.useState(rates[0]?.box_type_id ?? '')
   const rate = rates.find((r) => r.box_type_id === boxTypeId)
@@ -324,6 +340,61 @@ function AddFarmForm({
   return (
     <form onSubmit={submit} noValidate className="grid gap-3 rounded-md bg-muted/60 p-3" aria-label={`Add a farm to line ${line.line_no}`}>
       <p className="font-semibold">Add a farm</p>
+      {options.data && options.data.length > 0 && (
+        <div className="min-w-0 rounded-md border bg-card">
+          <Table>
+            <caption className="px-3 py-2 text-left text-sm font-semibold">Cost calculator: farms with a price for this product</caption>
+            <THead>
+              <TR>
+                <TH>Farm</TH>
+                <TH className="text-right">Farm price</TH>
+                <TH className="text-right">Buyer pays</TH>
+                <TH className="text-right">Margin</TH>
+                <TH className="text-right">Cost for {fmt(left)} stems</TH>
+                <TH>
+                  <span className="sr-only">Choose</span>
+                </TH>
+              </TR>
+            </THead>
+            <TBody>
+              {options.data.map((o) => {
+                const free = farms.some((f) => f.id === o.farm_id)
+                return (
+                  <TR key={o.farm_id} className={o.farm_id === farmId ? 'bg-accent/10' : undefined}>
+                    <TD>
+                      <span className="font-semibold">{o.farm_name}</span>
+                      {o.recommended && (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded bg-success-bg px-1.5 text-xs font-bold text-success">
+                          <Star className="size-3" aria-hidden="true" /> {o.pinned ? 'Pinned by Admin' : 'Cheapest'}
+                        </span>
+                      )}
+                      {o.placed_stems > 0 && <span className="block text-xs text-muted-foreground">{fmt(o.placed_stems)} stems already placed</span>}
+                    </TD>
+                    <TD className="text-right tabular-nums">{o.cost_per_stem.toFixed(3)}</TD>
+                    <TD className="text-right tabular-nums">{o.sell_per_stem.toFixed(3)}</TD>
+                    <TD className={`text-right tabular-nums ${o.margin_per_stem < 0 ? 'font-semibold text-destructive' : ''}`}>
+                      {o.margin_per_stem < 0 && <span className="sr-only">Loss: </span>}
+                      {o.margin_per_stem.toFixed(3)}
+                    </TD>
+                    <TD className="text-right tabular-nums">{(o.cost_per_stem * left).toFixed(2)}</TD>
+                    <TD>
+                      {free ? (
+                        <Button size="sm" variant={o.farm_id === farmId ? 'default' : 'outline'} onClick={() => setFarmId(o.farm_id)}>
+                          {o.farm_id === farmId ? 'Chosen' : 'Choose'}
+                          <span className="sr-only"> {o.farm_name}</span>
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">PO sent</span>
+                      )}
+                    </TD>
+                  </TR>
+                )
+              })}
+            </TBody>
+          </Table>
+        </div>
+      )}
+      {options.data?.length === 0 && <p className="text-sm text-warning">No farm has a price for this product yet. You can still choose a farm; set its price afterwards.</p>}
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_8rem_10rem_8rem] sm:items-end">
         <div className="grid gap-1">
           <Label htmlFor={`${p}-farm`}>Farm</Label>

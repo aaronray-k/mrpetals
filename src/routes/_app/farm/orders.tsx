@@ -3,6 +3,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Undo2, XCircle } from 'lucide-react'
 import { productLabel, respondPo, useFarmPurchaseOrders, type PurchaseOrder } from '~/lib/orders/api'
+import { answerPo } from '~/lib/ordering/api'
+import { Input } from '~/components/ui/input'
 import { formatDateTime } from '~/lib/utils'
 import { useQcReasons, useReturnedBoxes } from '~/lib/qc/api'
 import { BoxPhotosButton } from '~/components/qc/box-photos'
@@ -35,6 +37,7 @@ const GROUPS: { status: PurchaseOrder['status']; title: string; empty: string }[
   { status: 'sent', title: 'Waiting for your answer', empty: 'Nothing waiting. New purchase orders from ConsolFlora appear here.' },
   { status: 'confirmed', title: 'Confirmed', empty: 'No confirmed purchase orders.' },
   { status: 'declined', title: 'Declined', empty: 'No declined purchase orders.' },
+  { status: 'cancelled', title: 'Cancelled by ConsolFlora', empty: 'No cancelled purchase orders.' },
 ]
 
 function FarmOrdersPage() {
@@ -117,31 +120,8 @@ function FarmPoCard({ po, onChanged }: { po: FarmPo; onChanged: () => void }) {
         </p>
       )}
 
-      {po.status === 'sent' && (
-        <div className="grid gap-2 sm:flex">
-          <Button
-            size="lg"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true)
-              try {
-                await respondPo(po.id, true)
-                toast({ kind: 'success', title: `${po.po_number} confirmed`, description: 'Thank you. ConsolFlora has your answer.' })
-                onChanged()
-              } catch (e) {
-                toast({ kind: 'error', title: 'Not confirmed', description: (e as Error).message })
-              } finally {
-                setBusy(false)
-              }
-            }}
-          >
-            <CheckCircle2 aria-hidden="true" /> Confirm
-          </Button>
-          <Button size="lg" variant="outline" disabled={busy} onClick={() => setDeclining(true)}>
-            <XCircle aria-hidden="true" /> Can't supply…
-          </Button>
-        </div>
-      )}
+      {po.status === 'sent' && <AnswerForm po={po} busy={busy} setBusy={setBusy} onDecline={() => setDeclining(true)} onChanged={onChanged} />}
+      {po.status === 'cancelled' && <p className="text-sm">{po.cancel_reason ?? 'ConsolFlora cancelled this PO.'} Don't send these flowers.</p>}
 
       <ReasonDialog
         open={declining}
@@ -192,5 +172,79 @@ function ReturnedBoxes() {
         ))}
       </ul>
     </section>
+  )
+}
+
+/**
+ * The farm answers line by line: all the stems (the default) or how many it can supply, and the
+ * day it delivers (by default the date on the PO, 48 hours before the flight).
+ */
+function AnswerForm({ po, busy, setBusy, onDecline, onChanged }: { po: FarmPo; busy: boolean; setBusy: (b: boolean) => void; onDecline: () => void; onChanged: () => void }) {
+  const toast = useToast()
+  const [stems, setStems] = React.useState<Record<string, string>>(() => Object.fromEntries(po.lines.map((l) => [l.id, String(l.stems)])))
+  const [date, setDate] = React.useState(po.delivery_date ?? '')
+  const [error, setError] = React.useState<string | null>(null)
+  const short = po.lines.reduce((s, l) => s + Math.max(0, l.stems - (Number(stems[l.id]) || 0)), 0)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    const bad = po.lines.find((l) => !/^\d+$/.test((stems[l.id] ?? '').trim()) || Number(stems[l.id]) > l.stems)
+    if (bad) return setError(`${bad.products?.variety ?? 'A line'}: enter between 0 and ${bad.stems} stems.`)
+    if (po.lines.every((l) => Number(stems[l.id]) === 0)) return setError('If you can supply nothing, choose "Can\'t supply any".')
+    if (!date) return setError('Choose the day you deliver.')
+    setBusy(true)
+    setError(null)
+    try {
+      const r = await answerPo(
+        po.id,
+        po.lines.map((l) => ({ po_line_id: l.id, stems: Number(stems[l.id]) })),
+        date,
+        null,
+      )
+      toast({
+        kind: 'success',
+        title: r.short_stems ? `${po.po_number} confirmed in part` : `${po.po_number} confirmed`,
+        description: r.short_stems ? `ConsolFlora will find the other ${r.short_stems.toLocaleString('en-GB')} stems.` : 'Thank you. ConsolFlora has your answer.',
+      })
+      onChanged()
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} noValidate className="grid gap-3 rounded-md bg-muted/60 p-3">
+      <p className="font-semibold">How many stems can you supply?</p>
+      {po.lines.map((l) => (
+        <div key={l.id} className="grid gap-1">
+          <label htmlFor={`can-${l.id}`} className="text-sm font-semibold">
+            {l.products ? productLabel(l.products) : 'Product'} (asked: {l.stems.toLocaleString('en-GB')})
+          </label>
+          <Input id={`can-${l.id}`} inputMode="numeric" value={stems[l.id] ?? ''} onChange={(e) => setStems((s) => ({ ...s, [l.id]: e.target.value }))} className="sm:max-w-40" />
+        </div>
+      ))}
+      <div className="grid gap-1">
+        <label htmlFor={`date-${po.id}`} className="text-sm font-semibold">
+          Delivery to ConsolFlora
+        </label>
+        <Input id={`date-${po.id}`} type="date" value={date} onChange={(e) => setDate(e.target.value)} className="sm:max-w-56" />
+      </div>
+      {short > 0 && <p className="text-sm font-semibold">You are short by {short.toLocaleString('en-GB')} stems. ConsolFlora will source them elsewhere.</p>}
+      {error && (
+        <p className="text-sm font-semibold text-destructive" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="grid gap-2 sm:flex">
+        <Button type="submit" size="lg" disabled={busy}>
+          <CheckCircle2 aria-hidden="true" /> {short > 0 ? 'Confirm what I can supply' : 'Confirm all'}
+        </Button>
+        <Button size="lg" variant="outline" disabled={busy} onClick={onDecline}>
+          <XCircle aria-hidden="true" /> Can't supply any…
+        </Button>
+      </div>
+    </form>
   )
 }

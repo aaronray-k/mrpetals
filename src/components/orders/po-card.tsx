@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link } from '@tanstack/react-router'
-import { Boxes, CheckCircle2, Send, XCircle } from 'lucide-react'
+import { AlertTriangle, Boxes, CheckCircle2, Send, XCircle } from 'lucide-react'
 import { assignBoxes, productLabel, respondPo, sendPo, type Order, type PoLine, type PurchaseOrder, type Shipment } from '~/lib/orders/api'
 import { Button } from '~/components/ui/button'
 import { useToast } from '~/components/ui/toaster'
@@ -83,6 +83,23 @@ export function PoCard({
             <strong>Farm declined:</strong> {po.decline_reason}. Change or remove its lines above; the PO goes back to draft so you can send it
             again.
           </span>
+        </p>
+      )}
+
+      {po.answer_log
+        ?.flatMap((a) => a.short)
+        .map((x, i) => (
+          <p key={i} className="flex items-start gap-1.5 text-sm">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
+            <span>
+              <strong>Farm confirmed part:</strong> {x.product}: {x.confirmed.toLocaleString('en-GB')} of {x.asked.toLocaleString('en-GB')} stems.
+              The rest shows as still to place on the line.
+            </span>
+          </p>
+        ))}
+      {po.status === 'cancelled' && (
+        <p className="flex items-start gap-1.5 text-sm">
+          <XCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> {po.cancel_reason ?? 'Cancelled.'}
         </p>
       )}
 

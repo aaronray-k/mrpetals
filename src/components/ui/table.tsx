@@ -3,7 +3,8 @@ import { cn } from '~/lib/utils'
 
 export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="relative w-full overflow-x-auto">
+    // Focusable so keyboard users can scroll a wide table sideways on small screens.
+    <div className="relative w-full overflow-x-auto focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" tabIndex={0}>
       <table className={cn('w-full border-collapse text-left text-sm', className)} {...props} />
     </div>
   )

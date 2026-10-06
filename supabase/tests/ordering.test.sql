@@ -154,7 +154,7 @@ select pg_temp.check((select string_agg(format('%s:%s', farm_name, margin_per_st
 -- Release gate: documents and the unpaid prepaid order block closing.
 set request.jwt.claim.sub = '40000000-0000-0000-0000-00000000000c';
 select pg_temp.check((select string_agg(x, ' | ') from unnest(shipment_blockers(pg_temp.id('RS-OK'))) x)
-  = 'R Buyer Prepaid: KEPHIS phytosanitary certificate missing | R Buyer Prepaid: certificate of origin missing | R Buyer Prepaid: prepaid order CFLRB10001 not paid | Shipment: customs export entry missing',
+  = 'R Buyer Prepaid: 8 boxes not received yet | R Buyer Prepaid: KEPHIS phytosanitary certificate missing | R Buyer Prepaid: certificate of origin missing | R Buyer Prepaid: prepaid order CFLRB10001 not paid | Shipment: customs export entry missing',
   'the blockers are listed in plain words');
 select pg_temp.check_refused($$select close_shipment(pg_temp.id('RS-OK'))$$, 'can''t close yet');
 select pg_temp.check_refused($$select close_shipment(pg_temp.id('RS-OK'), 'Flight leaves now')$$, 'Only an Admin can close');
@@ -168,6 +168,13 @@ select approve_shipment_document(id) from docs;
 set request.jwt.claim.sub = '40000000-0000-0000-0000-00000000000d';
 select mark_order_paid(pg_temp.id('O1'), 'TT 2026-118');
 select pg_temp.check((select payment_status || ':' || payment_reference from customer_orders where id = pg_temp.id('O1')) = 'paid:TT 2026-118', 'Finance marks the order paid');
+select pg_temp.check((select string_agg(x, ' | ') from unnest(shipment_blockers(pg_temp.id('RS-OK'))) x) = 'R Buyer Prepaid: 8 boxes not received yet', 'only the boxes are left');
+set request.jwt.claim.sub = '40000000-0000-0000-0000-00000000000c';
+select receive_boxes(array(select id from boxes where shipment_id = pg_temp.id('RS-OK')));
+select pg_temp.check((select string_agg(x, ' | ') from unnest(shipment_blockers(pg_temp.id('RS-OK'))) x) = 'R Buyer Prepaid: 8 boxes not passed by QC yet', 'received boxes still need QC');
+select set_qc_result(array(select id from boxes where shipment_id = pg_temp.id('RS-OK')), true);
+select pg_temp.check((select string_agg(x, ' | ') from unnest(shipment_blockers(pg_temp.id('RS-OK'))) x) = 'R Buyer Prepaid: 8 boxes without a label yet', 'and labels');
+select count(*) from print_labels(array(select id from boxes where shipment_id = pg_temp.id('RS-OK')));
 select pg_temp.check(cardinality(shipment_blockers(pg_temp.id('RS-OK'))) = 0, 'nothing blocks the shipment now');
 set request.jwt.claim.sub = '40000000-0000-0000-0000-00000000000c';
 select close_shipment(pg_temp.id('RS-OK'));

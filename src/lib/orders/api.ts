@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSupabase } from '~/lib/supabase'
+import type { Coverage } from '~/lib/ordering/api'
 
 /** Database functions return errors as plain messages already written for people. */
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
@@ -75,9 +76,17 @@ export interface Order {
   incoterm: string
   currency: string
   farm_delivery_date: string | null
-  status: 'open' | 'cancelled'
+  status: 'submitted' | 'open' | 'cancelled' | 'declined'
   notes: string | null
   created_at: string
+  ship_date: string | null
+  payment_status: 'unpaid' | 'paid'
+  payment_reference: string | null
+  decline_reason: string | null
+  flight_note: string | null
+  packing_list_at: string | null
+  source: 'self_order' | 'staff'
+  standing_order_id: string | null
 }
 
 export interface OrderLine {
@@ -88,6 +97,11 @@ export interface OrderLine {
   stems: number
   margin_per_stem: number | null
   notes: string | null
+  bunching: 'standard' | 'custom' | 'consolflora'
+  stems_per_bunch: number | null
+  sleeves: boolean | null
+  bunch_labels: boolean | null
+  quoted_price_per_stem: number | null
 }
 
 export interface PurchaseOrder {
@@ -96,7 +110,9 @@ export interface PurchaseOrder {
   order_id: string
   farm_id: string
   delivery_date: string | null
-  status: 'draft' | 'sent' | 'confirmed' | 'declined'
+  status: 'draft' | 'sent' | 'confirmed' | 'declined' | 'cancelled'
+  cancel_reason: string | null
+  answer_log: { at: string; short: { product: string; asked: number; confirmed: number }[]; note: string | null }[]
   sent_at: string | null
   responded_at: string | null
   decline_reason: string | null
@@ -112,6 +128,7 @@ export interface PoLine {
   stems: number
   stems_per_box: number
   grower_price_per_stem: number | null
+  requested_stems: number | null
 }
 
 export interface OrderCharge {
@@ -349,11 +366,12 @@ export function useOrder(id: string) {
     queryKey: orderKeys.one(id),
     queryFn: async () => {
       const supabase = getSupabase()
-      const [order, lines, pos, charges] = await Promise.all([
+      const [order, lines, pos, charges, coverage] = await Promise.all([
         supabase.from('customer_orders').select('*').eq('id', id).maybeSingle(),
         rows<OrderLine>(supabase.from('customer_order_lines').select('*').eq('order_id', id).order('line_no')),
         rows<PurchaseOrder>(supabase.from('purchase_orders').select('*').eq('order_id', id).order('po_number')),
         rows<OrderCharge>(supabase.from('order_charges').select('*').eq('order_id', id).order('sort_order').order('created_at')),
+        rows<Coverage>(supabase.from('order_line_coverage').select('*').eq('order_id', id)),
       ])
       if (order.error) throw new Error(order.error.message)
       const poIds = pos.map((p) => p.id)
@@ -364,10 +382,11 @@ export function useOrder(id: string) {
         : []
       return {
         order: order.data as Order | null,
-        lines: lines.map((l) => ({ ...l, margin_per_stem: num(l.margin_per_stem) })),
+        lines: lines.map((l) => ({ ...l, margin_per_stem: num(l.margin_per_stem), quoted_price_per_stem: num(l.quoted_price_per_stem) })),
         pos,
         poLines: poLines.map((l) => ({ ...l, grower_price_per_stem: num(l.grower_price_per_stem) })),
         charges: charges.map((c) => ({ ...c, amount: Number(c.amount) })),
+        coverage,
         boxes: boxRows,
       }
     },
@@ -389,7 +408,7 @@ export const createOrder = (input: {
     p_notes: input.notes ?? null,
   })
 
-export async function updateOrder(id: string, patch: Partial<Pick<Order, 'shipment_id' | 'farm_delivery_date' | 'incoterm' | 'notes'>>) {
+export async function updateOrder(id: string, patch: Partial<Pick<Order, 'shipment_id' | 'farm_delivery_date' | 'incoterm' | 'notes' | 'ship_date'>>) {
   const { error } = await getSupabase().from('customer_orders').update(patch).eq('id', id)
   if (error) throw new Error(error.message)
 }

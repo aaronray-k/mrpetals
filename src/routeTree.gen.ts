@@ -18,16 +18,25 @@ import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppFarmsRouteImport } from './routes/_app/farms'
 import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppMarginsRouteImport } from './routes/_app/margins'
+import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
+import { Route as AppPricesRouteImport } from './routes/_app/prices'
 import { Route as AppProductsRouteImport } from './routes/_app/products'
+import { Route as AppStandingOrdersRouteImport } from './routes/_app/standing-orders'
+import { Route as AppUsersRouteImport } from './routes/_app/users'
 import { Route as AppFarmOrdersRouteImport } from './routes/_app/farm/orders'
 import { Route as AppLabelsIndexRouteImport } from './routes/_app/labels/index'
 import { Route as AppLabelsTemplateIdRouteImport } from './routes/_app/labels/$templateId'
+import { Route as AppMyOrdersIndexRouteImport } from './routes/_app/my-orders/index'
+import { Route as AppMyOrdersOrderIdRouteImport } from './routes/_app/my-orders/$orderId'
 import { Route as AppOrdersIndexRouteImport } from './routes/_app/orders/index'
 import { Route as AppOrdersOrderIdRouteImport } from './routes/_app/orders/$orderId'
 import { Route as AppOrdersNewRouteImport } from './routes/_app/orders/new'
 import { Route as AppQcScanRouteImport } from './routes/_app/qc/scan'
+import { Route as AppSettingsOrderingRouteImport } from './routes/_app/settings/ordering'
 import { Route as AppShipmentsIndexRouteImport } from './routes/_app/shipments/index'
 import { Route as AppShipmentsShipmentIdRouteImport } from './routes/_app/shipments/$shipmentId'
+import { Route as AppShopIndexRouteImport } from './routes/_app/shop/index'
+import { Route as AppShopCheckoutRouteImport } from './routes/_app/shop/checkout'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -73,9 +82,29 @@ const AppMarginsRoute = AppMarginsRouteImport.update({
   path: '/margins',
   getParentRoute: () => AppRoute,
 } as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPricesRoute = AppPricesRouteImport.update({
+  id: '/prices',
+  path: '/prices',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppProductsRoute = AppProductsRouteImport.update({
   id: '/products',
   path: '/products',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStandingOrdersRoute = AppStandingOrdersRouteImport.update({
+  id: '/standing-orders',
+  path: '/standing-orders',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppUsersRoute = AppUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFarmOrdersRoute = AppFarmOrdersRouteImport.update({
@@ -91,6 +120,16 @@ const AppLabelsIndexRoute = AppLabelsIndexRouteImport.update({
 const AppLabelsTemplateIdRoute = AppLabelsTemplateIdRouteImport.update({
   id: '/labels/$templateId',
   path: '/labels/$templateId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMyOrdersIndexRoute = AppMyOrdersIndexRouteImport.update({
+  id: '/my-orders/',
+  path: '/my-orders/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMyOrdersOrderIdRoute = AppMyOrdersOrderIdRouteImport.update({
+  id: '/my-orders/$orderId',
+  path: '/my-orders/$orderId',
   getParentRoute: () => AppRoute,
 } as any)
 const AppOrdersIndexRoute = AppOrdersIndexRouteImport.update({
@@ -113,6 +152,11 @@ const AppQcScanRoute = AppQcScanRouteImport.update({
   path: '/qc/scan',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsOrderingRoute = AppSettingsOrderingRouteImport.update({
+  id: '/settings/ordering',
+  path: '/settings/ordering',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppShipmentsIndexRoute = AppShipmentsIndexRouteImport.update({
   id: '/shipments/',
   path: '/shipments/',
@@ -121,6 +165,16 @@ const AppShipmentsIndexRoute = AppShipmentsIndexRouteImport.update({
 const AppShipmentsShipmentIdRoute = AppShipmentsShipmentIdRouteImport.update({
   id: '/shipments/$shipmentId',
   path: '/shipments/$shipmentId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppShopIndexRoute = AppShopIndexRouteImport.update({
+  id: '/shop/',
+  path: '/shop/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppShopCheckoutRoute = AppShopCheckoutRouteImport.update({
+  id: '/shop/checkout',
+  path: '/shop/checkout',
   getParentRoute: () => AppRoute,
 } as any)
 
@@ -133,16 +187,25 @@ export interface FileRoutesByFullPath {
   '/farms': typeof AppFarmsRoute
   '/import': typeof AppImportRoute
   '/margins': typeof AppMarginsRoute
+  '/notifications': typeof AppNotificationsRoute
+  '/prices': typeof AppPricesRoute
   '/products': typeof AppProductsRoute
+  '/standing-orders': typeof AppStandingOrdersRoute
+  '/users': typeof AppUsersRoute
   '/farm/orders': typeof AppFarmOrdersRoute
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
+  '/my-orders/$orderId': typeof AppMyOrdersOrderIdRoute
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/orders/new': typeof AppOrdersNewRoute
   '/qc/scan': typeof AppQcScanRoute
+  '/settings/ordering': typeof AppSettingsOrderingRoute
   '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
+  '/shop/checkout': typeof AppShopCheckoutRoute
   '/labels/': typeof AppLabelsIndexRoute
+  '/my-orders/': typeof AppMyOrdersIndexRoute
   '/orders/': typeof AppOrdersIndexRoute
   '/shipments/': typeof AppShipmentsIndexRoute
+  '/shop/': typeof AppShopIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -153,16 +216,25 @@ export interface FileRoutesByTo {
   '/farms': typeof AppFarmsRoute
   '/import': typeof AppImportRoute
   '/margins': typeof AppMarginsRoute
+  '/notifications': typeof AppNotificationsRoute
+  '/prices': typeof AppPricesRoute
   '/products': typeof AppProductsRoute
+  '/standing-orders': typeof AppStandingOrdersRoute
+  '/users': typeof AppUsersRoute
   '/farm/orders': typeof AppFarmOrdersRoute
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
+  '/my-orders/$orderId': typeof AppMyOrdersOrderIdRoute
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/orders/new': typeof AppOrdersNewRoute
   '/qc/scan': typeof AppQcScanRoute
+  '/settings/ordering': typeof AppSettingsOrderingRoute
   '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
+  '/shop/checkout': typeof AppShopCheckoutRoute
   '/labels': typeof AppLabelsIndexRoute
+  '/my-orders': typeof AppMyOrdersIndexRoute
   '/orders': typeof AppOrdersIndexRoute
   '/shipments': typeof AppShipmentsIndexRoute
+  '/shop': typeof AppShopIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -175,16 +247,25 @@ export interface FileRoutesById {
   '/_app/farms': typeof AppFarmsRoute
   '/_app/import': typeof AppImportRoute
   '/_app/margins': typeof AppMarginsRoute
+  '/_app/notifications': typeof AppNotificationsRoute
+  '/_app/prices': typeof AppPricesRoute
   '/_app/products': typeof AppProductsRoute
+  '/_app/standing-orders': typeof AppStandingOrdersRoute
+  '/_app/users': typeof AppUsersRoute
   '/_app/farm/orders': typeof AppFarmOrdersRoute
   '/_app/labels/$templateId': typeof AppLabelsTemplateIdRoute
+  '/_app/my-orders/$orderId': typeof AppMyOrdersOrderIdRoute
   '/_app/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/_app/orders/new': typeof AppOrdersNewRoute
   '/_app/qc/scan': typeof AppQcScanRoute
+  '/_app/settings/ordering': typeof AppSettingsOrderingRoute
   '/_app/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
+  '/_app/shop/checkout': typeof AppShopCheckoutRoute
   '/_app/labels/': typeof AppLabelsIndexRoute
+  '/_app/my-orders/': typeof AppMyOrdersIndexRoute
   '/_app/orders/': typeof AppOrdersIndexRoute
   '/_app/shipments/': typeof AppShipmentsIndexRoute
+  '/_app/shop/': typeof AppShopIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -197,16 +278,25 @@ export interface FileRouteTypes {
     | '/farms'
     | '/import'
     | '/margins'
+    | '/notifications'
+    | '/prices'
     | '/products'
+    | '/standing-orders'
+    | '/users'
     | '/farm/orders'
     | '/labels/$templateId'
+    | '/my-orders/$orderId'
     | '/orders/$orderId'
     | '/orders/new'
     | '/qc/scan'
+    | '/settings/ordering'
     | '/shipments/$shipmentId'
+    | '/shop/checkout'
     | '/labels/'
+    | '/my-orders/'
     | '/orders/'
     | '/shipments/'
+    | '/shop/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -217,16 +307,25 @@ export interface FileRouteTypes {
     | '/farms'
     | '/import'
     | '/margins'
+    | '/notifications'
+    | '/prices'
     | '/products'
+    | '/standing-orders'
+    | '/users'
     | '/farm/orders'
     | '/labels/$templateId'
+    | '/my-orders/$orderId'
     | '/orders/$orderId'
     | '/orders/new'
     | '/qc/scan'
+    | '/settings/ordering'
     | '/shipments/$shipmentId'
+    | '/shop/checkout'
     | '/labels'
+    | '/my-orders'
     | '/orders'
     | '/shipments'
+    | '/shop'
   id:
     | '__root__'
     | '/'
@@ -238,16 +337,25 @@ export interface FileRouteTypes {
     | '/_app/farms'
     | '/_app/import'
     | '/_app/margins'
+    | '/_app/notifications'
+    | '/_app/prices'
     | '/_app/products'
+    | '/_app/standing-orders'
+    | '/_app/users'
     | '/_app/farm/orders'
     | '/_app/labels/$templateId'
+    | '/_app/my-orders/$orderId'
     | '/_app/orders/$orderId'
     | '/_app/orders/new'
     | '/_app/qc/scan'
+    | '/_app/settings/ordering'
     | '/_app/shipments/$shipmentId'
+    | '/_app/shop/checkout'
     | '/_app/labels/'
+    | '/_app/my-orders/'
     | '/_app/orders/'
     | '/_app/shipments/'
+    | '/_app/shop/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -321,11 +429,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMarginsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/notifications': {
+      id: '/_app/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/prices': {
+      id: '/_app/prices'
+      path: '/prices'
+      fullPath: '/prices'
+      preLoaderRoute: typeof AppPricesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/products': {
       id: '/_app/products'
       path: '/products'
       fullPath: '/products'
       preLoaderRoute: typeof AppProductsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/standing-orders': {
+      id: '/_app/standing-orders'
+      path: '/standing-orders'
+      fullPath: '/standing-orders'
+      preLoaderRoute: typeof AppStandingOrdersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/users': {
+      id: '/_app/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AppUsersRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/farm/orders': {
@@ -347,6 +483,20 @@ declare module '@tanstack/react-router' {
       path: '/labels/$templateId'
       fullPath: '/labels/$templateId'
       preLoaderRoute: typeof AppLabelsTemplateIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/my-orders/': {
+      id: '/_app/my-orders/'
+      path: '/my-orders'
+      fullPath: '/my-orders/'
+      preLoaderRoute: typeof AppMyOrdersIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/my-orders/$orderId': {
+      id: '/_app/my-orders/$orderId'
+      path: '/my-orders/$orderId'
+      fullPath: '/my-orders/$orderId'
+      preLoaderRoute: typeof AppMyOrdersOrderIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/orders/': {
@@ -377,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQcScanRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings/ordering': {
+      id: '/_app/settings/ordering'
+      path: '/settings/ordering'
+      fullPath: '/settings/ordering'
+      preLoaderRoute: typeof AppSettingsOrderingRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/shipments/': {
       id: '/_app/shipments/'
       path: '/shipments'
@@ -391,6 +548,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppShipmentsShipmentIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/shop/': {
+      id: '/_app/shop/'
+      path: '/shop'
+      fullPath: '/shop/'
+      preLoaderRoute: typeof AppShopIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/shop/checkout': {
+      id: '/_app/shop/checkout'
+      path: '/shop/checkout'
+      fullPath: '/shop/checkout'
+      preLoaderRoute: typeof AppShopCheckoutRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -401,16 +572,25 @@ interface AppRouteChildren {
   AppFarmsRoute: typeof AppFarmsRoute
   AppImportRoute: typeof AppImportRoute
   AppMarginsRoute: typeof AppMarginsRoute
+  AppNotificationsRoute: typeof AppNotificationsRoute
+  AppPricesRoute: typeof AppPricesRoute
   AppProductsRoute: typeof AppProductsRoute
+  AppStandingOrdersRoute: typeof AppStandingOrdersRoute
+  AppUsersRoute: typeof AppUsersRoute
   AppFarmOrdersRoute: typeof AppFarmOrdersRoute
   AppLabelsTemplateIdRoute: typeof AppLabelsTemplateIdRoute
+  AppMyOrdersOrderIdRoute: typeof AppMyOrdersOrderIdRoute
   AppOrdersOrderIdRoute: typeof AppOrdersOrderIdRoute
   AppOrdersNewRoute: typeof AppOrdersNewRoute
   AppQcScanRoute: typeof AppQcScanRoute
+  AppSettingsOrderingRoute: typeof AppSettingsOrderingRoute
   AppShipmentsShipmentIdRoute: typeof AppShipmentsShipmentIdRoute
+  AppShopCheckoutRoute: typeof AppShopCheckoutRoute
   AppLabelsIndexRoute: typeof AppLabelsIndexRoute
+  AppMyOrdersIndexRoute: typeof AppMyOrdersIndexRoute
   AppOrdersIndexRoute: typeof AppOrdersIndexRoute
   AppShipmentsIndexRoute: typeof AppShipmentsIndexRoute
+  AppShopIndexRoute: typeof AppShopIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -420,16 +600,25 @@ const AppRouteChildren: AppRouteChildren = {
   AppFarmsRoute: AppFarmsRoute,
   AppImportRoute: AppImportRoute,
   AppMarginsRoute: AppMarginsRoute,
+  AppNotificationsRoute: AppNotificationsRoute,
+  AppPricesRoute: AppPricesRoute,
   AppProductsRoute: AppProductsRoute,
+  AppStandingOrdersRoute: AppStandingOrdersRoute,
+  AppUsersRoute: AppUsersRoute,
   AppFarmOrdersRoute: AppFarmOrdersRoute,
   AppLabelsTemplateIdRoute: AppLabelsTemplateIdRoute,
+  AppMyOrdersOrderIdRoute: AppMyOrdersOrderIdRoute,
   AppOrdersOrderIdRoute: AppOrdersOrderIdRoute,
   AppOrdersNewRoute: AppOrdersNewRoute,
   AppQcScanRoute: AppQcScanRoute,
+  AppSettingsOrderingRoute: AppSettingsOrderingRoute,
   AppShipmentsShipmentIdRoute: AppShipmentsShipmentIdRoute,
+  AppShopCheckoutRoute: AppShopCheckoutRoute,
   AppLabelsIndexRoute: AppLabelsIndexRoute,
+  AppMyOrdersIndexRoute: AppMyOrdersIndexRoute,
   AppOrdersIndexRoute: AppOrdersIndexRoute,
   AppShipmentsIndexRoute: AppShipmentsIndexRoute,
+  AppShopIndexRoute: AppShopIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

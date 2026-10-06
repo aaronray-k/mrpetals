@@ -213,7 +213,10 @@ select pg_temp.check_refused($$select close_shipment(pg_temp.id('S1'))$$, 'can''
 select approve_shipment_document(save_shipment_document(pg_temp.id('S1'), c, d, 'REF-1', null))
 from (values (pg_temp.id('B1')), (pg_temp.id('B2'))) as b (c), (values ('phyto'), ('certificate_of_origin')) as t (d);
 select approve_shipment_document(save_shipment_document(pg_temp.id('S1'), null, 'export_entry', 'EX-1', null));
-select close_shipment(pg_temp.id('S1'));
+select pg_temp.check_refused($$select close_shipment(pg_temp.id('S1'))$$, 'not passed by QC yet');
+set request.jwt.claim.sub = '20000000-0000-0000-0000-00000000000a'; -- Admin closes anyway (logged)
+select close_shipment(pg_temp.id('S1'), 'Test: close with open QC to check numbering freezes');
+set request.jwt.claim.sub = '20000000-0000-0000-0000-00000000000c';
 select pg_temp.check_refused($$select close_shipment(pg_temp.id('S1'))$$, 'already closed');
 create temp table t_frozen as select id, buyer_box_no, buyer_box_total from boxes where customer_id = pg_temp.id('B1') and status = 'active';
 grant select on t_frozen to authenticated;

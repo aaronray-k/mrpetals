@@ -112,7 +112,7 @@ export function createGateway({ pool, jwtSecret, restPort, appPort }) {
             [claims.sub, String(json.password)],
           )
         }
-        if (json.data) await pool.query('update auth.users set raw_user_meta_data = coalesce(raw_user_meta_data, \'{}\') || $2 where id = $1', [claims.sub, json.data])
+        if (json.data) await pool.query('update auth.users set raw_user_meta_data = coalesce(raw_user_meta_data, \'{}\') || $2::jsonb where id = $1', [claims.sub, json.data])
       }
       const u = (await pool.query('select * from auth.users where id = $1 and not banned', [claims.sub])).rows[0]
       return u ? [200, userJson(u)] : authError(401, 'user_not_found', 'User not found')
@@ -137,7 +137,7 @@ export function createGateway({ pool, jwtSecret, restPort, appPort }) {
         try {
           const { rows } = await pool.query(
             `insert into auth.users (id, email, encrypted_password, raw_user_meta_data, must_change_password)
-             values (gen_random_uuid(), $1, extensions.crypt($2, extensions.gen_salt('bf')), $3, coalesce(($3 ->> 'must_change_password')::boolean, false)) returning *`,
+             values (gen_random_uuid(), $1, extensions.crypt($2, extensions.gen_salt('bf')), $3::jsonb, coalesce(($3::jsonb ->> 'must_change_password')::boolean, false)) returning *`,
             [email, String(json.password), json.user_metadata ?? {}],
           )
           return [200, userJson(rows[0])]
@@ -156,7 +156,7 @@ export function createGateway({ pool, jwtSecret, restPort, appPort }) {
         }
         if (json.user_metadata) {
           args.push(json.user_metadata)
-          sets.push(`raw_user_meta_data = coalesce(raw_user_meta_data, '{}') || $${args.length}`)
+          sets.push(`raw_user_meta_data = coalesce(raw_user_meta_data, '{}') || $${args.length}::jsonb`)
           if ('must_change_password' in json.user_metadata) {
             args.push(Boolean(json.user_metadata.must_change_password))
             sets.push(`must_change_password = $${args.length}`)

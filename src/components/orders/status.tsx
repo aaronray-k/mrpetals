@@ -29,6 +29,12 @@ export function PoStatus({ status }: { status: PurchaseOrder['status'] }) {
           <XCircle aria-hidden="true" /> Declined
         </Badge>
       )
+    case 'cancelled':
+      return (
+        <Badge>
+          <XCircle aria-hidden="true" /> Cancelled
+        </Badge>
+      )
   }
 }
 

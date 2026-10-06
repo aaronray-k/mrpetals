@@ -33,8 +33,10 @@ from the database is in `supabase/migrations`; this file lists the rest.
   - `GOTRUE_SITE_URL` set to the app's address, and `https://<app>/sign-in` on the redirect allow list.
   - Keep public sign-up **off** (`GOTRUE_DISABLE_SIGNUP=true`) until item 7 adds the sign-up page with
     the Terms of sale consent. Until then, accounts are created by an Admin.
-- **Environment for the app:** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` at build time.
-  The app never uses the service-role key: server functions act as the signed-in user.
+- **Environment for the app:** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` at build time, and
+  `SUPABASE_SERVICE_ROLE_KEY` on the server only (never prefixed `VITE_`). The service-role key is used
+  only by `src/server/users.functions.ts`, to create accounts and set passwords through Supabase Auth's
+  admin API, after checking the caller is an Admin. Every other server call acts as the signed-in user.
 
 ## Item 1: Import
 
@@ -112,6 +114,35 @@ Still needed from the backend:
 - **HTTPS** for the app: Android Chrome only opens the camera on secure pages.
 - Buyer claims (a buyer submits a claim with photos; staff review it; costs are charged to the farm) are a
   separate item. They will reuse the QC photos and reasons.
+
+## Item 5: Ordering flow and shipment release
+
+Provided by migrations `…007_shipment_release.sql` to `…010_release_boxes.sql`.
+
+| Object | Purpose |
+|---|---|
+| `ordering_settings` | Lead time (72 h), farm delivery (48 h before the flight), standing orders created 5 days ahead. Admin edits. |
+| `price_overrides`, `catalog()`, `sell_price()` | Buyer prices per product: cheapest farm + incoterm margin, or a pinned farm, or a fixed price. Buyers never see farm prices. |
+| `available_flights()`, `place_order()`, `approve_order()`, `decline_order()` | Buyer checkout and ConsolFlora approval. |
+| `line_farm_options()` | The cost calculator: every farm's price, buyer price, margin, recommended farm. Staff and Finance only. |
+| `answer_purchase_order()` | Farms confirm each line in full or in part, with the delivery date. |
+| `order_line_coverage`, `create_packing_list()`, `order_progress()` | Shortfalls, the packing-list step, the buyer's view of progress. |
+| `standing_orders`, `generate_standing_orders()` | Weekly repeating orders. **Schedule `select generate_standing_orders();` hourly** with Supabase pg_cron (the preview runs it from its server). |
+| `notifications` | In-app notices per audience (staff, finance, buyer, farm), with `email_status` waiting for item 6. |
+| `customer_orders.payment_status`, `mark_order_paid()` | Payment, Finance and Admin only. Prepaid = payment terms "Prepaid". |
+| `buyer_credit`, `order_values` | Open, unpaid order value against the credit limit (a warning only). |
+| `shipment_documents` + Storage bucket `shipment-docs` | KEPHIS phyto and certificate of origin per buyer, customs export entry per shipment. |
+| `shipment_release`, `shipment_blockers()`, `close_shipment(shipment, override)`, `shipment_overrides` | The release gate, and Admin's logged override. |
+| `admin_list_users()`, `admin_set_user()`, `profiles.active` | Users page: roles, links, switching accounts off. |
+
+Still needed from the backend:
+
+- **pg_cron** (or another scheduler) calling `generate_standing_orders()` hourly.
+- **`SUPABASE_SERVICE_ROLE_KEY`** on the app server, for the Users page.
+- **Mail (item 6):** Zoho SMTP and IMAP settings and a mailbox (e.g. orders@consolflora.com), entered by you
+  in the server environment, to send notifications and bring replies back into the app.
+- The proforma and packing list are not yet attached to emails automatically; buyers see the order and its
+  progress in the app, and staff download the files.
 
 ## Not needed yet
 

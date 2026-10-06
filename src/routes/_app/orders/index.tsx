@@ -8,6 +8,7 @@ import { PageHeader } from '~/components/layout/app-shell'
 import { RequireRole } from '~/components/layout/require-role'
 import { rolesFor } from '~/components/layout/nav'
 import { formatDate } from '~/components/orders/shipment-status'
+import { OrderStatusBadge } from '~/components/orders/order-actions'
 import { Tip } from '~/components/tips/tips'
 import { Alert } from '~/components/ui/alert'
 import { buttonVariants } from '~/components/ui/button'
@@ -35,7 +36,11 @@ function OrdersPage() {
   const buyerName = (id: string) => buyers.data?.find((b) => b.id === id)?.company_name ?? ''
   const shipment = (id: string | null) => shipments.data?.find((s) => s.id === id)
   const term = search.trim().toLowerCase()
-  const list = (orders.data ?? []).filter((o) => !term || `${o.order_number} ${buyerName(o.customer_id)}`.toLowerCase().includes(term))
+  const [status, setStatus] = React.useState('all')
+  const list = (orders.data ?? []).filter(
+    (o) => (!term || `${o.order_number} ${buyerName(o.customer_id)}`.toLowerCase().includes(term)) && (status === 'all' || o.status === status),
+  )
+  const waiting = (orders.data ?? []).filter((o) => o.status === 'submitted').length
 
   return (
     <>
@@ -62,6 +67,20 @@ function OrdersPage() {
             <Input id="order-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" placeholder="Order number or buyer" />
           </div>
         </div>
+        <fieldset className="flex flex-wrap gap-1">
+          <legend className="sr-only">Show</legend>
+          {[
+            ['all', 'All'],
+            ['submitted', `Waiting for approval (${waiting})`],
+            ['open', 'Approved'],
+            ['declined', 'Declined'],
+          ].map(([id, label]) => (
+            <label key={id} className={`inline-flex h-9 cursor-pointer items-center rounded-md border px-3 text-sm font-semibold has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${status === id ? 'bg-accent/20' : 'bg-card'}`}>
+              <input type="radio" name="order-status" className="sr-only" checked={status === id} onChange={() => setStatus(id!)} />
+              {label}
+            </label>
+          ))}
+        </fieldset>
         {orders.isLoading && <Spinner />}
         {orders.error && <Alert variant="destructive" title="Couldn't load orders" role="alert">{(orders.error as Error).message}</Alert>}
         {orders.data?.length === 0 && (
@@ -78,6 +97,7 @@ function OrdersPage() {
               <THead>
                 <TR>
                   <TH>Order</TH>
+                  <TH>Status</TH>
                   <TH>Buyer</TH>
                   <TH>Shipment</TH>
                   <TH>Farm delivery</TH>
@@ -97,7 +117,9 @@ function OrdersPage() {
                         <Link to="/orders/$orderId" params={{ orderId: o.id }} className="inline-flex min-h-6 items-center font-semibold underline-offset-2 hover:underline">
                           {o.order_number}
                         </Link>
-                        {o.status === 'cancelled' && <span className="ml-2 text-sm text-muted-foreground">(cancelled)</span>}
+                      </TD>
+                      <TD>
+                        <OrderStatusBadge order={o} />
                       </TD>
                       <TD>{buyerName(o.customer_id)}</TD>
                       <TD className="whitespace-nowrap">{s ? `${s.shipment_ref} · ${s.flight_no ?? ''}` : <span className="text-muted-foreground">Not set</span>}</TD>

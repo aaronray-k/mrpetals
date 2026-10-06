@@ -36,7 +36,9 @@ Supabase CLI (`supabase db push --db-url ...`) or `psql -f`. Then make yourself 
 Roles live in `public.user_roles`; RLS policies call `has_role()`, `is_staff()` (Admin or
 Consolidator), `my_farm_id()` and `my_customer_id()`. The UI hides pages a role can't use, but the
 data is always protected by RLS, never by the UI alone. Farm and Customer users only see rows for
-the farm or customer linked on their profile.
+the farm or customer linked on their profile. Admin creates accounts on the **Users** page with a
+temporary password; the person chooses their own at first sign-in. Switching an account off removes
+its access at once.
 
 ## Navigation tips
 
@@ -112,6 +114,30 @@ buyer. Saving makes a new version; old versions never change.
    current proforma (farms in box order, margin and unit price formulas, other costs, grand total). The
    packing list is the same without prices. A proforma won't download while a line has no grower price.
 
+## Buyer ordering
+
+1. **Catalog** (buyers): every product a farm can supply, with the buyer's price per stem for their
+   incoterm, per variety and stem length. The price is the cheapest farm's price plus the incoterm margin,
+   unless Admin pinned a farm or fixed the price on **Selling prices**.
+2. **Checkout**: stems per line; bunching is standard (the product's bunch size), the buyer's own (stems per
+   bunch, sleeves, bunch labels) or "ConsolFlora decides". The buyer picks one of the open flights to their
+   airport, or another date. Orders need **72 hours** before the ship date (an Admin setting); farms deliver
+   **48 hours** before it. New buyers are told the flight may change.
+3. **Approval**: the order waits under **Orders → Waiting for approval**. Staff approve or decline it
+   (with a reason the buyer sees). Finance or Admin can decline an approved order, e.g. over the credit limit.
+4. **Farms**: the **cost calculator** on each line lists every farm's price, what the buyer pays and the
+   margin (a loss shows in red), and recommends the cheapest (or the pinned farm). Farms answer each line in
+   full or in part and confirm the delivery date; a shortfall shows on the line for ConsolFlora to place.
+5. **Packing list**: once every stem is confirmed, **Create packing list** makes all the boxes at once.
+6. **Payment and release**: Finance or Admin mark orders paid. A shipment closes only when, for each buyer,
+   the KEPHIS phytosanitary certificate and certificate of origin are in and checked, prepaid orders are paid,
+   and every box is received, passed by QC and labelled; plus the customs export entry for the shipment.
+   Credit buyers over their limit only get a warning. Admin can close anyway, with a logged reason.
+7. **Standing orders**: buyers set ship days (e.g. Monday and Thursday) and lines; each week's order is
+   created 5 days ahead, already approved. Buyers can skip a week or change the standing order.
+8. **Following an order**: buyers see each step under **My orders**; everyone gets **Notifications**
+   (emailed once the mail settings are in, item 6).
+
 ## QC scanning
 
 **Scan boxes** (QC, Senior QC, Admin, Consolidator) is made for Android phones. Pick the shipment, then
@@ -150,6 +176,10 @@ src/
   lib/orders/             orders, POs and boxes API, label printing, proforma and packing list Excel
   components/orders/      order lines, farm POs, boxes table, statuses
   lib/qc/, components/qc/ QC scanning: QR reading, send queue, BACK TO FARM sticker, scan page parts
+  lib/ordering/           catalog, cart, checkout, standing orders, release, prices, notifications
+  components/shop/        catalog and cart parts; components/shipments/ release panel
+  server/users.functions  account creation (the only use of the service-role key)
+preview/                  the Render preview: demo backend, demo data
   server/                 server functions (run as the signed-in user, RLS applies)
 supabase/migrations/      schema, RLS policies, import function
 docs/backend.md           what the backend must provide
@@ -164,7 +194,12 @@ docs/backend.md           what the backend must provide
 | 2 | Label designer | Done |
 | 3 | Boxes on POs and packing lists | Done |
 | 4 | QC scanner | Done |
-| 5 | Shipment screen | Not started |
-| 6 | Floricode | Not started |
-| 7 | Legal and consent | Not started |
-| 8 | Accessibility and security (WCAG 2.2 AA, 2FA) | Not started |
+| 5 | Ordering flow and shipment release: catalog, checkout, approval, cost calculator, partial farm answers, packing list, standing orders, payment, credit, documents, users | Done |
+| 6 | Messages and email (Zoho: SMTP out, IMAP replies into the app) | Not started |
+| 7 | Dashboards per role: charts and action lists | Not started |
+| 8 | Floricode | Not started |
+| 9 | Legal and consent | Not started |
+| 10 | Accessibility and security (WCAG 2.2 AA, 2FA) | Not started |
+| 11 | Buyer claims (with QC photos) | Not started |
+
+A clickable preview with demo data runs on Render; see `preview/README.md`.

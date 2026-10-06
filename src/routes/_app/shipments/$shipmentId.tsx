@@ -3,7 +3,6 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { FileSpreadsheet, Lock, ScanLine } from 'lucide-react'
 import {
-  closeShipment,
   productLabel,
   shipmentKeys,
   useBuyerDirectory,
@@ -16,6 +15,8 @@ import {
   type Shipment,
 } from '~/lib/orders/api'
 import { downloadOrderSheet } from '~/lib/orders/download-sheet'
+import { closeShipmentWithOverride, useShipmentRelease } from '~/lib/ordering/api'
+import { ReleasePanel, ShipmentDetailsForm } from '~/components/shipments/release-panel'
 import { useAuth } from '~/lib/auth'
 import { QC_CLEAR_ROLES, QC_ROLES, STAFF_ROLES, hasAnyRole } from '~/lib/roles'
 import { RequireRole } from '~/components/layout/require-role'
@@ -58,6 +59,7 @@ function ShipmentPage() {
   const farms = useFarmNames()
   const products = useProductNames()
   const [closing, setClosing] = React.useState(false)
+  const [overrideReason, setOverrideReason] = React.useState('')
 
   const staff = hasAnyRole(roles, STAFF_ROLES)
   const can = {
@@ -119,6 +121,19 @@ function ShipmentPage() {
         until the shipment is closed.
       </Tip>
 
+      <ShipmentDetailsForm key={`${shipment.mawb}-${shipment.flight_no}-${shipment.flight_date}-${shipment.destination_airport}`} shipment={shipment} canEdit={staff} onSaved={() => void queryClient.invalidateQueries({ queryKey: shipmentKeys.all })} />
+      {hasAnyRole(roles, ['admin', 'consolidator', 'finance']) && (
+        <ReleasePanel
+          shipmentId={shipment.id}
+          buyerName={(id) => {
+            const b = buyerName(id)
+            return b ? `${b.company_name} (${b.customer_code})` : 'Buyer'
+          }}
+          canEdit={hasAnyRole(roles, ['admin', 'consolidator', 'finance'])}
+          onChanged={refresh}
+        />
+      )}
+
       {buyerIds.length === 0 && (
         <Card className="p-6">
           <p className="font-bold">No orders on this shipment yet</p>
@@ -155,6 +170,7 @@ function ShipmentPage() {
         description="Box numbers are frozen when the shipment closes: voiding a box after that leaves a gap. No more boxes can be added."
       >
         <div className="grid gap-4">
+          <CloseBlockers shipmentId={shipment.id} isAdmin={hasAnyRole(roles, ['admin'])} reason={overrideReason} onReason={setOverrideReason} />
           {unprinted > 0 && (
             <Alert variant="warning" title={`${unprinted} ${unprinted === 1 ? 'box has' : 'boxes have'} no label yet`}>
               You can still print them after closing.
@@ -167,7 +183,7 @@ function ShipmentPage() {
             <Button
               onClick={async () => {
                 try {
-                  await closeShipment(shipment.id)
+                  await closeShipmentWithOverride(shipment.id, overrideReason.trim() || null)
                   toast({ kind: 'success', title: `${shipment.shipment_ref} closed`, description: 'Box numbers are now frozen.' })
                   setClosing(false)
                   refresh()
@@ -283,5 +299,31 @@ function BuyerSection({
         )}
       </CardContent>
     </Card>
+  )
+}
+
+/** What still blocks closing; an Admin can close anyway with a reason (logged). */
+function CloseBlockers({ shipmentId, isAdmin, reason, onReason }: { shipmentId: string; isAdmin: boolean; reason: string; onReason: (r: string) => void }) {
+  const q = useShipmentRelease(shipmentId)
+  const blockers = q.data?.blockers ?? []
+  if (!blockers.length) return null
+  return (
+    <Alert variant="warning" title="Not cleared yet">
+      <ul className="list-disc pl-5">
+        {blockers.map((b) => (
+          <li key={b}>{b}</li>
+        ))}
+      </ul>
+      {isAdmin ? (
+        <div className="mt-3 grid gap-1">
+          <label htmlFor="override-reason" className="text-sm font-semibold">
+            Close anyway: reason (Admin, logged)
+          </label>
+          <textarea id="override-reason" rows={2} value={reason} onChange={(e) => onReason(e.target.value)} className="w-full rounded-md border border-input bg-card px-3 py-2 text-base" />
+        </div>
+      ) : (
+        <p className="mt-2">Clear these first, or ask an Admin to close it anyway.</p>
+      )}
+    </Alert>
   )
 }

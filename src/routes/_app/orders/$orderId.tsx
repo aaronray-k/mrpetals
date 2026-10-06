@@ -19,6 +19,7 @@ import { STAFF_ROLES, hasAnyRole } from '~/lib/roles'
 import { RequireRole } from '~/components/layout/require-role'
 import { rolesFor } from '~/components/layout/nav'
 import { OrderCharges } from '~/components/orders/order-charges'
+import { OrderActions, OrderStatusBadge } from '~/components/orders/order-actions'
 import { OrderLineCard } from '~/components/orders/order-lines'
 import { PoCard } from '~/components/orders/po-card'
 import { formatDate } from '~/components/orders/shipment-status'
@@ -54,12 +55,14 @@ function OrderPage() {
     void queryClient.invalidateQueries({ queryKey: orderKeys.one(orderId) })
     void queryClient.invalidateQueries({ queryKey: orderKeys.all })
     void queryClient.invalidateQueries({ queryKey: shipmentKeys.all })
+    void queryClient.invalidateQueries({ queryKey: ['farm-options'] })
+    void queryClient.invalidateQueries({ queryKey: ['buyer-credit'] })
   }
 
   if (q.isLoading || ref.isLoading) return <Spinner />
   if (q.error) return <Alert variant="destructive" title="Couldn't load this order" role="alert">{(q.error as Error).message}</Alert>
   if (!q.data?.order) return <Alert variant="warning" title="This order doesn't exist" role="alert" />
-  const { order, lines, pos, poLines, charges, boxes } = q.data
+  const { order, lines, pos, poLines, charges, boxes, coverage } = q.data
   const refs = { farms: ref.data?.farms ?? [], products: ref.data?.products ?? [], packRates: ref.data?.packRates ?? [] }
   const buyer = ref.data?.buyers.find((b) => b.id === order.customer_id)
   const shipment = shipments.data?.find((s) => s.id === order.shipment_id) ?? null
@@ -91,7 +94,8 @@ function OrderPage() {
           </Link>
           <h1 className="flex flex-wrap items-center gap-3 text-3xl font-bold tracking-tight text-primary dark:text-foreground">
             {order.order_number}
-            {order.status === 'cancelled' && <Badge variant="destructive">Cancelled</Badge>}
+            <OrderStatusBadge order={order} />
+            {order.standing_order_id && <Badge>Standing order</Badge>}
           </h1>
           <p className="text-muted-foreground">
             {buyer ? `${buyer.company_name} (${buyer.customer_code})` : 'Buyer'} · {order.incoterm} · {order.currency} ·{' '}
@@ -110,13 +114,15 @@ function OrderPage() {
 
       {canEdit && (
         <Tip id="orders.detail" title="Split, send, confirm, box">
-          Add a farm to each line until every stem is placed. Each farm gets one PO for this order: <strong>Send to farm</strong>, wait
-          for the farm to confirm, then <strong>Assign boxes</strong>. Boxes appear on the shipment, where they are received, checked and
-          labelled.
+          Approve the order, then add farms to each line: the calculator recommends the cheapest. <strong>Send to farm</strong>; farms
+          confirm in full or in part, and any shortfall shows on the line for you to place with another farm. When every stem is confirmed,{' '}
+          <strong>Create packing list</strong> makes the boxes.
         </Tip>
       )}
 
-      <OrderDetailsCard key={`${order.shipment_id}-${order.farm_delivery_date}-${order.incoterm}-${order.notes}`} order={order} shipments={shipments.data ?? []} canEdit={canEdit} onSaved={refresh} />
+      <OrderActions order={order} coverage={coverage} hasBoxes={boxes.some((b) => b.status === 'active')} onChanged={refresh} />
+
+      <OrderDetailsCard key={`${order.shipment_id}-${order.ship_date}-${order.farm_delivery_date}-${order.incoterm}-${order.notes}`} order={order} shipments={shipments.data ?? []} canEdit={canEdit} onSaved={refresh} />
 
       <Card>
         <CardHeader>
@@ -174,13 +180,15 @@ function OrderDetailsCard({ order, shipments, canEdit, onSaved }: { order: Order
   const incoterms = useIncoterms()
   const [shipmentId, setShipmentId] = React.useState(order.shipment_id ?? '')
   const [date, setDate] = React.useState(order.farm_delivery_date ?? '')
+  const [shipDate, setShipDate] = React.useState(order.ship_date ?? '')
   const [incoterm, setIncoterm] = React.useState(order.incoterm)
   const [notes, setNotes] = React.useState(order.notes ?? '')
   const [busy, setBusy] = React.useState(false)
   const current = shipments.find((s) => s.id === order.shipment_id)
   const choices = shipments.filter((s) => s.status === 'open' || s.id === order.shipment_id)
   const dirty =
-    shipmentId !== (order.shipment_id ?? '') || date !== (order.farm_delivery_date ?? '') || incoterm !== order.incoterm || notes !== (order.notes ?? '')
+    shipmentId !== (order.shipment_id ?? '') || date !== (order.farm_delivery_date ?? '') || incoterm !== order.incoterm || notes !== (order.notes ?? '') ||
+    shipDate !== (order.ship_date ?? '')
 
   if (!canEdit)
     return (
@@ -189,8 +197,9 @@ function OrderDetailsCard({ order, shipments, canEdit, onSaved }: { order: Order
           <CardTitle>Order details</CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="grid gap-3 sm:grid-cols-4">
+          <dl className="grid gap-3 sm:grid-cols-5">
             <Detail term="Shipment" value={current ? `${current.shipment_ref} · ${current.flight_no ?? 'flight not set'} · ${formatDate(current.flight_date)}` : 'Not set'} />
+            <Detail term="Ship date" value={formatDate(order.ship_date)} />
             <Detail term="Farms deliver on" value={formatDate(order.farm_delivery_date)} />
             <Detail term="Incoterm" value={order.incoterm} />
             <Detail term="Notes" value={order.notes || '—'} />
@@ -203,7 +212,15 @@ function OrderDetailsCard({ order, shipments, canEdit, onSaved }: { order: Order
     e.preventDefault()
     setBusy(true)
     try {
-      await updateOrder(order.id, { shipment_id: shipmentId || null, farm_delivery_date: date || null, incoterm, notes: notes.trim() || null })
+      const flight = shipments.find((s) => s.id === shipmentId)
+      await updateOrder(order.id, {
+        shipment_id: shipmentId || null,
+        // A flight sets the ship date; the farm date follows it unless you changed it too.
+        ship_date: (flight?.flight_date ?? shipDate) || null,
+        ...(date !== (order.farm_delivery_date ?? '') ? { farm_delivery_date: date || null } : {}),
+        incoterm,
+        notes: notes.trim() || null,
+      })
       toast({
         kind: 'success',
         title: 'Order saved',
@@ -224,7 +241,7 @@ function OrderDetailsCard({ order, shipments, canEdit, onSaved }: { order: Order
       </CardHeader>
       <CardContent>
         <form onSubmit={save} className="grid gap-4" noValidate>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <Field id="order-shipment" label="Shipment" hint="Needed before boxes can be assigned.">
               {(d) => (
                 <Select id="order-shipment" value={shipmentId} onChange={(e) => setShipmentId(e.target.value)} aria-describedby={d}>
@@ -238,7 +255,10 @@ function OrderDetailsCard({ order, shipments, canEdit, onSaved }: { order: Order
                 </Select>
               )}
             </Field>
-            <Field id="order-delivery" label="Farms deliver on" hint="New farm POs take this date.">
+            <Field id="order-ship" label="Ship date" hint="Set by the flight when one is chosen.">
+              {(d) => <Input id="order-ship" type="date" value={shipDate} disabled={!!shipmentId} onChange={(e) => setShipDate(e.target.value)} aria-describedby={d} />}
+            </Field>
+            <Field id="order-delivery" label="Farms deliver on" hint="Worked out from the ship date. New farm POs take it.">
               {(d) => <Input id="order-delivery" type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-describedby={d} />}
             </Field>
             <Field id="order-incoterm" label="Incoterm" hint={incoterm !== order.incoterm ? 'Saving resets each line\'s margin to this incoterm\'s rules.' : undefined}>
@@ -265,6 +285,7 @@ function OrderDetailsCard({ order, shipments, canEdit, onSaved }: { order: Order
                   setDate(order.farm_delivery_date ?? '')
                   setIncoterm(order.incoterm)
                   setNotes(order.notes ?? '')
+                  setShipDate(order.ship_date ?? '')
                 }}
               >
                 Undo changes
