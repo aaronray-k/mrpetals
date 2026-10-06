@@ -208,6 +208,11 @@ select void_box((select id from boxes where customer_id = pg_temp.id('B1') and b
 select pg_temp.check((select string_agg(format('%s:%s', id = pg_temp.box('b1-3'), label_out_of_date), ',' order by id) from box_overview where id in (pg_temp.box('b1-3'), pg_temp.box('b1-4'))) = 't:t,f:t', 'labels whose numbers changed need a reprint');
 
 -- ---------------------------------------------------------------- Close the shipment
+-- Release needs the export documents (see shipment_release.test.sql for the gate itself).
+select pg_temp.check_refused($$select close_shipment(pg_temp.id('S1'))$$, 'can''t close yet');
+select approve_shipment_document(save_shipment_document(pg_temp.id('S1'), c, d, 'REF-1', null))
+from (values (pg_temp.id('B1')), (pg_temp.id('B2'))) as b (c), (values ('phyto'), ('certificate_of_origin')) as t (d);
+select approve_shipment_document(save_shipment_document(pg_temp.id('S1'), null, 'export_entry', 'EX-1', null));
 select close_shipment(pg_temp.id('S1'));
 select pg_temp.check_refused($$select close_shipment(pg_temp.id('S1'))$$, 'already closed');
 create temp table t_frozen as select id, buyer_box_no, buyer_box_total from boxes where customer_id = pg_temp.id('B1') and status = 'active';
@@ -234,7 +239,7 @@ select pg_temp.check_refused($$select * from print_labels(array[pg_temp.box('b1-
 select pg_temp.check_refused($$select assign_boxes(pg_temp.id('PO-A'))$$, 'Only Admin and Consolidator');
 
 set request.jwt.claim.sub = '20000000-0000-0000-0000-00000000000d'; -- Finance
-select pg_temp.check((select count(*) from customer_orders) = 4 and (select count(*) from purchase_orders) = 3, 'Finance reads orders and POs');
+select pg_temp.check((select count(*) from customer_orders where customer_id in (pg_temp.id('B1'), pg_temp.id('B2'))) = 4 and (select count(*) from purchase_orders po join customer_orders o on o.id = po.order_id where o.customer_id in (pg_temp.id('B1'), pg_temp.id('B2'))) = 3, 'Finance reads orders and POs');
 select pg_temp.check_refused($$select void_box(pg_temp.box('b1-4'), 'Finance says no')$$, 'Only Admin and Consolidator');
 select pg_temp.check_refused($$select set_qc_result(array[pg_temp.box('b1-4')], true)$$, 'Only QC, Admin and Consolidator');
 
