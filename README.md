@@ -24,7 +24,7 @@ Supabase CLI (`supabase db push --db-url ...`) or `psql -f`. Then make yourself 
 |---|---|
 | `npm run dev` | Development server with hot reload |
 | `npm test` | Unit tests (dry-run rules, template check) |
-| `npm run test:db` | Database tests: migrations, import function, RLS ([details](supabase/tests/run.sh)) |
+| `npm run test:db` | Database tests: migrations, functions and RLS ([details](supabase/tests/run.sh)) |
 | `npm run typecheck` | TypeScript check |
 | `npm run build` | Production build into `dist/` |
 | `npm start` | Serve the production build (Node, via srvx) |
@@ -87,7 +87,30 @@ buyer. Saving makes a new version; old versions never change.
 - **Zebra notes:** the printer's built-in font is narrower than the preview's, and has one weight, so bold
   text is printed twice a dot apart. Label text supports Western European characters; others print as "?".
 - **Reprints** print a REPRINT mark at the position set in the template. Every print and reprint (with the
-  reason) is logged in `label_prints` once boxes exist (item 3).
+  reason) is logged in `label_prints`, with the box numbers the label showed.
+
+## Orders, farm POs and boxes
+
+1. **Order.** A buyer's order is in stems (from the self-order platform later; staff can enter one under
+   **Orders → New order**). Its number is `CFL<buyer code><0001>`. Each line takes ConsolFlora's margin
+   per stem from **Margins** for the order's incoterm (the current FOB rules: up to 50 cm $0.010, longer
+   $0.015). Staff can change a line's margin; changing the order's incoterm re-applies that incoterm's rules.
+2. **Split to farms.** On the order, staff add farms to each line until every stem is placed. Each farm
+   gets one PO per order (`PO-2026-00001`); farms never see the buyer or the margin. Stems per box come from
+   the pack rate, the grower price from the price list (staff can set it when the list has none).
+3. **Send and confirm.** Staff send the PO; the farm confirms or declines (with a reason) on
+   **My purchase orders**, or staff record the farm's answer. A declined PO goes back to draft when it is edited.
+4. **Assign boxes.** On a confirmed PO this creates the boxes on the order's shipment: stems ÷ stems per
+   box, rounded up, the last box holding the rest. Box ids are 8 digits from a database sequence and never
+   change or get reused.
+5. **Shipment.** Boxes are numbered per buyer ("042 / 180") and per farm ("Farm box 3 / 12"), in the order
+   they were created. Staff mark boxes **Received**, QC records **passed** or **failed** (with a note), then
+   labels print as PDF or ZPL, only for received boxes that passed QC. A box that drops out is **voided**,
+   never deleted: while the shipment is open the boxes after it move up a number, and labels that show old
+   numbers are flagged for reprint. **Close shipment** freezes the numbers.
+6. **Proforma and packing list.** Downloaded from the order or the shipment as Excel, in the layout of the
+   current proforma (farms in box order, margin and unit price formulas, other costs, grand total). The
+   packing list is the same without prices. A proforma won't download while a line has no grower price.
 
 ## Project layout
 
@@ -101,6 +124,8 @@ src/
   lib/import/             template schema, .xlsx parser, dry-run rules, CSV export
   lib/labels/             label layout, QR formatter, render engine, PDF and ZPL output
   components/labels/      label designer (canvas, inspector, settings, versions)
+  lib/orders/             orders, POs and boxes API, label printing, proforma and packing list Excel
+  components/orders/      order lines, farm POs, boxes table, statuses
   server/                 server functions (run as the signed-in user, RLS applies)
 supabase/migrations/      schema, RLS policies, import function
 docs/backend.md           what the backend must provide
@@ -113,7 +138,7 @@ docs/backend.md           what the backend must provide
 | 0 | App foundation: shell, sign-in, roles, master-data lists, tips | Done |
 | 1 | Import page | Done |
 | 2 | Label designer | Done |
-| 3 | Boxes on POs and packing lists | Not started |
+| 3 | Boxes on POs and packing lists | Done |
 | 4 | QC scanner | Not started |
 | 5 | Shipment screen | Not started |
 | 6 | Floricode | Not started |

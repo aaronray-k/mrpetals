@@ -17,9 +17,16 @@ import { Route as AppCustomersRouteImport } from './routes/_app/customers'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppFarmsRouteImport } from './routes/_app/farms'
 import { Route as AppImportRouteImport } from './routes/_app/import'
+import { Route as AppMarginsRouteImport } from './routes/_app/margins'
 import { Route as AppProductsRouteImport } from './routes/_app/products'
+import { Route as AppFarmOrdersRouteImport } from './routes/_app/farm/orders'
 import { Route as AppLabelsIndexRouteImport } from './routes/_app/labels/index'
 import { Route as AppLabelsTemplateIdRouteImport } from './routes/_app/labels/$templateId'
+import { Route as AppOrdersIndexRouteImport } from './routes/_app/orders/index'
+import { Route as AppOrdersOrderIdRouteImport } from './routes/_app/orders/$orderId'
+import { Route as AppOrdersNewRouteImport } from './routes/_app/orders/new'
+import { Route as AppShipmentsIndexRouteImport } from './routes/_app/shipments/index'
+import { Route as AppShipmentsShipmentIdRouteImport } from './routes/_app/shipments/$shipmentId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -60,9 +67,19 @@ const AppImportRoute = AppImportRouteImport.update({
   path: '/import',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMarginsRoute = AppMarginsRouteImport.update({
+  id: '/margins',
+  path: '/margins',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppProductsRoute = AppProductsRouteImport.update({
   id: '/products',
   path: '/products',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFarmOrdersRoute = AppFarmOrdersRouteImport.update({
+  id: '/farm/orders',
+  path: '/farm/orders',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLabelsIndexRoute = AppLabelsIndexRouteImport.update({
@@ -75,6 +92,31 @@ const AppLabelsTemplateIdRoute = AppLabelsTemplateIdRouteImport.update({
   path: '/labels/$templateId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppOrdersIndexRoute = AppOrdersIndexRouteImport.update({
+  id: '/orders/',
+  path: '/orders/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOrdersOrderIdRoute = AppOrdersOrderIdRouteImport.update({
+  id: '/orders/$orderId',
+  path: '/orders/$orderId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOrdersNewRoute = AppOrdersNewRouteImport.update({
+  id: '/orders/new',
+  path: '/orders/new',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppShipmentsIndexRoute = AppShipmentsIndexRouteImport.update({
+  id: '/shipments/',
+  path: '/shipments/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppShipmentsShipmentIdRoute = AppShipmentsShipmentIdRouteImport.update({
+  id: '/shipments/$shipmentId',
+  path: '/shipments/$shipmentId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -84,9 +126,16 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/farms': typeof AppFarmsRoute
   '/import': typeof AppImportRoute
+  '/margins': typeof AppMarginsRoute
   '/products': typeof AppProductsRoute
+  '/farm/orders': typeof AppFarmOrdersRoute
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
+  '/orders/$orderId': typeof AppOrdersOrderIdRoute
+  '/orders/new': typeof AppOrdersNewRoute
+  '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/labels/': typeof AppLabelsIndexRoute
+  '/orders/': typeof AppOrdersIndexRoute
+  '/shipments/': typeof AppShipmentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -96,9 +145,16 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/farms': typeof AppFarmsRoute
   '/import': typeof AppImportRoute
+  '/margins': typeof AppMarginsRoute
   '/products': typeof AppProductsRoute
+  '/farm/orders': typeof AppFarmOrdersRoute
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
+  '/orders/$orderId': typeof AppOrdersOrderIdRoute
+  '/orders/new': typeof AppOrdersNewRoute
+  '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/labels': typeof AppLabelsIndexRoute
+  '/orders': typeof AppOrdersIndexRoute
+  '/shipments': typeof AppShipmentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -110,9 +166,16 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/farms': typeof AppFarmsRoute
   '/_app/import': typeof AppImportRoute
+  '/_app/margins': typeof AppMarginsRoute
   '/_app/products': typeof AppProductsRoute
+  '/_app/farm/orders': typeof AppFarmOrdersRoute
   '/_app/labels/$templateId': typeof AppLabelsTemplateIdRoute
+  '/_app/orders/$orderId': typeof AppOrdersOrderIdRoute
+  '/_app/orders/new': typeof AppOrdersNewRoute
+  '/_app/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/_app/labels/': typeof AppLabelsIndexRoute
+  '/_app/orders/': typeof AppOrdersIndexRoute
+  '/_app/shipments/': typeof AppShipmentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -124,9 +187,16 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/farms'
     | '/import'
+    | '/margins'
     | '/products'
+    | '/farm/orders'
     | '/labels/$templateId'
+    | '/orders/$orderId'
+    | '/orders/new'
+    | '/shipments/$shipmentId'
     | '/labels/'
+    | '/orders/'
+    | '/shipments/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -136,9 +206,16 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/farms'
     | '/import'
+    | '/margins'
     | '/products'
+    | '/farm/orders'
     | '/labels/$templateId'
+    | '/orders/$orderId'
+    | '/orders/new'
+    | '/shipments/$shipmentId'
     | '/labels'
+    | '/orders'
+    | '/shipments'
   id:
     | '__root__'
     | '/'
@@ -149,9 +226,16 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/farms'
     | '/_app/import'
+    | '/_app/margins'
     | '/_app/products'
+    | '/_app/farm/orders'
     | '/_app/labels/$templateId'
+    | '/_app/orders/$orderId'
+    | '/_app/orders/new'
+    | '/_app/shipments/$shipmentId'
     | '/_app/labels/'
+    | '/_app/orders/'
+    | '/_app/shipments/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -218,11 +302,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppImportRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/margins': {
+      id: '/_app/margins'
+      path: '/margins'
+      fullPath: '/margins'
+      preLoaderRoute: typeof AppMarginsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/products': {
       id: '/_app/products'
       path: '/products'
       fullPath: '/products'
       preLoaderRoute: typeof AppProductsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/farm/orders': {
+      id: '/_app/farm/orders'
+      path: '/farm/orders'
+      fullPath: '/farm/orders'
+      preLoaderRoute: typeof AppFarmOrdersRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/labels/': {
@@ -239,6 +337,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLabelsTemplateIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/orders/': {
+      id: '/_app/orders/'
+      path: '/orders'
+      fullPath: '/orders/'
+      preLoaderRoute: typeof AppOrdersIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/orders/$orderId': {
+      id: '/_app/orders/$orderId'
+      path: '/orders/$orderId'
+      fullPath: '/orders/$orderId'
+      preLoaderRoute: typeof AppOrdersOrderIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/orders/new': {
+      id: '/_app/orders/new'
+      path: '/orders/new'
+      fullPath: '/orders/new'
+      preLoaderRoute: typeof AppOrdersNewRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/shipments/': {
+      id: '/_app/shipments/'
+      path: '/shipments'
+      fullPath: '/shipments/'
+      preLoaderRoute: typeof AppShipmentsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/shipments/$shipmentId': {
+      id: '/_app/shipments/$shipmentId'
+      path: '/shipments/$shipmentId'
+      fullPath: '/shipments/$shipmentId'
+      preLoaderRoute: typeof AppShipmentsShipmentIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -248,9 +381,16 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppFarmsRoute: typeof AppFarmsRoute
   AppImportRoute: typeof AppImportRoute
+  AppMarginsRoute: typeof AppMarginsRoute
   AppProductsRoute: typeof AppProductsRoute
+  AppFarmOrdersRoute: typeof AppFarmOrdersRoute
   AppLabelsTemplateIdRoute: typeof AppLabelsTemplateIdRoute
+  AppOrdersOrderIdRoute: typeof AppOrdersOrderIdRoute
+  AppOrdersNewRoute: typeof AppOrdersNewRoute
+  AppShipmentsShipmentIdRoute: typeof AppShipmentsShipmentIdRoute
   AppLabelsIndexRoute: typeof AppLabelsIndexRoute
+  AppOrdersIndexRoute: typeof AppOrdersIndexRoute
+  AppShipmentsIndexRoute: typeof AppShipmentsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -259,9 +399,16 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppFarmsRoute: AppFarmsRoute,
   AppImportRoute: AppImportRoute,
+  AppMarginsRoute: AppMarginsRoute,
   AppProductsRoute: AppProductsRoute,
+  AppFarmOrdersRoute: AppFarmOrdersRoute,
   AppLabelsTemplateIdRoute: AppLabelsTemplateIdRoute,
+  AppOrdersOrderIdRoute: AppOrdersOrderIdRoute,
+  AppOrdersNewRoute: AppOrdersNewRoute,
+  AppShipmentsShipmentIdRoute: AppShipmentsShipmentIdRoute,
   AppLabelsIndexRoute: AppLabelsIndexRoute,
+  AppOrdersIndexRoute: AppOrdersIndexRoute,
+  AppShipmentsIndexRoute: AppShipmentsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

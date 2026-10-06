@@ -56,11 +56,37 @@ Provided by `20261006000003_labels.sql`; nothing else is required.
 | `label_templates` | Template name, the buyer it belongs to or the default flag. One default and one template per buyer. Admin writes; Admin, Consolidator and QC read. Not deletable. |
 | `label_template_versions` | Every saved version: size, feed, layout. Can't be changed or deleted. A check makes sure the QR code, box ID and "Box n of N" are in every layout. |
 | `label_templates_current` | View: each template with its latest version. Runs with the caller's permissions (`security_invoker`, Postgres 15 or later, which Supabase uses). |
-| `label_prints` | Print and reprint log: box, template version, who, when, reason (required for reprints). The link to the boxes table is added in item 3. |
+| `label_prints` | Print and reprint log: box, template version, who, when, reason (required for reprints), and the box numbers printed. Written only by `print_labels()`. |
 | `save_label_template(...)` | Saves a new version in one transaction, and refuses if someone else saved first. |
 | `label_template_version_for(customer)` | The version to print for a buyer: theirs, or the default. |
 
 Logos ship with the app (`public/labels`), so no storage bucket is needed for labels.
+
+## Item 3: Boxes on POs and packing lists
+
+Provided by `20261006000004_orders_boxes.sql`. Status changes, numbering and box rows only change
+through the functions below (security definer, each with its own role check); direct writes are revoked.
+
+| Object | Purpose |
+|---|---|
+| `margin_rules`, `margin_for(incoterm, product)` | Margin per stem by incoterm, stem length and optionally flower type. Seeded with today's FOB rules. Admin and Finance edit. |
+| `customer_orders`, `customer_order_lines`, `order_charges` | Buyer orders in stems, per-line margin, other costs. Staff, Finance and the buyer read. |
+| `purchase_orders`, `purchase_order_lines` | One PO per farm per order. A farm sees its own POs once sent, never the buyer. |
+| `boxes` (`box_id_seq` from 10000001) | One row per box, with received, QC and void status, and buyer and farm numbering. |
+| `create_customer_order`, `allocate_order_line`, `remove_allocation`, `set_grower_price`, `send_purchase_order`, `respond_purchase_order`, `assign_boxes` | Order to boxes. |
+| `receive_boxes`, `set_qc_result`, `void_box`, `close_shipment`, `print_labels` | Shipment work. `print_labels` refuses boxes that are void, not received or not passed, needs a reason for reprints, and logs every print. |
+| `box_overview`, `order_packing_list`, `buyer_directory` | Views for the shipment page, the Excel export, and buyer names for QC. |
+
+Still needed from the backend:
+
+- **Emailing POs to farms.** "Send to farm" only changes the status; the farm sees the PO on its page.
+  An email or WhatsApp notice to the farm's sales agent needs a mail service (a Supabase Edge Function
+  or Odoo).
+- **Farm users** must be linked to their farm (`profiles.farm_id`, see above) to see their POs.
+- **Margins for other incoterms.** Only FOB rules exist. Orders on CPT, CIF and so on start without a
+  margin until rules are added on the Margins page.
+- **The self-order platform** will call `create_customer_order` (or an equivalent that marks the order
+  `source = 'self_order'`); its screens are a later item. HAWB per buyer is part of item 5.
 
 ## Not needed yet
 

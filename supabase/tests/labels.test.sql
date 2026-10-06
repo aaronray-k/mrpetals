@@ -56,32 +56,23 @@ select pg_temp.check(label_template_version_for((select id from customers where 
 
 select pg_temp.check((select string_agg(format('%s:v%s:%s', name, current_version, width_mm), ',' order by name) from label_templates_current) = 'Label Buyer:v1:100.0,Standard v2:v2:100.0', 'current view shows each template with its latest version');
 
--- ---------------------------------------------------------------- Consolidator: reads, prints, can't design
+-- ---------------------------------------------------------------- Consolidator: reads, can't design
 set request.jwt.claim.sub = '10000000-0000-0000-0000-00000000000c';
 select pg_temp.check((select count(*) from label_templates) = 2, 'consolidator reads templates');
 select pg_temp.check((select count(*) from label_template_versions) = 3, 'consolidator reads versions');
 select pg_temp.check_refused($$select save_label_template(null, 'Mine', null, false, 100, 100, 'normal', (select ok from t_layouts))$$, 'Only Admin users');
 select pg_temp.check_refused($$insert into label_templates (name) values ('sneaky')$$, 'row-level security');
 
-create temp table t_version as select id from label_template_versions limit 1;
-grant select on t_version to authenticated;
-insert into label_prints (box_id, template_version_id, kind) select 42, id, 'print' from t_version;
-insert into label_prints (box_id, template_version_id, kind, reason) select 42, id, 'reprint', 'Label torn at packing' from t_version;
-select pg_temp.check((select count(*) from label_prints where box_id = 42 and printed_by = auth.uid()) = 2, 'prints are logged for the user');
-select pg_temp.check_refused($$insert into label_prints (box_id, template_version_id, kind) select 42, id, 'reprint' from t_version$$, 'label_prints_check');
-select pg_temp.check_refused($$insert into label_prints (box_id, template_version_id, kind, reason, printed_by) select 42, id, 'reprint', 'Torn label', '10000000-0000-0000-0000-00000000000a' from t_version$$, 'row-level security');
-with u as (update label_prints set reason = 'changed' returning 1) select pg_temp.check((select count(*) from u) = 0, 'the print log cannot be edited');
-with d as (delete from label_prints returning 1) select pg_temp.check((select count(*) from d) = 0, 'the print log cannot be deleted');
+-- Direct writes to the print log are refused: prints are logged by print_labels() (see orders_boxes.test.sql).
+select pg_temp.check_refused($$insert into label_prints (box_id, template_version_id, kind) select 1, id, 'print' from label_template_versions limit 1$$, 'row-level security');
 
--- ---------------------------------------------------------------- QC prints too; Finance has no access
+-- ---------------------------------------------------------------- QC reads templates; Finance has no access
 set request.jwt.claim.sub = '10000000-0000-0000-0000-00000000000e';
-insert into label_prints (box_id, template_version_id, kind, reason) select 43, id, 'reprint', 'Wet box' from t_version;
-select pg_temp.check((select count(*) from label_prints) = 3, 'QC logs and reads prints');
+select pg_temp.check((select count(*) from label_templates) = 2, 'QC reads templates');
 
 set request.jwt.claim.sub = '10000000-0000-0000-0000-00000000000d';
 select pg_temp.check((select count(*) from label_templates) = 0, 'Finance cannot read templates');
 select pg_temp.check((select count(*) from label_templates_current) = 0, 'Finance cannot read templates through the view');
 select pg_temp.check((select count(*) from label_prints) = 0, 'Finance cannot read the print log');
-select pg_temp.check_refused($$insert into label_prints (box_id, template_version_id, kind) select 44, id, 'print' from t_version$$, 'row-level security');
 
 reset role;
