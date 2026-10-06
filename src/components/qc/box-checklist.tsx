@@ -51,6 +51,9 @@ export function BoxChecklist({
         </fieldset>
       </div>
 
+      {live.length === 0 && (
+        <p className="text-muted-foreground">No boxes on this shipment yet. Boxes appear once staff assign them to confirmed farm POs.</p>
+      )}
       {buyers.map((buyerId) => {
         const mine = live.filter((b) => b.customer_id === buyerId && b.status === 'active')
         const scanned = mine.filter((b) => b.scanned).length

@@ -8,6 +8,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/com
 import { Field, Input } from '~/components/ui/input'
 import { SetupNeeded } from '~/components/layout/setup-needed'
 
+/** Preview site only (VITE_PREVIEW_DEMO_PASSWORD set at build): demo accounts, one per role. */
+const DEMO_PASSWORD = import.meta.env.VITE_PREVIEW_DEMO_PASSWORD as string | undefined
+const DEMO_ACCOUNTS = [
+  ['Admin', 'admin'],
+  ['Consolidator', 'consolidator'],
+  ['Finance', 'finance'],
+  ['QC', 'qc'],
+  ['Senior QC', 'senior.qc'],
+  ['Farm (Kibo Roses)', 'farm'],
+  ['Buyer (Pacific Floral)', 'buyer'],
+] as const
+
 export const Route = createFileRoute('/sign-in')({
   ssr: false,
   head: () => ({ meta: [{ title: 'Sign in · ConsolFlora' }] }),
@@ -95,6 +107,35 @@ function SignIn() {
             </form>
           </CardContent>
         </Card>
+        {DEMO_PASSWORD && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Preview: demo accounts</CardTitle>
+              <CardDescription>
+                Demo data only. Every account's password is <strong className="font-mono">{DEMO_PASSWORD}</strong>. Pick a role to fill in the form.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="grid gap-1">
+                {DEMO_ACCOUNTS.map(([role, user]) => (
+                  <li key={user}>
+                    <button
+                      type="button"
+                      className="flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-3 text-left hover:bg-muted"
+                      onClick={() => {
+                        setEmail(`${user}@demo.consolflora.com`)
+                        setPassword(DEMO_PASSWORD)
+                      }}
+                    >
+                      <span className="font-semibold">{role}</span>
+                      <span className="truncate text-sm text-muted-foreground">{user}@demo.consolflora.com</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </main>
   )
