@@ -67,6 +67,28 @@ or change a closed shipment. Box numbers (1..N per shipment) are calculated by t
 The template's columns are pinned by a test (`src/lib/import/template.test.ts`): if the template
 changes, update `src/lib/import/schema.ts` to match.
 
+## Box labels
+
+Admins design box labels under **Label designer**. A template has a size (150 × 70 mm by default,
+100 × 150 and 100 × 100 presets, or custom), a printer feed (sideways for labels wider than a 4-inch
+printer), the ConsolFlora logo, and fields picked from a list with an English or Dutch caption. The QR
+code, box ID and "Box n of N" are always on the label. A template can be the default or belong to one
+buyer. Saving makes a new version; old versions never change.
+
+- **One engine, three outputs.** `src/lib/labels/engine.ts` turns a template and a box into drawing
+  steps; the preview (SVG), PDF (`pdf.ts`) and Zebra ZPL at 203 or 300 dpi (`zpl.ts`) all draw the same
+  steps, so what you see is what prints.
+- **QR content** comes from `src/lib/labels/qr-format.ts`. Until Florisoft's specification arrives it
+  uses a placeholder, `CF1|<box id>|<shipment>|<n>/<N>`. To switch, add a formatter there and point
+  `ACTIVE_QR_FORMATTER` at it; the designer, PDF, ZPL and (later) the QC scanner all follow.
+- **Logos** are `public/labels/consolflora-logo-full.png` and `consolflora-logo-mark.png` (from
+  consolflora.com). Replace those files to change the logo on every label. For Zebra printers the logo is
+  converted to black and white, and sent to the printer once per file.
+- **Zebra notes:** the printer's built-in font is narrower than the preview's, and has one weight, so bold
+  text is printed twice a dot apart. Label text supports Western European characters; others print as "?".
+- **Reprints** print a REPRINT mark at the position set in the template. Every print and reprint (with the
+  reason) is logged in `label_prints` once boxes exist (item 3).
+
 ## Project layout
 
 ```
@@ -77,6 +99,8 @@ src/
   components/tips/        navigation tips and the on/off switch
   components/import/      Import page parts
   lib/import/             template schema, .xlsx parser, dry-run rules, CSV export
+  lib/labels/             label layout, QR formatter, render engine, PDF and ZPL output
+  components/labels/      label designer (canvas, inspector, settings, versions)
   server/                 server functions (run as the signed-in user, RLS applies)
 supabase/migrations/      schema, RLS policies, import function
 docs/backend.md           what the backend must provide
@@ -88,7 +112,7 @@ docs/backend.md           what the backend must provide
 |---|---|---|
 | 0 | App foundation: shell, sign-in, roles, master-data lists, tips | Done |
 | 1 | Import page | Done |
-| 2 | Label designer | Not started |
+| 2 | Label designer | Done |
 | 3 | Boxes on POs and packing lists | Not started |
 | 4 | QC scanner | Not started |
 | 5 | Shipment screen | Not started |

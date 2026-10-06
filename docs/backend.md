@@ -47,7 +47,22 @@ The PackingList import uses a temporary table, so the `authenticated` role needs
 privilege on the database. Postgres grants this to everyone by default; only check it if your
 setup removed it.
 
+## Item 2: Label designer
+
+Provided by `20261006000003_labels.sql`; nothing else is required.
+
+| Object | Purpose |
+|---|---|
+| `label_templates` | Template name, the buyer it belongs to or the default flag. One default and one template per buyer. Admin writes; Admin, Consolidator and QC read. Not deletable. |
+| `label_template_versions` | Every saved version: size, feed, layout. Can't be changed or deleted. A check makes sure the QR code, box ID and "Box n of N" are in every layout. |
+| `label_templates_current` | View: each template with its latest version. Runs with the caller's permissions (`security_invoker`, Postgres 15 or later, which Supabase uses). |
+| `label_prints` | Print and reprint log: box, template version, who, when, reason (required for reprints). The link to the boxes table is added in item 3. |
+| `save_label_template(...)` | Saves a new version in one transaction, and refuses if someone else saved first. |
+| `label_template_version_for(customer)` | The version to print for a buyer: theirs, or the default. |
+
+Logos ship with the app (`public/labels`), so no storage bucket is needed for labels.
+
 ## Not needed yet
 
 - Odoo: no calls until the shipment and fulfilment items.
-- Storage buckets: needed from item 2 (label logos) and item 5 (shipment documents).
+- Storage bucket: needed for item 5 (shipment documents).

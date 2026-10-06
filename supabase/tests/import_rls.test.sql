@@ -2,21 +2,7 @@
 \set ON_ERROR_STOP 1
 set client_min_messages = warning;
 
-create function pg_temp.check(ok boolean, what text) returns void language plpgsql as $$
-begin
-  if ok is not true then raise exception 'FAILED: %', what; end if;
-end $$;
-
--- Raises unless the statement fails with a message containing the expected text.
-create function pg_temp.check_refused(stmt text, expected text) returns void language plpgsql as $$
-begin
-  execute stmt;
-  raise exception 'FAILED: expected refusal containing "%"', expected;
-exception when others then
-  if sqlerrm like 'FAILED:%' or position(expected in sqlerrm) = 0 then
-    raise exception 'FAILED: expected "%", got "%"', expected, sqlerrm;
-  end if;
-end $$;
+\ir helpers.sql
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-0000-0000-00000000000a', 'admin@test', '{"full_name":"Ada Admin"}'),
@@ -112,4 +98,3 @@ select pg_temp.check((select count(*) from farms) = 0, 'anonymous users see noth
 select pg_temp.check_refused($$select import_sheet('Farms', 'x', '[{}]')$$, 'permission denied');
 
 reset role;
-\echo 'All database tests passed.'

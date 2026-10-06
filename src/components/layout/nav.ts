@@ -1,4 +1,4 @@
-import { Boxes, Building2, FileSpreadsheet, Flower2, LayoutDashboard, Store, type LucideIcon } from 'lucide-react'
+import { Boxes, Building2, FileSpreadsheet, Flower2, LayoutDashboard, Store, Tags, type LucideIcon } from 'lucide-react'
 import { ROLES, type Role } from '~/lib/roles'
 
 export interface NavItem {
@@ -33,6 +33,7 @@ export const NAV: NavGroup[] = [
     label: 'Tools',
     items: [
       { to: '/import', label: 'Import', icon: FileSpreadsheet, tip: 'Load data from the Excel template', roles: ['admin', 'consolidator'] },
+      { to: '/labels', label: 'Label designer', icon: Tags, tip: 'Box label layouts, QR code and test prints', roles: ['admin'] },
     ],
   },
 ]

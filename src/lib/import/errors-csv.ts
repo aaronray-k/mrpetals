@@ -1,3 +1,4 @@
+import { downloadBlob } from '~/lib/download'
 import type { Issue } from './validate'
 
 function csvCell(v: string | number | null) {
@@ -15,12 +16,5 @@ export function issuesToCsv(issues: Issue[], sheet: string) {
 }
 
 export function downloadCsv(content: string, fileName: string) {
-  const url = URL.createObjectURL(new Blob([content], { type: 'text/csv;charset=utf-8' }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = fileName
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
+  downloadBlob(new Blob([content], { type: 'text/csv;charset=utf-8' }), fileName)
 }

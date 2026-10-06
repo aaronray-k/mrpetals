@@ -13,4 +13,8 @@ if [ "$(run -Atc "select count(*) from pg_tables where schemaname = 'public'")" 
 fi
 run -f "$here/supabase-shim.sql"
 for f in "$here"/../migrations/*.sql; do run -f "$f"; done
-run -o /dev/null -f "$here/import_rls.test.sql"
+for t in "$here"/*.test.sql; do
+  echo "== $(basename "$t")"
+  run -o /dev/null -f "$t"
+done
+echo "All database tests passed."

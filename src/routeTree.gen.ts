@@ -18,6 +18,8 @@ import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppFarmsRouteImport } from './routes/_app/farms'
 import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppProductsRouteImport } from './routes/_app/products'
+import { Route as AppLabelsIndexRouteImport } from './routes/_app/labels/index'
+import { Route as AppLabelsTemplateIdRouteImport } from './routes/_app/labels/$templateId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -63,6 +65,16 @@ const AppProductsRoute = AppProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLabelsIndexRoute = AppLabelsIndexRouteImport.update({
+  id: '/labels/',
+  path: '/labels/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLabelsTemplateIdRoute = AppLabelsTemplateIdRouteImport.update({
+  id: '/labels/$templateId',
+  path: '/labels/$templateId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -73,6 +85,8 @@ export interface FileRoutesByFullPath {
   '/farms': typeof AppFarmsRoute
   '/import': typeof AppImportRoute
   '/products': typeof AppProductsRoute
+  '/labels/$templateId': typeof AppLabelsTemplateIdRoute
+  '/labels/': typeof AppLabelsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -83,6 +97,8 @@ export interface FileRoutesByTo {
   '/farms': typeof AppFarmsRoute
   '/import': typeof AppImportRoute
   '/products': typeof AppProductsRoute
+  '/labels/$templateId': typeof AppLabelsTemplateIdRoute
+  '/labels': typeof AppLabelsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,6 +111,8 @@ export interface FileRoutesById {
   '/_app/farms': typeof AppFarmsRoute
   '/_app/import': typeof AppImportRoute
   '/_app/products': typeof AppProductsRoute
+  '/_app/labels/$templateId': typeof AppLabelsTemplateIdRoute
+  '/_app/labels/': typeof AppLabelsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,6 +125,8 @@ export interface FileRouteTypes {
     | '/farms'
     | '/import'
     | '/products'
+    | '/labels/$templateId'
+    | '/labels/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -117,6 +137,8 @@ export interface FileRouteTypes {
     | '/farms'
     | '/import'
     | '/products'
+    | '/labels/$templateId'
+    | '/labels'
   id:
     | '__root__'
     | '/'
@@ -128,6 +150,8 @@ export interface FileRouteTypes {
     | '/_app/farms'
     | '/_app/import'
     | '/_app/products'
+    | '/_app/labels/$templateId'
+    | '/_app/labels/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -201,6 +225,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProductsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/labels/': {
+      id: '/_app/labels/'
+      path: '/labels'
+      fullPath: '/labels/'
+      preLoaderRoute: typeof AppLabelsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/labels/$templateId': {
+      id: '/_app/labels/$templateId'
+      path: '/labels/$templateId'
+      fullPath: '/labels/$templateId'
+      preLoaderRoute: typeof AppLabelsTemplateIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -211,6 +249,8 @@ interface AppRouteChildren {
   AppFarmsRoute: typeof AppFarmsRoute
   AppImportRoute: typeof AppImportRoute
   AppProductsRoute: typeof AppProductsRoute
+  AppLabelsTemplateIdRoute: typeof AppLabelsTemplateIdRoute
+  AppLabelsIndexRoute: typeof AppLabelsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -220,6 +260,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppFarmsRoute: AppFarmsRoute,
   AppImportRoute: AppImportRoute,
   AppProductsRoute: AppProductsRoute,
+  AppLabelsTemplateIdRoute: AppLabelsTemplateIdRoute,
+  AppLabelsIndexRoute: AppLabelsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
