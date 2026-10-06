@@ -1,0 +1,124 @@
+@import 'tailwindcss';
+
+/*
+ * ConsolFlora design tokens. Brand colours come from consolflora.com:
+ * deep #002903, leaf #43B14B, rose #F11B2A, pale #EAF5EB, mist #F4F7F3.
+ * Components use the semantic names (primary, muted, destructive...) so a
+ * theme change happens here only.
+ */
+:root {
+  --background: #f4f7f3;
+  --foreground: #10200f;
+  --card: #ffffff;
+  --card-foreground: #10200f;
+  --muted: #eaf5eb;
+  --muted-foreground: #3d4a3c;
+  --primary: #002903;
+  --primary-foreground: #ffffff;
+  --accent: #43b14b;
+  --accent-foreground: #002903;
+  --destructive: #c8101e;
+  --destructive-foreground: #ffffff;
+  --warning: #8a5a00;
+  --warning-bg: #fff6e0;
+  --success: #1f7a2a;
+  --success-bg: #e6f4e7;
+  --info-bg: #eaf5eb;
+  --border: rgba(0, 41, 3, 0.16);
+  --input: rgba(0, 41, 3, 0.32);
+  --ring: #43b14b;
+  --sidebar: #002903;
+  --sidebar-foreground: #eaf5eb;
+  --sidebar-muted: #a9bcaa;
+  --sidebar-active: rgba(67, 177, 75, 0.22);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #031a07;
+    --foreground: #e3efe4;
+    --card: #062209;
+    --card-foreground: #e3efe4;
+    --muted: #0a2c10;
+    --muted-foreground: #a9bcaa;
+    --primary: #43b14b;
+    --primary-foreground: #002903;
+    --accent: #43b14b;
+    --accent-foreground: #002903;
+    --destructive: #ff6b74;
+    --destructive-foreground: #1a0003;
+    --warning: #ffc35a;
+    --warning-bg: #2b2000;
+    --success: #7fd486;
+    --success-bg: #0c2e12;
+    --info-bg: #0a2c10;
+    --border: rgba(234, 245, 235, 0.16);
+    --input: rgba(234, 245, 235, 0.32);
+    --ring: #7fd486;
+    --sidebar: #002903; /* matches the logo artwork's background */
+    --sidebar-foreground: #eaf5eb;
+    --sidebar-muted: #a9bcaa;
+    --sidebar-active: rgba(67, 177, 75, 0.25);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --font-sans: 'Blinker', ui-sans-serif, system-ui, Arial, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-info-bg: var(--info-bg);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-active: var(--sidebar-active);
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.375rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  :focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
