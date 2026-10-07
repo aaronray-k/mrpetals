@@ -208,6 +208,24 @@ size, ripeness stage, quality group, flowers per stem), packaging codes and the 
   The QC scanner still reads labels printed with the first format (`CF1|…`). When Florisoft's QR
   specification arrives, it replaces this format in one place (`src/lib/labels/qr-format.ts`).
 
+## Legal and consent
+
+Everyone agrees before using the app: **buyers** to the Terms of sale (with the Claims and credits policy),
+**farms** to the Supplier terms (based on the Pacific Floral Japan quality and claim policy), **ConsolFlora
+staff** to the Terms of use, and **everyone** to the Privacy and Cookie notices.
+
+- At sign-in (after choosing a password, for new accounts) each document is shown in its own scroll box; its
+  tick box unlocks once the person has scrolled to the end. "Agree and continue" stores each document's
+  version and the time.
+- Marketing email is a separate, optional box, unticked; buyers and farms can change it in **My account**,
+  which also lists what they agreed to and when.
+- The database enforces it: until someone has agreed to the current versions for their roles, they have no
+  access, even through the API. A new version of a document (or a new role) asks again at the next sign-in.
+- The **Users** page shows who has agreed and who is still waiting.
+- The legal pages are public at `/legal` (no sign-in needed), linked from the footer of every page. Their text
+  is a **placeholder marked "pending legal review"** (`src/lib/legal/documents.ts`).
+- Only business contact details are kept: there are no ID number or date of birth fields anywhere.
+
 ## Project layout
 
 ```
@@ -244,7 +262,7 @@ docs/backend.md           what the backend must provide
 | 5 | Ordering flow and shipment release: catalog, checkout, approval, cost calculator, partial farm answers, packing list, standing orders, payment, credit, documents, users | Done |
 | 6 | Dashboards per role (charts and action lists), buyer currencies and exchange rates | Done |
 | 7 | Floricode: codes, sync, product form, review flags, codes on labels and in the QR code | Done (demo data until Floricode API access) |
-| 8 | Legal and consent | Not started |
+| 8 | Legal and consent: agreements per role at sign-in, public legal pages, marketing choice | Done (texts pending legal review) |
 | 9 | Accessibility and security (WCAG 2.2 AA, 2FA) | Not started |
 | 10 | Buyer claims (with QC photos) | Not started |
 | 11 | Messages and email (Zoho: SMTP out, IMAP replies into the app); settings page already there | Not started |

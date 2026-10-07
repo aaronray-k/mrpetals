@@ -13,6 +13,9 @@ if [ "$(run -Atc "select count(*) from pg_tables where schemaname = 'public'")" 
 fi
 run -f "$here/supabase-shim.sql"
 for f in "$here"/../migrations/*.sql; do run -f "$f"; done
+# Test users have no legal documents to accept (each file would otherwise accept them first);
+# legal_consent.test.sql puts the documents back inside its own transaction.
+run -c "update public.legal_documents set audience = '{}'"
 # Alphabetical order: import_rls.test.sql must run first, on the empty database.
 for t in "$here"/*.test.sql; do
   echo "== $(basename "$t")"

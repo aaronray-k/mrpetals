@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Barcode, Bell, Boxes, Building2, CalendarClock, ClipboardList, FileSpreadsheet, Flower2, LayoutDashboard, ListChecks, Mail, Percent, Plane, ScanLine, Settings, ShoppingBasket, Store, Tag, Tags, Truck, Users, type LucideIcon } from 'lucide-react'
+import { ArrowLeftRight, Barcode, Bell, CircleUser, Boxes, Building2, CalendarClock, ClipboardList, FileSpreadsheet, Flower2, LayoutDashboard, ListChecks, Mail, Percent, Plane, ScanLine, Settings, ShoppingBasket, Store, Tag, Tags, Truck, Users, type LucideIcon } from 'lucide-react'
 import { ROLES, type Role } from '~/lib/roles'
 
 export interface NavItem {
@@ -21,6 +21,7 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, tip: 'Your shortcuts and what needs attention', roles: 'all' },
       { to: '/notifications', label: 'Notifications', icon: Bell, tip: 'Updates on your orders', roles: 'all' },
+      { to: '/account', label: 'My account', icon: CircleUser, tip: 'Your details, agreements and email choices', roles: 'all' },
     ],
   },
   {

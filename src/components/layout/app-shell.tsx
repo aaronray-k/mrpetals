@@ -5,6 +5,7 @@ import { useAuth } from '~/lib/auth'
 import { ROLE_LABELS } from '~/lib/roles'
 import { useTips } from '~/components/tips/tips'
 import { Switch } from '~/components/ui/switch'
+import { LegalFooter } from '~/components/legal/legal-footer'
 import { cn } from '~/lib/utils'
 import { navFor } from './nav'
 
@@ -151,9 +152,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main id="main" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-6xl px-4 py-6 outline-none sm:px-6 lg:py-8">
-        {children}
-      </main>
+      <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col">
+        <main id="main" tabIndex={-1} className="w-full min-w-0 flex-1 px-4 py-6 outline-none sm:px-6 lg:py-8">
+          {children}
+        </main>
+        <LegalFooter className="mx-4 mb-6 border-t pt-4 sm:mx-6" />
+      </div>
     </div>
   )
 }

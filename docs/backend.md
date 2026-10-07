@@ -184,6 +184,22 @@ signed-in Admin. Still needed:
 - `FLORICODE_SOURCE=demo` loads the demo master data instead. **Preview only**: never set it in production.
 - A daily scheduled sync can be added like the standing-orders job once the API is connected.
 
+## Item 8: Legal and consent
+
+Provided by migration `…014_legal.sql`.
+
+| Object | Purpose |
+|---|---|
+| `legal_documents` | Each document's current version and who must accept it (roles, or all). Public read. |
+| `legal_acceptances` | Who accepted which version, when, and from which browser. |
+| `profiles.legal_ok`, `profiles.marketing_opt_in` | Accepted everything current; optional marketing email. |
+| `my_pending_documents()`, `accept_documents()`, `my_agreements()`, `set_marketing_opt_in()`, `admin_list_agreements()` | The sign-in step, My account and the Users page. |
+| `has_role()`, `has_any_role()`, `my_farm_id()`, `my_customer_id()` | Now also require `legal_ok`, so no access until agreed. |
+
+**Publishing a new version of a document:** change its text and version in `src/lib/legal/documents.ts`, and add a
+migration `update legal_documents set version = '<new>' where code = '<code>';`. Everyone it applies to is
+asked again at their next sign-in.
+
 ## Not needed yet
 
 - Odoo: no calls until the shipment and fulfilment items.

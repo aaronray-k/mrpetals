@@ -24,3 +24,5 @@ Render settings: build `bash preview/build.sh`, start `node preview/start.mjs`, 
 
 To start over with fresh demo data, drop and recreate the database's `public`, `auth`, `storage` and
 `preview` schemas (or create a new Render database) and redeploy.
+
+Every demo account is asked to agree to its legal documents at its first sign-in after item 8, like a real user.

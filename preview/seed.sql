@@ -19,6 +19,9 @@ insert into public.user_roles (user_id, role) values
   ('d0000000-0000-0000-0000-0000000000e5', 'senior_qc'),
   ('d0000000-0000-0000-0000-0000000000f1', 'farm'),
   ('d0000000-0000-0000-0000-0000000000b1', 'customer');
+-- The demo data below is made through the app's functions, as these accounts. They accept the legal
+-- documents themselves at their first sign-in (start.mjs resets this once the demo data is in).
+update public.profiles set legal_ok = true where id::text like 'd0000000-%';
 update public.profiles p set full_name = v.name
 from (values
   ('d0000000-0000-0000-0000-00000000000a'::uuid, 'Amina (Admin)'),

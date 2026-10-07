@@ -7,6 +7,7 @@ import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Field, Input } from '~/components/ui/input'
 import { SetupNeeded } from '~/components/layout/setup-needed'
+import { LegalFooter } from '~/components/legal/legal-footer'
 
 /** Preview site only (VITE_PREVIEW_DEMO_PASSWORD set at build): demo accounts, one per role. */
 const DEMO_PASSWORD = import.meta.env.VITE_PREVIEW_DEMO_PASSWORD as string | undefined
@@ -136,6 +137,7 @@ function SignIn() {
             </CardContent>
           </Card>
         )}
+        <LegalFooter dark />
       </div>
     </main>
   )

@@ -60,6 +60,16 @@ function tempPassword() {
 }
 
 function UsersPage() {
+  const agreements = useQuery({
+    queryKey: ['admin-agreements'],
+    queryFn: async () => {
+      const { data, error } = await getSupabase().rpc('admin_list_agreements')
+      if (error) throw new Error(error.message)
+      return new Map(
+        ((data ?? []) as { user_id: string; legal_ok: boolean; pending: string[]; accepted: { title: string; version: string; accepted_at: string }[]; marketing_opt_in: boolean }[]).map((a) => [a.user_id, a]),
+      )
+    },
+  })
   const q = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
@@ -102,6 +112,7 @@ function UsersPage() {
                   <TH>Roles</TH>
                   <TH>Linked to</TH>
                   <TH>Status</TH>
+                  <TH>Agreements</TH>
                   <TH>Last sign-in</TH>
                   <TH>
                     <span className="sr-only">Actions</span>
@@ -118,6 +129,9 @@ function UsersPage() {
                     <TD>{u.roles.map((r) => ROLE_LABELS[r] ?? r).join(', ') || 'No role'}</TD>
                     <TD>{farmName(u.farm_id) ?? buyerName(u.customer_id) ?? '—'}</TD>
                     <TD>{u.active ? <Badge variant="success">Active</Badge> : <Badge>Switched off</Badge>}</TD>
+                    <TD>
+                      <Agreements a={agreements.data?.get(u.id)} />
+                    </TD>
                     <TD className="whitespace-nowrap">{u.last_sign_in_at ? formatDateTime(u.last_sign_in_at) : 'Never'}</TD>
                     <TD className="whitespace-nowrap">
                       <Button size="sm" variant="ghost" onClick={() => setEditing(u)}>
@@ -314,5 +328,22 @@ function ResetDialog({ user, onClose }: { user: UserRow; onClose: () => void }) 
         </div>
       </div>
     </Dialog>
+  )
+}
+
+/** Whether the person has agreed to the current documents for their roles, and when. */
+function Agreements({ a }: { a: { legal_ok: boolean; pending: string[]; accepted: { title: string; version: string; accepted_at: string }[]; marketing_opt_in: boolean } | undefined }) {
+  if (!a) return <>—</>
+  const last = a.accepted.at(-1)
+  return (
+    <div className="grid gap-1 text-sm">
+      {a.pending.length === 0 ? (
+        <Badge variant="success">All agreed</Badge>
+      ) : (
+        <Badge variant="warning">Waiting: {a.pending.join(', ')}</Badge>
+      )}
+      {last && <span className="text-muted-foreground">Last agreed {formatDateTime(last.accepted_at)}</span>}
+      <span className="text-muted-foreground">Marketing email: {a.marketing_opt_in ? 'yes' : 'no'}</span>
+    </div>
   )
 }

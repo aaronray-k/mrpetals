@@ -5,6 +5,7 @@ import { Alert } from '~/components/ui/alert'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Field, Input } from '~/components/ui/input'
+import { LegalFooter } from '~/components/legal/legal-footer'
 
 /** First sign-in with a temporary password: the person chooses their own before going on. */
 export function ChangePassword() {
@@ -31,7 +32,7 @@ export function ChangePassword() {
   }
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-sidebar p-4">
+    <main className="grid min-h-dvh place-content-center gap-6 bg-sidebar p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Choose your password</CardTitle>
@@ -55,6 +56,7 @@ export function ChangePassword() {
           </form>
         </CardContent>
       </Card>
+      <LegalFooter dark className="max-w-md" />
     </main>
   )
 }

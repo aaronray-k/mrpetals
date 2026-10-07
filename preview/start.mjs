@@ -59,6 +59,13 @@ async function setUpDatabase() {
       await client.query("insert into preview.applied (name) values ('seed-floricode')")
       await client.query('commit')
     }
+    // Item 8: every demo account accepts the legal documents at its next sign-in.
+    if (!done.has('legal-reset')) {
+      await client.query('begin')
+      await client.query('select public.refresh_legal_ok(id) from public.profiles')
+      await client.query("insert into preview.applied (name) values ('legal-reset')")
+      await client.query('commit')
+    }
     // PostgREST picks up new functions and tables.
     await client.query("notify pgrst, 'reload schema'")
   } catch (e) {

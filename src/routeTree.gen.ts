@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as AppAccountRouteImport } from './routes/_app/account'
 import { Route as AppBoxTypesRouteImport } from './routes/_app/box-types'
 import { Route as AppCustomersRouteImport } from './routes/_app/customers'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
@@ -25,6 +26,8 @@ import { Route as AppPricesRouteImport } from './routes/_app/prices'
 import { Route as AppProductsRouteImport } from './routes/_app/products'
 import { Route as AppStandingOrdersRouteImport } from './routes/_app/standing-orders'
 import { Route as AppUsersRouteImport } from './routes/_app/users'
+import { Route as LegalIndexRouteImport } from './routes/legal/index'
+import { Route as LegalCodeRouteImport } from './routes/legal/$code'
 import { Route as AppFarmOrdersRouteImport } from './routes/_app/farm/orders'
 import { Route as AppLabelsIndexRouteImport } from './routes/_app/labels/index'
 import { Route as AppLabelsTemplateIdRouteImport } from './routes/_app/labels/$templateId'
@@ -54,6 +57,11 @@ const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppAccountRoute = AppAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppBoxTypesRoute = AppBoxTypesRouteImport.update({
   id: '/box-types',
@@ -119,6 +127,16 @@ const AppUsersRoute = AppUsersRouteImport.update({
   id: '/users',
   path: '/users',
   getParentRoute: () => AppRoute,
+} as any)
+const LegalIndexRoute = LegalIndexRouteImport.update({
+  id: '/legal/',
+  path: '/legal/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalCodeRoute = LegalCodeRouteImport.update({
+  id: '/legal/$code',
+  path: '/legal/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppFarmOrdersRoute = AppFarmOrdersRouteImport.update({
   id: '/farm/orders',
@@ -199,6 +217,7 @@ const AppShopCheckoutRoute = AppShopCheckoutRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
+  '/account': typeof AppAccountRoute
   '/box-types': typeof AppBoxTypesRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
@@ -212,6 +231,8 @@ export interface FileRoutesByFullPath {
   '/products': typeof AppProductsRoute
   '/standing-orders': typeof AppStandingOrdersRoute
   '/users': typeof AppUsersRoute
+  '/legal/$code': typeof LegalCodeRoute
+  '/legal/': typeof LegalIndexRoute
   '/farm/orders': typeof AppFarmOrdersRoute
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
   '/my-orders/$orderId': typeof AppMyOrdersOrderIdRoute
@@ -231,6 +252,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
+  '/account': typeof AppAccountRoute
   '/box-types': typeof AppBoxTypesRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
@@ -244,6 +266,8 @@ export interface FileRoutesByTo {
   '/products': typeof AppProductsRoute
   '/standing-orders': typeof AppStandingOrdersRoute
   '/users': typeof AppUsersRoute
+  '/legal/$code': typeof LegalCodeRoute
+  '/legal': typeof LegalIndexRoute
   '/farm/orders': typeof AppFarmOrdersRoute
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
   '/my-orders/$orderId': typeof AppMyOrdersOrderIdRoute
@@ -265,6 +289,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/sign-in': typeof SignInRoute
+  '/_app/account': typeof AppAccountRoute
   '/_app/box-types': typeof AppBoxTypesRoute
   '/_app/customers': typeof AppCustomersRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -278,6 +303,8 @@ export interface FileRoutesById {
   '/_app/products': typeof AppProductsRoute
   '/_app/standing-orders': typeof AppStandingOrdersRoute
   '/_app/users': typeof AppUsersRoute
+  '/legal/$code': typeof LegalCodeRoute
+  '/legal/': typeof LegalIndexRoute
   '/_app/farm/orders': typeof AppFarmOrdersRoute
   '/_app/labels/$templateId': typeof AppLabelsTemplateIdRoute
   '/_app/my-orders/$orderId': typeof AppMyOrdersOrderIdRoute
@@ -299,6 +326,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/sign-in'
+    | '/account'
     | '/box-types'
     | '/customers'
     | '/dashboard'
@@ -312,6 +340,8 @@ export interface FileRouteTypes {
     | '/products'
     | '/standing-orders'
     | '/users'
+    | '/legal/$code'
+    | '/legal/'
     | '/farm/orders'
     | '/labels/$templateId'
     | '/my-orders/$orderId'
@@ -331,6 +361,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/sign-in'
+    | '/account'
     | '/box-types'
     | '/customers'
     | '/dashboard'
@@ -344,6 +375,8 @@ export interface FileRouteTypes {
     | '/products'
     | '/standing-orders'
     | '/users'
+    | '/legal/$code'
+    | '/legal'
     | '/farm/orders'
     | '/labels/$templateId'
     | '/my-orders/$orderId'
@@ -364,6 +397,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/sign-in'
+    | '/_app/account'
     | '/_app/box-types'
     | '/_app/customers'
     | '/_app/dashboard'
@@ -377,6 +411,8 @@ export interface FileRouteTypes {
     | '/_app/products'
     | '/_app/standing-orders'
     | '/_app/users'
+    | '/legal/$code'
+    | '/legal/'
     | '/_app/farm/orders'
     | '/_app/labels/$templateId'
     | '/_app/my-orders/$orderId'
@@ -398,6 +434,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   SignInRoute: typeof SignInRoute
+  LegalCodeRoute: typeof LegalCodeRoute
+  LegalIndexRoute: typeof LegalIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -422,6 +460,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/account': {
+      id: '/_app/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AppAccountRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/box-types': {
       id: '/_app/box-types'
@@ -513,6 +558,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/users'
       preLoaderRoute: typeof AppUsersRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/legal/': {
+      id: '/legal/'
+      path: '/legal'
+      fullPath: '/legal/'
+      preLoaderRoute: typeof LegalIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/$code': {
+      id: '/legal/$code'
+      path: '/legal/$code'
+      fullPath: '/legal/$code'
+      preLoaderRoute: typeof LegalCodeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/farm/orders': {
       id: '/_app/farm/orders'
@@ -623,6 +682,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAccountRoute: typeof AppAccountRoute
   AppBoxTypesRoute: typeof AppBoxTypesRoute
   AppCustomersRoute: typeof AppCustomersRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -654,6 +714,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAccountRoute: AppAccountRoute,
   AppBoxTypesRoute: AppBoxTypesRoute,
   AppCustomersRoute: AppCustomersRoute,
   AppDashboardRoute: AppDashboardRoute,
@@ -690,6 +751,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   SignInRoute: SignInRoute,
+  LegalCodeRoute: LegalCodeRoute,
+  LegalIndexRoute: LegalIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
