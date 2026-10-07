@@ -200,6 +200,19 @@ Provided by migration `…014_legal.sql`.
 migration `update legal_documents set version = '<new>' where code = '<code>';`. Everyone it applies to is
 asked again at their next sign-in.
 
+## Service fees
+
+Provided by migration `…015_service_fees.sql`.
+
+| Object | Purpose |
+|---|---|
+| `customers.service` | sourcing, consolidation, intake_qc or full_package. |
+| `service_fees` | Per service: whether the per-stem fee applies, the fee per shipment and how it shows on the proforma. Admin and Finance edit. |
+| `margin_rules.currency` | Null: the same figure in every currency (the rate card). Otherwise converted with `exchange_rates`. |
+| `service_margin()`, `sell_price_for()` | The per-stem fee and buyer price for a service; used by the catalog, checkout, standing orders, the cost calculator and staff-entered orders. |
+| `order_charges.kind = 'service_fee'`, `sync_service_fee()` | The fee per shipment, kept on the buyer's earliest active order on each flight by a trigger on `customer_orders`. |
+| `my_service()` | The buyer's service and fee, for the catalog and checkout. |
+
 ## Not needed yet
 
 - Odoo: no calls until the shipment and fulfilment items.

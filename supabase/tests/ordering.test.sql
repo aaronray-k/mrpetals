@@ -19,6 +19,8 @@ insert into farms (farm_code, farm_name, country, sales_agent_name, sales_agent_
 insert into customers (customer_code, company_name, country, contact_name, contact_email, currency, incoterm, payment_terms, credit_limit, destination_airport) values
   ('RB1', 'R Buyer Prepaid', 'Japan', 'C', 'c@rb1.jp', 'USD', 'FOB', 'Prepaid', null, 'NRT'),
   ('RB2', 'R Buyer Credit', 'Netherlands', 'D', 'd@rb2.nl', 'USD', 'FOB', 'Net 30', 100, 'AMS');
+-- Sourcing buyers: the per-stem fee only, no per-shipment fee (see service_fees.test.sql).
+update customers set service = 'sourcing' where customer_code in ('RB1', 'RB2');
 update profiles set farm_id = (select id from farms where farm_code = 'RF1') where id = '40000000-0000-0000-0000-0000000000f1';
 update profiles set customer_id = (select id from customers where customer_code = 'RB1') where id = '40000000-0000-0000-0000-0000000000b1';
 update profiles set customer_id = (select id from customers where customer_code = 'RB2') where id = '40000000-0000-0000-0000-0000000000b2';
@@ -49,8 +51,8 @@ select pg_temp.check(earliest_ship_date() <= (now() at time zone 'Africa/Nairobi
 set role authenticated;
 -- ---------------------------------------------------------------- Catalog (buyer)
 set request.jwt.claim.sub = '40000000-0000-0000-0000-0000000000b1';
-select pg_temp.check((select string_agg(format('%s:%s:%s', stem_length_cm, price_per_stem, farms), ',' order by stem_length_cm) from catalog()) = '60:0.2650:2,70:0.4150:1',
-  'the catalog prices each length: cheapest farm plus the FOB margin; products without a farm price are left out');
+select pg_temp.check((select string_agg(format('%s:%s:%s', stem_length_cm, price_per_stem, farms), ',' order by stem_length_cm) from catalog()) = '60:0.2700:2,70:0.4200:1',
+  'the catalog prices each length: cheapest farm plus the FOB per-stem fee (0.02 for 60/70 cm); products without a farm price are left out');
 select pg_temp.check_refused($$select * from catalog(pg_temp.id('RB2'))$$, 'The catalog is for buyers');
 select pg_temp.check_refused($$select * from sell_price('FOB', pg_temp.id('RR60'))$$, 'permission denied');
 select pg_temp.check((select count(*) from price_list) = 0, 'buyers never see farm prices');
@@ -73,7 +75,7 @@ select pg_temp.check((select status || ':' || source || ':' || ship_date || ':' 
   = format('submitted:self_order:%s:%s', current_date + 10, current_date + 8), 'a catalog order waits for approval; the farm date is worked out');
 select pg_temp.check((select flight_note is not null from customer_orders where id = pg_temp.id('O1')), 'a new buyer is told ConsolFlora may change the flight');
 select pg_temp.check((select string_agg(format('%s:%s:%s:%s', bunching, coalesce(stems_per_bunch, 0), quoted_price_per_stem, margin_per_stem), ',' order by line_no)
-  from customer_order_lines where order_id = pg_temp.id('O1')) = 'custom:10:0.2650:0.0150,consolflora:0:0.4150:0.0150', 'bunching, the quoted price and the margin are kept per line');
+  from customer_order_lines where order_id = pg_temp.id('O1')) = 'custom:10:0.2700:0.0200,consolflora:0:0.4200:0.0200', 'bunching, the quoted price and the margin are kept per line');
 select pg_temp.check((order_progress(pg_temp.id('O1')) ->> 'status') = 'submitted', 'the buyer can follow the order');
 select pg_temp.check((select count(*) from notifications) = 0, 'buyers don''t see staff notifications');
 
@@ -90,12 +92,12 @@ select pg_temp.check_refused($$select allocate_order_line(pg_temp.line(1), pg_te
 select approve_order(pg_temp.id('O1'));
 select pg_temp.check_refused($$select approve_order(pg_temp.id('O1'))$$, 'not waiting for approval');
 select pg_temp.check((select string_agg(format('%s:%s:%s:%s', farm_code, cost_per_stem, margin_per_stem, recommended), ',' order by cost_per_stem) from line_farm_options(pg_temp.line(1)))
-  = 'RF2:0.2500:0.0150:t,RF1:0.3000:-0.0350:f', 'the calculator lists farms cheapest first and recommends the cheapest');
+  = 'RF2:0.2500:0.0200:t,RF1:0.3000:-0.0300:f', 'the calculator lists farms cheapest first and recommends the cheapest');
 set role postgres;
 insert into price_overrides (product_id, incoterm, pinned_farm_id) values (pg_temp.id('RR60'), 'FOB', pg_temp.id('RF1'));
 set role authenticated;
 select pg_temp.check((select farm_code from line_farm_options(pg_temp.line(1)) where recommended) = 'RF1', 'an Admin-pinned farm is recommended instead');
-select pg_temp.check((select margin_per_stem from line_farm_options(pg_temp.line(1)) where farm_code = 'RF2') = 0.0150, 'the buyer keeps the price they were quoted');
+select pg_temp.check((select margin_per_stem from line_farm_options(pg_temp.line(1)) where farm_code = 'RF2') = 0.0200, 'the buyer keeps the price they were quoted');
 select pg_temp.check_refused($$insert into price_overrides (product_id, incoterm, sell_price_per_stem) values (pg_temp.id('RR70'), 'FOB', 1)$$, 'row-level security');
 
 select allocate_order_line(pg_temp.line(1), pg_temp.id('RF1'), 1000);
@@ -147,9 +149,9 @@ select pg_temp.check_refused($$select decline_order(pg_temp.id('O1'), 'Over limi
 
 -- ---------------------------------------------------------------- Payment and credit (Finance)
 select pg_temp.check((select is_prepaid from buyer_credit where customer_id = pg_temp.id('RB1')), 'Prepaid buyers are those on Prepaid terms');
-select pg_temp.check((select open_value from buyer_credit where customer_id = pg_temp.id('RB1')) = 331.4, 'the order is worth the quoted prices: 600 x 0.265 + 160 x 0.415 + 400 x 0.265');
+select pg_temp.check((select open_value from buyer_credit where customer_id = pg_temp.id('RB1')) = 337.2, 'the order is worth the quoted prices: 600 x 0.27 + 160 x 0.42 + 400 x 0.27');
 select pg_temp.check((select string_agg(format('%s:%s', farm_name, margin_per_stem), ',' order by farm_name, margin_per_stem) from order_packing_list where order_id = pg_temp.id('O1'))
-  = 'R Farm One:-0.0350,R Farm One:0.0150,R Farm Two:0.0150', 'the packing list margin is quoted price minus each farm''s price');
+  = 'R Farm One:-0.0300,R Farm One:0.0200,R Farm Two:0.0200', 'the packing list margin is quoted price minus each farm''s price');
 
 -- Release gate: documents and the unpaid prepaid order block closing.
 set request.jwt.claim.sub = '40000000-0000-0000-0000-00000000000c';
@@ -186,7 +188,7 @@ create temp table o3 as select place_order(pg_temp.id('RS-AMS'), null, pg_temp.l
 grant select on o3 to authenticated;
 insert into t select 'O3', (r ->> 'order_id')::uuid from o3;
 set request.jwt.claim.sub = '40000000-0000-0000-0000-00000000000d';
-select pg_temp.check((select over_limit and open_value = 315 from buyer_credit where customer_id = pg_temp.id('RB2')), 'a credit buyer over the limit is flagged (1000 x 0.315 from the pinned farm > 100)');
+select pg_temp.check((select over_limit and open_value = 320 from buyer_credit where customer_id = pg_temp.id('RB2')), 'a credit buyer over the limit is flagged (1000 x 0.32 from the pinned farm > 100)');
 set request.jwt.claim.sub = '40000000-0000-0000-0000-00000000000c';
 select approve_order(pg_temp.id('O3'));
 set request.jwt.claim.sub = '40000000-0000-0000-0000-00000000000d';

@@ -3,6 +3,7 @@ import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Info } from 'lucide-react'
 import { placeOrder, useCart, useCatalog, useFlights, useOrderingSettings } from '~/lib/ordering/api'
+import { serviceFeeText, useMyService } from '~/lib/fees/api'
 import { PageHeader } from '~/components/layout/app-shell'
 import { RequireRole } from '~/components/layout/require-role'
 import { rolesFor } from '~/components/layout/nav'
@@ -29,6 +30,7 @@ function CheckoutPage() {
   const catalog = useCatalog()
   const flights = useFlights()
   const settings = useOrderingSettings()
+  const myService = useMyService()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [flight, setFlight] = React.useState('')
@@ -40,6 +42,7 @@ function CheckoutPage() {
   if (catalog.isLoading || settings.isLoading) return <Spinner />
   const item = (id: string) => catalog.data?.find((c) => c.product_id === id)
   const currency = catalog.data?.[0]?.currency ?? 'USD'
+  const feeText = serviceFeeText(myService.data)
   const total = cart.lines.reduce((s, l) => s + (item(l.product_id)?.price_per_stem ?? 0) * l.stems, 0)
   const earliest = settings.data?.earliest_ship_date
 
@@ -88,7 +91,12 @@ function CheckoutPage() {
             {cart.lines.length > 0 && (
               <p className="text-right text-lg">
                 Estimated total: <strong>{money(total, currency)}</strong>
-                <span className="block text-sm text-muted-foreground">Other costs (consolidation, data logger…) are added on the proforma invoice.</span>
+                {feeText && (
+                  <span className="block text-sm text-muted-foreground">
+                    Plus your {myService.data?.label} {feeText} (once per flight, however many orders).
+                  </span>
+                )}
+                <span className="block text-sm text-muted-foreground">Other costs (UCR, data logger…) are added on the proforma invoice.</span>
               </p>
             )}
           </CardContent>

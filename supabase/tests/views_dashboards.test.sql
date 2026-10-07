@@ -16,6 +16,7 @@ insert into farms (farm_code, farm_name, country, sales_agent_name, sales_agent_
   ('DF1', 'D Farm', 'Kenya', 'A', 'a@df.ke', 'USD', 'Net 15');
 insert into customers (customer_code, company_name, country, contact_name, contact_email, currency, incoterm, payment_terms, credit_limit, destination_airport) values
   ('DEU', 'D Euro Buyer', 'Netherlands', 'C', 'c@deu.nl', 'EUR', 'FOB', 'Net 30', 50, 'AMS');
+update customers set service = 'sourcing' where customer_code = 'DEU';
 update profiles set farm_id = (select id from farms where farm_code = 'DF1') where id = '60000000-0000-0000-0000-0000000000f1';
 update profiles set customer_id = (select id from customers where customer_code = 'DEU') where id = '60000000-0000-0000-0000-0000000000b1';
 insert into box_types (box_code, length_cm, width_cm, height_cm) values ('DQB', 100, 25, 15);
@@ -37,19 +38,19 @@ insert into exchange_rates (from_currency, to_currency, rate, valid_from) values
 set request.jwt.claim.sub = '60000000-0000-0000-0000-00000000000c';
 select pg_temp.check_refused($$insert into exchange_rates (from_currency, to_currency, rate) values ('EUR', 'USD', 1.1)$$, 'row-level security');
 set request.jwt.claim.sub = '60000000-0000-0000-0000-0000000000b1';
-select pg_temp.check((select price_per_stem || ' ' || currency from catalog() where product_code = 'D60') = '0.2835 EUR',
-  'the euro catalog converts both the farm price and the USD margin: (0.30 + 0.015) x 0.9');
+select pg_temp.check((select price_per_stem || ' ' || currency from catalog() where product_code = 'D60') = '0.2900 EUR',
+  'the euro catalog converts the farm price; the per-stem fee is the same figure in euro: 0.30 x 0.9 + 0.02');
 create temp table o as select place_order((select id from flight), null,
   jsonb_build_array(jsonb_build_object('product_id', (select id from products where product_code = 'D60'), 'stems', 320))) as r;
 select pg_temp.check((select currency || ':' || margin_per_stem || ':' || quoted_price_per_stem from customer_orders o join customer_order_lines l on l.order_id = o.id
-  where o.id = (select (r ->> 'order_id')::uuid from o)) = 'EUR:0.0135:0.2835', 'the order, its margin and its quoted price are all in euro');
+  where o.id = (select (r ->> 'order_id')::uuid from o)) = 'EUR:0.0200:0.2900', 'the order, its margin and its quoted price are all in euro');
 grant select on o to authenticated;
 
 -- ---------------------------------------------------------------- Dashboards
 select pg_temp.check((dashboard_buyer() ->> 'currency') = 'EUR' and (dashboard_buyer() -> 'actions' -> 'waiting_approval' -> 0 ->> 'order_number') like 'CFLDEU%',
   'the buyer dashboard is in euro and lists the order waiting for approval');
 select pg_temp.check(jsonb_array_length(dashboard_buyer(8) -> 'stems_per_week') = 8 and jsonb_array_length(dashboard_buyer(26) -> 'stems_per_week') = 26, '8 weeks by default, 6 months on request');
-select pg_temp.check(((dashboard_buyer() -> 'tiles' ->> 'spend_in_period')::numeric) = 90.72, 'spend in the buyer''s currency: 320 x 0.2835');
+select pg_temp.check(((dashboard_buyer() -> 'tiles' ->> 'spend_in_period')::numeric) = 92.80, 'spend in the buyer''s currency: 320 x 0.29');
 select pg_temp.check_refused($$select dashboard_staff()$$, 'Admin and Consolidator');
 select pg_temp.check_refused($$select dashboard_finance()$$, 'Finance and Admin');
 select pg_temp.check_refused($$select dashboard_farm()$$, 'farm users');
@@ -75,13 +76,13 @@ select pg_temp.check((select (x ->> 'short')::int from jsonb_array_elements(dash
 select pg_temp.check((select (x ->> 'asked')::int || '/' || (x ->> 'confirmed')::int from jsonb_array_elements(dashboard_staff() -> 'fill_rate_by_farm') x where x ->> 'farm' = 'D Farm') = '320/160',
   'fill rate per farm: 160 of 320 confirmed');
 select pg_temp.check((select (x ->> 'margin')::numeric from jsonb_array_elements(dashboard_staff() -> 'margin_per_week') x
-  where x ->> 'currency' = 'EUR' and (x ->> 'week')::date = date_trunc('week', current_date)::date) = 2.16, 'margin in euro: 160 x (0.2835 - 0.30 x 0.9)');
+  where x ->> 'currency' = 'EUR' and (x ->> 'week')::date = date_trunc('week', current_date)::date) = 3.20, 'margin in euro: 160 x (0.29 - 0.30 x 0.9)');
 
 set request.jwt.claim.sub = '60000000-0000-0000-0000-00000000000d';
-select pg_temp.check((select (x ->> 'open_value')::numeric from jsonb_array_elements(dashboard_finance() -> 'credit') x where x ->> 'buyer' = 'D Euro Buyer') = 90.72,
+select pg_temp.check((select (x ->> 'open_value')::numeric from jsonb_array_elements(dashboard_finance() -> 'credit') x where x ->> 'buyer' = 'D Euro Buyer') = 92.80,
   'Finance sees open value against the credit limit, in euro');
 select pg_temp.check((select x ->> 'buyer' from jsonb_array_elements(dashboard_finance() -> 'actions' -> 'over_limit') x where x ->> 'buyer' = 'D Euro Buyer') is not null,
-  'and the buyer over the limit (90.72 > 50)');
+  'and the buyer over the limit (92.80 > 50)');
 select pg_temp.check(not ((dashboard_finance() -> 'actions' -> 'missing_rates') @> '[{"from": "USD", "to": "EUR"}]'), 'the missing-rate warning is gone');
 
 set request.jwt.claim.sub = '60000000-0000-0000-0000-00000000000e';

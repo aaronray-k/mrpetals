@@ -173,6 +173,8 @@ export interface MarginRule {
   min_length_cm: number
   max_length_cm: number | null
   margin_per_stem: number
+  /** null: the same figure in every currency (the rate card's € or US$). */
+  currency: string | null
   active: boolean
 }
 

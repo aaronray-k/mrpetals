@@ -51,7 +51,7 @@ export const NAV: NavGroup[] = [
       { to: '/box-types', label: 'Box types', icon: Boxes, tip: 'Box sizes and volumetric weight', roles: ['admin', 'consolidator', 'qc', 'senior_qc'] },
       { to: '/prices', label: 'Selling prices', icon: Tag, tip: 'Pin a farm or fix a price per product', roles: ['admin', 'consolidator', 'finance'] },
       { to: '/exchange-rates', label: 'Exchange rates', icon: ArrowLeftRight, tip: 'Convert farm prices into each buyer\'s currency', roles: ['admin', 'consolidator', 'finance'] },
-      { to: '/margins', label: 'Margins', icon: Percent, tip: 'ConsolFlora margin per stem, by incoterm', roles: ['admin', 'consolidator', 'finance'] },
+      { to: '/margins', label: 'Fees and margins', icon: Percent, tip: 'Fee per stem by incoterm, and per shipment by service', roles: ['admin', 'consolidator', 'finance'] },
     ],
   },
   {

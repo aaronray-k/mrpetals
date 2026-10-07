@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Pencil, Plus } from 'lucide-react'
 import { saveMarginRule, useIncoterms, useMarginRules, useProductNames, type MarginRule } from '~/lib/orders/api'
+import { saveServiceFee, useServiceFees, type ServiceFee } from '~/lib/fees/api'
 import { useAuth } from '~/lib/auth'
 import { hasAnyRole } from '~/lib/roles'
 import { PageHeader } from '~/components/layout/app-shell'
@@ -21,7 +22,7 @@ import { TBody, TD, TH, THead, TR, Table } from '~/components/ui/table'
 import { useToast } from '~/components/ui/toaster'
 
 export const Route = createFileRoute('/_app/margins')({
-  head: () => ({ meta: [{ title: 'Margins · ConsolFlora' }] }),
+  head: () => ({ meta: [{ title: 'Fees and margins · ConsolFlora' }] }),
   component: () => (
     <RequireRole roles={rolesFor('/margins')}>
       <MarginsPage />
@@ -50,22 +51,25 @@ function MarginsPage() {
   return (
     <>
       <PageHeader
-        title="Margins"
-        description="ConsolFlora's margin per stem. Each new order line takes the margin for its incoterm; staff can still change it on the order."
+        title="Fees and margins"
+        description="ConsolFlora's rate card: the fee per stem for each incoterm and stem length, and the fee per shipment for each service."
         actions={
           canEdit && (
-            <Button onClick={() => setEditing({ incoterm: incoterms.data?.[0] ?? 'FOB', flower_type: null, min_length_cm: 0, max_length_cm: null, margin_per_stem: 0, active: true })}>
-              <Plus aria-hidden="true" /> Add a rule
+            <Button onClick={() => setEditing({ incoterm: incoterms.data?.[0] ?? 'FOB', flower_type: null, min_length_cm: 0, max_length_cm: null, margin_per_stem: 0, currency: null, active: true })}>
+              <Plus aria-hidden="true" /> Add a per-stem rule
             </Button>
           )
         }
       />
       <div className="grid grid-cols-1 gap-4">
-        <Tip id="margins.rules" title="Which rule wins">
-          A rule for a flower type beats a rule for any flower, and a narrower length band beats a wider one. Changing a rule doesn't change
-          orders already placed.
+        <Tip id="margins.rules" title="How fees work">
+          Each buyer has a service (set on the Customers page). Sourcing and Full package buyers pay the fee per stem for their incoterm and
+          stem length. Consolidation, Intake and quality checks, and Full package buyers pay a fee per shipment, added once per flight to their
+          first order. Per-stem fees with no currency are the same figure in euros or US dollars. For the same incoterm, a rule for a flower
+          type beats one for any flower, and a narrower length band beats a wider one. Changes apply to new orders only.
         </Tip>
-        {!canEdit && <Alert title="Only Admin and Finance users can change margins." />}
+        {!canEdit && <Alert title="Only Admin and Finance users can change fees." />}
+        <ServiceFeesCard canEdit={canEdit} />
         {without.length > 0 && rules.data && (
           <Alert variant="warning" title={`No margin rules for ${without.join(', ')}`}>
             Orders on {without.length === 1 ? 'this incoterm' : 'these incoterms'} start without a margin, and staff must enter it on each line.
@@ -83,7 +87,7 @@ function MarginsPage() {
             <Card key={t}>
               <CardHeader>
                 <CardTitle>{t}</CardTitle>
-                <CardDescription>Margin per stem on {t} orders, in the buyer's currency.</CardDescription>
+                <CardDescription>Fee per stem on {t} orders (Sourcing and Full package buyers).</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="rounded-md border">
@@ -93,7 +97,8 @@ function MarginsPage() {
                       <TR>
                         <TH>Flowers</TH>
                         <TH>Stem length</TH>
-                        <TH className="text-right">Margin per stem</TH>
+                        <TH className="text-right">Fee per stem</TH>
+                        <TH>Currency</TH>
                         <TH>Status</TH>
                         {canEdit && (
                           <TH>
@@ -110,6 +115,7 @@ function MarginsPage() {
                             <TD>{r.flower_type ?? 'Any flower'}</TD>
                             <TD>{lengthBand(r)}</TD>
                             <TD className="text-right tabular-nums">{r.margin_per_stem.toFixed(4)}</TD>
+                            <TD>{r.currency ?? 'Same in € or US$'}</TD>
                             <TD>{r.active ? <Badge variant="success">Active</Badge> : <Badge>Off</Badge>}</TD>
                             {canEdit && (
                               <TD className="text-right">
@@ -134,7 +140,7 @@ function MarginsPage() {
           onClose={() => setEditing(null)}
           onSave={async (d) => {
             await saveMarginRule(d)
-            toast({ kind: 'success', title: 'Margin rule saved' })
+            toast({ kind: 'success', title: 'Per-stem fee saved' })
             setEditing(null)
             refresh()
           }}
@@ -153,6 +159,7 @@ function RuleDialog({ draft, incoterms, onClose, onSave }: { draft: Draft; incot
   const [max, setMax] = React.useState(draft.max_length_cm == null ? '' : String(draft.max_length_cm))
   const [margin, setMargin] = React.useState(draft.id ? String(draft.margin_per_stem) : '')
   const [active, setActive] = React.useState(draft.active)
+  const [currency, setCurrency] = React.useState(draft.currency ?? '')
   const [error, setError] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
 
@@ -163,11 +170,11 @@ function RuleDialog({ draft, incoterms, onClose, onSave }: { draft: Draft; incot
     const marginN = Number(margin)
     if (!Number.isInteger(minN) || minN < 0) return setError('Shortest stem must be a whole number of cm, 0 or more.')
     if (maxN != null && (!Number.isInteger(maxN) || maxN < minN)) return setError('Longest stem must be a whole number, at least the shortest. Leave it empty for no limit.')
-    if (margin.trim() === '' || !Number.isFinite(marginN) || marginN < 0) return setError('Enter the margin per stem, like 0.015.')
+    if (margin.trim() === '' || !Number.isFinite(marginN) || marginN < 0) return setError('Enter the fee per stem, like 0.02.')
     setBusy(true)
     setError(null)
     try {
-      await onSave({ id: draft.id, incoterm, flower_type: flower.trim() || null, min_length_cm: minN, max_length_cm: maxN, margin_per_stem: marginN, active })
+      await onSave({ id: draft.id, incoterm, flower_type: flower.trim() || null, min_length_cm: minN, max_length_cm: maxN, margin_per_stem: marginN, currency: currency || null, active })
     } catch (err) {
       setError((err as Error).message)
       setBusy(false)
@@ -175,7 +182,7 @@ function RuleDialog({ draft, incoterms, onClose, onSave }: { draft: Draft; incot
   }
 
   return (
-    <Dialog open onClose={onClose} title={draft.id ? 'Edit margin rule' : 'Add a margin rule'}>
+    <Dialog open onClose={onClose} title={draft.id ? 'Edit per-stem fee' : 'Add a per-stem fee'}>
       <form onSubmit={submit} noValidate className="grid gap-4">
         {error && <Alert variant="destructive" title={error} role="alert" />}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -208,8 +215,20 @@ function RuleDialog({ draft, incoterms, onClose, onSave }: { draft: Draft; incot
           <Field id="rule-max" label="Longest stem (cm)" hint="Leave empty for no limit.">
             {(d) => <Input id="rule-max" inputMode="numeric" value={max} onChange={(e) => setMax(e.target.value)} aria-describedby={d} />}
           </Field>
-          <Field id="rule-margin" label="Margin per stem">
-            {(d) => <Input id="rule-margin" inputMode="decimal" value={margin} placeholder="0.015" onChange={(e) => setMargin(e.target.value)} aria-describedby={d} />}
+          <Field id="rule-margin" label="Fee per stem">
+            {(d) => <Input id="rule-margin" inputMode="decimal" value={margin} placeholder="0.02" onChange={(e) => setMargin(e.target.value)} aria-describedby={d} />}
+          </Field>
+          <Field id="rule-currency" label="Currency" hint="Same figure in every currency, or converted from one currency.">
+            {(d) => (
+              <Select id="rule-currency" value={currency} onChange={(e) => setCurrency(e.target.value)} aria-describedby={d}>
+                <option value="">Same in € or US$</option>
+                {['USD', 'EUR', 'KES', 'GBP', 'JPY'].map((c) => (
+                  <option key={c} value={c}>
+                    {c}, converted for other currencies
+                  </option>
+                ))}
+              </Select>
+            )}
           </Field>
         </div>
         <Switch checked={active} onCheckedChange={setActive} label="Rule is active" />
@@ -226,5 +245,111 @@ function RuleDialog({ draft, incoterms, onClose, onSave }: { draft: Draft; incot
         </div>
       </form>
     </Dialog>
+  )
+}
+
+/** Per-shipment fee and whether the per-stem fee applies, for each service. */
+function ServiceFeesCard({ canEdit }: { canEdit: boolean }) {
+  const fees = useServiceFees()
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Services</CardTitle>
+        <CardDescription>What each service pays. Fees per shipment are the same figure in € or US$.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {fees.isLoading && <Spinner />}
+        {fees.error && <Alert variant="destructive" title="Couldn't load the fees" role="alert">{(fees.error as Error).message}</Alert>}
+        {fees.data && (
+          <div className="rounded-md border">
+            <Table>
+              <caption className="sr-only">Fees per service</caption>
+              <THead>
+                <TR>
+                  <TH>Service</TH>
+                  <TH>Fee per stem</TH>
+                  <TH>Fee per shipment</TH>
+                  <TH>On the proforma as</TH>
+                  {canEdit && (
+                    <TH>
+                      <span className="sr-only">Save</span>
+                    </TH>
+                  )}
+                </TR>
+              </THead>
+              <TBody>
+                {fees.data.map((f) => (
+                  <ServiceFeeRow key={`${f.service}-${f.fee_per_shipment}-${f.per_stem}-${f.fee_description}`} fee={f} canEdit={canEdit} />
+                ))}
+              </TBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function ServiceFeeRow({ fee, canEdit }: { fee: ServiceFee; canEdit: boolean }) {
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const [perStem, setPerStem] = React.useState(fee.per_stem)
+  const [amount, setAmount] = React.useState(String(fee.fee_per_shipment))
+  const [desc, setDesc] = React.useState(fee.fee_description ?? '')
+  const dirty = perStem !== fee.per_stem || Number(amount) !== fee.fee_per_shipment || desc !== (fee.fee_description ?? '')
+  if (!canEdit)
+    return (
+      <TR>
+        <TD className="font-semibold">{fee.label}</TD>
+        <TD>{fee.per_stem ? 'Yes, by incoterm' : 'No'}</TD>
+        <TD className="tabular-nums">{fee.fee_per_shipment ? fee.fee_per_shipment.toFixed(2) : '—'}</TD>
+        <TD>{fee.fee_description ?? '—'}</TD>
+      </TR>
+    )
+  return (
+    <TR>
+      <TD className="font-semibold">{fee.label}</TD>
+      <TD>
+        <label className="inline-flex min-h-10 items-center gap-2">
+          <input type="checkbox" className="size-6 shrink-0 accent-accent" checked={perStem} onChange={(e) => setPerStem(e.target.checked)} />
+          <span>
+            Yes<span className="sr-only">, {fee.label} pays the fee per stem</span>
+          </span>
+        </label>
+      </TD>
+      <TD>
+        <label className="sr-only" htmlFor={`fee-${fee.service}`}>
+          Fee per shipment for {fee.label}
+        </label>
+        <Input id={`fee-${fee.service}`} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-28" />
+      </TD>
+      <TD>
+        <label className="sr-only" htmlFor={`fee-desc-${fee.service}`}>
+          How the {fee.label} fee shows on the proforma
+        </label>
+        <Input id={`fee-desc-${fee.service}`} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Not charged" className="min-w-48" />
+      </TD>
+      <TD>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!dirty}
+          onClick={async () => {
+            const n = Number(amount)
+            if (!Number.isFinite(n) || n < 0) return toast({ kind: 'error', title: 'Enter a fee of 0 or more' })
+            if (n > 0 && !desc.trim()) return toast({ kind: 'error', title: 'Say how the fee shows on the proforma' })
+            try {
+              await saveServiceFee(fee.service, { per_stem: perStem, fee_per_shipment: n, fee_description: desc.trim() || null })
+              toast({ kind: 'success', title: `${fee.label} fees saved`, description: 'New orders use them; orders already placed keep theirs.' })
+              void queryClient.invalidateQueries({ queryKey: ['service-fees'] })
+            } catch (e) {
+              toast({ kind: 'error', title: 'Not saved', description: (e as Error).message })
+            }
+          }}
+        >
+          Save<span className="sr-only"> {fee.label} fees</span>
+        </Button>
+      </TD>
+    </TR>
   )
 }

@@ -94,9 +94,9 @@ buyer. Saving makes a new version; old versions never change.
 ## Orders, farm POs and boxes
 
 1. **Order.** A buyer's order is in stems (from the self-order platform later; staff can enter one under
-   **Orders → New order**). Its number is `CFL<buyer code><0001>`. Each line takes ConsolFlora's margin
-   per stem from **Margins** for the order's incoterm (the current FOB rules: up to 50 cm $0.010, longer
-   $0.015). Staff can change a line's margin; changing the order's incoterm re-applies that incoterm's rules.
+   **Orders → New order**). Its number is `CFL<buyer code><0001>`. Each line takes ConsolFlora's fee per
+   stem from **Fees and margins** for the order's incoterm and the buyer's service (see Service fees below).
+   Staff can change a line's margin; changing the order's incoterm re-applies that incoterm's rules.
 2. **Split to farms.** On the order, staff add farms to each line until every stem is placed. Each farm
    gets one PO per order (`PO-2026-00001`); farms never see the buyer or the margin. Stems per box come from
    the pack rate, the grower price from the price list (staff can set it when the list has none).
@@ -137,6 +137,28 @@ buyer. Saving makes a new version; old versions never change.
    created 5 days ahead, already approved. Buyers can skip a week or change the standing order.
 8. **Following an order**: buyers see each step under **My orders**; everyone gets **Notifications**
    (emailed once the mail settings are in; email is the last item).
+
+## Service fees
+
+ConsolFlora's rate card (from "Consolflora Services", 2026). Each buyer takes one **service**, set on the
+**Customers** page; the service decides which fees apply. Fees are the same figure in euros or US dollars.
+
+| Service | Fee per stem | Fee per shipment |
+|---|---|---|
+| Sourcing | Yes | none |
+| Consolidation | No | 80 document consolidation fee |
+| Intake and quality checks | No | 150 |
+| Full package | Yes | 100 document consolidation fee |
+
+- **Fee per stem**, per incoterm and stem length, on **Fees and margins**. FOB: 0.01 for 40/50 cm, 0.02 for
+  60/70 cm, 0.025 for 80 to 120 cm. Each other incoterm has its own rules. It is included in the buyer's
+  catalog price (farm price plus the fee); buyers on Consolidation or Intake and quality checks see the farm
+  price only.
+- **Fee per shipment** is added automatically to the buyer's first order on a flight, once per buyer per flight
+  however many orders they place. If that order is declined or moved, the fee moves to their next order on
+  the flight. It counts towards ConsolFlora's margin on the dashboards.
+- Other charges (UCR, data loggers) are still added by hand on the order.
+- Changes apply to new orders; orders already placed keep their prices.
 
 ## Dashboards and currency
 

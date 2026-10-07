@@ -25,6 +25,7 @@ insert into farms (farm_code, farm_name, country, sales_agent_name, sales_agent_
 insert into customers (customer_code, company_name, country, contact_name, contact_email, currency, incoterm, payment_terms, destination_airport) values
   ('B1', 'Buyer One', 'Japan', 'C', 'c@b1.jp', 'USD', 'FOB', 'Net 15', 'NRT'),
   ('B2', 'Buyer Two', 'Netherlands', 'D', 'd@b2.nl', 'USD', 'CPT', 'Net 15', 'AMS');
+update customers set service = 'sourcing' where customer_code in ('B1', 'B2'); -- per-stem fee only (service_fees.test.sql covers the rest)
 insert into box_types (box_code, length_cm, width_cm, height_cm) values ('OQB', 100, 25, 15), ('OHB', 100, 50, 15);
 insert into products (product_code, flower_type, variety, grade, stem_length_cm, stems_per_bunch) values
   ('R70', 'Rose', 'Ever Red', 'A1', 70, 20),
@@ -53,16 +54,20 @@ create function pg_temp.id(n text) returns uuid language sql stable as $$ select
 create function pg_temp.box(n text) returns bigint language sql stable as $$ select id from t_box where name = n $$;
 
 -- ---------------------------------------------------------------- Margins
-select pg_temp.check(margin_for('FOB', pg_temp.id('R70')) = 0.015, 'FOB margin from 51 cm is 0.015');
-select pg_temp.check(margin_for('FOB', pg_temp.id('R40')) = 0.010, 'FOB margin up to 50 cm is 0.010');
-select pg_temp.check(margin_for('CPT', pg_temp.id('R70')) is null, 'no margin without a rule for the incoterm');
+select pg_temp.check(margin_in('FOB', pg_temp.id('R70'), 'USD') = 0.020, 'FOB per-stem fee for 60/70 cm is 0.02');
+select pg_temp.check(margin_in('FOB', pg_temp.id('R40'), 'EUR') = 0.010, 'FOB per-stem fee for 40/50 cm is 0.01, the same figure in euro');
+select pg_temp.check(margin_in('CPT', pg_temp.id('R70'), 'USD') is null, 'no margin without a rule for the incoterm');
 
 set role authenticated;
 set request.jwt.claim.sub = '20000000-0000-0000-0000-00000000000d'; -- Finance
-insert into margin_rules (incoterm, flower_type, min_length_cm, max_length_cm, margin_per_stem) values ('FOB', 'rose', 60, 80, 0.02);
-select pg_temp.check(margin_for('FOB', pg_temp.id('R70')) = 0.02, 'a rule for the flower type beats the general one');
+insert into margin_rules (incoterm, flower_type, min_length_cm, max_length_cm, margin_per_stem) values ('FOB', 'rose', 60, 80, 0.03);
+reset role;
+select pg_temp.check(margin_in('FOB', pg_temp.id('R70'), 'USD') = 0.03, 'a rule for the flower type beats the general one');
+set role authenticated;
 update margin_rules set active = false where flower_type = 'rose';
-select pg_temp.check(margin_for('FOB', pg_temp.id('R70')) = 0.015, 'inactive rules are ignored');
+reset role;
+select pg_temp.check(margin_in('FOB', pg_temp.id('R70'), 'USD') = 0.02, 'inactive rules are ignored');
+set role authenticated;
 set request.jwt.claim.sub = '20000000-0000-0000-0000-00000000000c'; -- Consolidator
 select pg_temp.check_refused($$insert into margin_rules (incoterm, margin_per_stem) values ('FOB', 1)$$, 'row-level security');
 
@@ -77,7 +82,7 @@ create temp table t_order as select create_customer_order(pg_temp.id('B1'), pg_t
                     jsonb_build_object('product_id', pg_temp.id('R40'), 'stems', 1000))) as r;
 insert into t select 'O1', (r ->> 'order_id')::uuid from t_order;
 select pg_temp.check((select r ->> 'order_number' from t_order) = 'CFLB10001', 'order numbers are CFL + buyer code + 4 digits');
-select pg_temp.check((select string_agg(format('%s:%s:%s', line_no, stems, margin_per_stem), ',' order by line_no) from customer_order_lines where order_id = pg_temp.id('O1')) = '1:1000:0.0150,2:1000:0.0100', 'lines get the FOB margins');
+select pg_temp.check((select string_agg(format('%s:%s:%s', line_no, stems, margin_per_stem), ',' order by line_no) from customer_order_lines where order_id = pg_temp.id('O1')) = '1:1000:0.0200,2:1000:0.0100', 'lines get the FOB per-stem fees: 0.02 for 70 cm, 0.01 for 40 cm');
 select pg_temp.check(create_customer_order(pg_temp.id('B1'), null, null, jsonb_build_array(jsonb_build_object('product_id', pg_temp.id('R40'), 'stems', 50))) ->> 'order_number' = 'CFLB10002', 'the next order for the buyer is 0002');
 insert into t select 'O2', (create_customer_order(pg_temp.id('B2'), pg_temp.id('S1'), '2026-08-01',
   jsonb_build_array(jsonb_build_object('product_id', pg_temp.id('R70'), 'stems', 320))) ->> 'order_id')::uuid;
@@ -166,7 +171,7 @@ select pg_temp.check((select format('%s/%s', farm_box_no, farm_box_total) from b
 select pg_temp.check_refused($$update customer_orders set shipment_id = pg_temp.id('S2') where id = pg_temp.id('O1')$$, 'already has boxes in its shipment');
 -- A new incoterm re-applies margins.
 update customer_orders set incoterm = 'FOB' where id = pg_temp.id('O2');
-select pg_temp.check((select margin_per_stem from customer_order_lines where order_id = pg_temp.id('O2')) = 0.015, 'changing the incoterm re-applies margins');
+select pg_temp.check((select margin_per_stem from customer_order_lines where order_id = pg_temp.id('O2')) = 0.020, 'changing the incoterm re-applies the per-stem fee');
 
 -- Nobody writes boxes directly.
 select pg_temp.check_refused($$insert into boxes (po_line_id, shipment_id, customer_id, farm_id, product_id, box_type_id, stems) select po_line_id, shipment_id, customer_id, farm_id, product_id, box_type_id, 1 from boxes limit 1$$, 'permission denied');

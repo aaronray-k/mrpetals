@@ -3,6 +3,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { Plus, Search, ShoppingCart } from 'lucide-react'
 import { useCart, useCatalog, type CatalogItem } from '~/lib/ordering/api'
 import { PageHeader } from '~/components/layout/app-shell'
+import { serviceFeeText, useMyService } from '~/lib/fees/api'
 import { RequireRole } from '~/components/layout/require-role'
 import { rolesFor } from '~/components/layout/nav'
 import { Tip } from '~/components/tips/tips'
@@ -57,6 +58,7 @@ function CatalogPage() {
           Add stems of each variety and length to your cart, then choose your flight at checkout. Orders need at least 72 hours before the
           flight. ConsolFlora approves the order and confirms it with the farms; you can follow each step under <strong>My orders</strong>.
         </Tip>
+        <ServiceNote />
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="grid gap-1.5">
             <Label htmlFor="cat-search">Search</Label>
@@ -167,5 +169,19 @@ function CatalogRow({ item, inCart, onAdd }: { item: CatalogItem; inCart: number
         </form>
       </TD>
     </TR>
+  )
+}
+
+/** The buyer's ConsolFlora service and its per-shipment fee. */
+function ServiceNote() {
+  const s = useMyService()
+  if (!s.data) return null
+  const fee = serviceFeeText(s.data)
+  return (
+    <p className="text-sm text-muted-foreground">
+      Your service: <strong className="text-foreground">{s.data.label}</strong>.{' '}
+      {s.data.per_stem ? 'Prices include ConsolFlora\'s fee per stem.' : 'Prices are the farm price, with no fee per stem.'}
+      {fee ? ` A ${fee} is added once per flight.` : ''}
+    </p>
   )
 }
