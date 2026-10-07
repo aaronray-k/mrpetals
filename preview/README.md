@@ -28,3 +28,5 @@ To start over with fresh demo data, drop and recreate the database's `public`, `
 Every demo account is asked to agree to its legal documents at its first sign-in after item 8, like a real user.
 
 Admin, Consolidator and Finance demo accounts set up two-factor sign-in at their first sign-in (an authenticator app, or an email code, which the preview shows on screen because email is not connected).
+
+Claims demo (`seed-claims.sql`): one claim waiting for review and one decided, with a claim notice to Kibo. On the preview only, the claim window is 30 days so the demo buyer can report on the past weeks' flights; the default is 24 hours.

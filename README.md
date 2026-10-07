@@ -248,6 +248,24 @@ staff** to the Terms of use, and **everyone** to the Privacy and Cookie notices.
   is a **placeholder marked "pending legal review"** (`src/lib/legal/documents.ts`).
 - Only business contact details are kept: there are no ID number or date of birth fields anywhere.
 
+## Buyer claims
+
+1. **Buyer reports** (My claims → Report a problem, or from the order page) within the **claim window**: 24 hours
+   after the flight lands, an Admin setting under **Ordering settings**. Staff enter when a flight landed on the
+   shipment page; until then it counts from 08:00 the day after the flight. Per box: the reason, stems affected,
+   a note and photos (the phone camera opens); plus extra costs such as fumigation. Boxes can be picked from the
+   list or by scanning the box label.
+2. **Consolidator reviews** (Claims): the buyer's photos sit next to ConsolFlora's QC result and photos for the
+   same box. Each box is approved (all or some stems) or denied with a reason the buyer sees; each extra cost is
+   approved or denied and charged to a farm.
+3. **Finishing the review** gives the buyer a **credit note** (CN-2026-00001) in their currency, and sends each
+   farm with approved boxes a **claim notice** (FCN-2026-00001) for its own boxes, at its own price and currency,
+   with the photos. Farms never see the buyer or the buyer's price.
+4. **The farm responds** (Claims on your flowers) with **its credit note**: number, amount, date and the
+   document; or asks a question first. ConsolFlora replies, checks the credit note and closes the notice.
+
+Everyone is notified at each step, and the dashboards list claims to review, farm replies, and notices to answer.
+
 ## Two-factor sign-in and accessibility
 
 **Admin, Consolidator and Finance** sign in with their password and then a 6-digit code:
@@ -303,7 +321,7 @@ docs/backend.md           what the backend must provide
 | 7 | Floricode: codes, sync, product form, review flags, codes on labels and in the QR code | Done (demo data until Floricode API access) |
 | 8 | Legal and consent: agreements per role at sign-in, public legal pages, marketing choice | Done (texts pending legal review) |
 | 9 | Accessibility and security: two-factor sign-in (app or email, remembered devices), WCAG 2.2 AA sweep | Done (email codes wait for the mailbox) |
-| 10 | Buyer claims (with QC photos) | Not started |
+| 10 | Buyer claims: buyer report with photos, consolidator review, buyer credit notes, farm claim notices and farm credit notes | Done |
 | 11 | Messages and email (Zoho: SMTP out, IMAP replies into the app); settings page already there | Not started |
 
 A clickable preview with demo data runs on Render; see `preview/README.md`.

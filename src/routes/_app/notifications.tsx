@@ -75,6 +75,21 @@ function NotificationsPage() {
                     Open order
                   </Link>
                 ) : null)}
+              {n.attachments?.claim_id &&
+                (staff ? (
+                  <Link to="/claims/$claimId" params={{ claimId: n.attachments.claim_id }} className="inline-flex min-h-6 items-center font-semibold underline underline-offset-2">
+                    Open claim
+                  </Link>
+                ) : hasAnyRole(roles, ['customer']) ? (
+                  <Link to="/my-claims/$claimId" params={{ claimId: n.attachments.claim_id }} className="inline-flex min-h-6 items-center font-semibold underline underline-offset-2">
+                    Open claim
+                  </Link>
+                ) : null)}
+              {n.attachments?.notice_id && hasAnyRole(roles, ['farm']) && (
+                <Link to="/farm/claims" className="inline-flex min-h-6 items-center font-semibold underline underline-offset-2">
+                  Open claim notice
+                </Link>
+              )}
             </p>
           </li>
         ))}

@@ -28,9 +28,15 @@ import { Route as AppStandingOrdersRouteImport } from './routes/_app/standing-or
 import { Route as AppUsersRouteImport } from './routes/_app/users'
 import { Route as LegalIndexRouteImport } from './routes/legal/index'
 import { Route as LegalCodeRouteImport } from './routes/legal/$code'
+import { Route as AppClaimsIndexRouteImport } from './routes/_app/claims/index'
+import { Route as AppClaimsClaimIdRouteImport } from './routes/_app/claims/$claimId'
+import { Route as AppFarmClaimsRouteImport } from './routes/_app/farm/claims'
 import { Route as AppFarmOrdersRouteImport } from './routes/_app/farm/orders'
 import { Route as AppLabelsIndexRouteImport } from './routes/_app/labels/index'
 import { Route as AppLabelsTemplateIdRouteImport } from './routes/_app/labels/$templateId'
+import { Route as AppMyClaimsIndexRouteImport } from './routes/_app/my-claims/index'
+import { Route as AppMyClaimsClaimIdRouteImport } from './routes/_app/my-claims/$claimId'
+import { Route as AppMyClaimsNewRouteImport } from './routes/_app/my-claims/new'
 import { Route as AppMyOrdersIndexRouteImport } from './routes/_app/my-orders/index'
 import { Route as AppMyOrdersOrderIdRouteImport } from './routes/_app/my-orders/$orderId'
 import { Route as AppOrdersIndexRouteImport } from './routes/_app/orders/index'
@@ -138,6 +144,21 @@ const LegalCodeRoute = LegalCodeRouteImport.update({
   path: '/legal/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppClaimsIndexRoute = AppClaimsIndexRouteImport.update({
+  id: '/claims/',
+  path: '/claims/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppClaimsClaimIdRoute = AppClaimsClaimIdRouteImport.update({
+  id: '/claims/$claimId',
+  path: '/claims/$claimId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFarmClaimsRoute = AppFarmClaimsRouteImport.update({
+  id: '/farm/claims',
+  path: '/farm/claims',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppFarmOrdersRoute = AppFarmOrdersRouteImport.update({
   id: '/farm/orders',
   path: '/farm/orders',
@@ -151,6 +172,21 @@ const AppLabelsIndexRoute = AppLabelsIndexRouteImport.update({
 const AppLabelsTemplateIdRoute = AppLabelsTemplateIdRouteImport.update({
   id: '/labels/$templateId',
   path: '/labels/$templateId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMyClaimsIndexRoute = AppMyClaimsIndexRouteImport.update({
+  id: '/my-claims/',
+  path: '/my-claims/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMyClaimsClaimIdRoute = AppMyClaimsClaimIdRouteImport.update({
+  id: '/my-claims/$claimId',
+  path: '/my-claims/$claimId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMyClaimsNewRoute = AppMyClaimsNewRouteImport.update({
+  id: '/my-claims/new',
+  path: '/my-claims/new',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMyOrdersIndexRoute = AppMyOrdersIndexRouteImport.update({
@@ -233,8 +269,12 @@ export interface FileRoutesByFullPath {
   '/users': typeof AppUsersRoute
   '/legal/$code': typeof LegalCodeRoute
   '/legal/': typeof LegalIndexRoute
+  '/claims/$claimId': typeof AppClaimsClaimIdRoute
+  '/farm/claims': typeof AppFarmClaimsRoute
   '/farm/orders': typeof AppFarmOrdersRoute
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
+  '/my-claims/$claimId': typeof AppMyClaimsClaimIdRoute
+  '/my-claims/new': typeof AppMyClaimsNewRoute
   '/my-orders/$orderId': typeof AppMyOrdersOrderIdRoute
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/orders/new': typeof AppOrdersNewRoute
@@ -243,7 +283,9 @@ export interface FileRoutesByFullPath {
   '/settings/ordering': typeof AppSettingsOrderingRoute
   '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/shop/checkout': typeof AppShopCheckoutRoute
+  '/claims/': typeof AppClaimsIndexRoute
   '/labels/': typeof AppLabelsIndexRoute
+  '/my-claims/': typeof AppMyClaimsIndexRoute
   '/my-orders/': typeof AppMyOrdersIndexRoute
   '/orders/': typeof AppOrdersIndexRoute
   '/shipments/': typeof AppShipmentsIndexRoute
@@ -268,8 +310,12 @@ export interface FileRoutesByTo {
   '/users': typeof AppUsersRoute
   '/legal/$code': typeof LegalCodeRoute
   '/legal': typeof LegalIndexRoute
+  '/claims/$claimId': typeof AppClaimsClaimIdRoute
+  '/farm/claims': typeof AppFarmClaimsRoute
   '/farm/orders': typeof AppFarmOrdersRoute
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
+  '/my-claims/$claimId': typeof AppMyClaimsClaimIdRoute
+  '/my-claims/new': typeof AppMyClaimsNewRoute
   '/my-orders/$orderId': typeof AppMyOrdersOrderIdRoute
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/orders/new': typeof AppOrdersNewRoute
@@ -278,7 +324,9 @@ export interface FileRoutesByTo {
   '/settings/ordering': typeof AppSettingsOrderingRoute
   '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/shop/checkout': typeof AppShopCheckoutRoute
+  '/claims': typeof AppClaimsIndexRoute
   '/labels': typeof AppLabelsIndexRoute
+  '/my-claims': typeof AppMyClaimsIndexRoute
   '/my-orders': typeof AppMyOrdersIndexRoute
   '/orders': typeof AppOrdersIndexRoute
   '/shipments': typeof AppShipmentsIndexRoute
@@ -305,8 +353,12 @@ export interface FileRoutesById {
   '/_app/users': typeof AppUsersRoute
   '/legal/$code': typeof LegalCodeRoute
   '/legal/': typeof LegalIndexRoute
+  '/_app/claims/$claimId': typeof AppClaimsClaimIdRoute
+  '/_app/farm/claims': typeof AppFarmClaimsRoute
   '/_app/farm/orders': typeof AppFarmOrdersRoute
   '/_app/labels/$templateId': typeof AppLabelsTemplateIdRoute
+  '/_app/my-claims/$claimId': typeof AppMyClaimsClaimIdRoute
+  '/_app/my-claims/new': typeof AppMyClaimsNewRoute
   '/_app/my-orders/$orderId': typeof AppMyOrdersOrderIdRoute
   '/_app/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/_app/orders/new': typeof AppOrdersNewRoute
@@ -315,7 +367,9 @@ export interface FileRoutesById {
   '/_app/settings/ordering': typeof AppSettingsOrderingRoute
   '/_app/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/_app/shop/checkout': typeof AppShopCheckoutRoute
+  '/_app/claims/': typeof AppClaimsIndexRoute
   '/_app/labels/': typeof AppLabelsIndexRoute
+  '/_app/my-claims/': typeof AppMyClaimsIndexRoute
   '/_app/my-orders/': typeof AppMyOrdersIndexRoute
   '/_app/orders/': typeof AppOrdersIndexRoute
   '/_app/shipments/': typeof AppShipmentsIndexRoute
@@ -342,8 +396,12 @@ export interface FileRouteTypes {
     | '/users'
     | '/legal/$code'
     | '/legal/'
+    | '/claims/$claimId'
+    | '/farm/claims'
     | '/farm/orders'
     | '/labels/$templateId'
+    | '/my-claims/$claimId'
+    | '/my-claims/new'
     | '/my-orders/$orderId'
     | '/orders/$orderId'
     | '/orders/new'
@@ -352,7 +410,9 @@ export interface FileRouteTypes {
     | '/settings/ordering'
     | '/shipments/$shipmentId'
     | '/shop/checkout'
+    | '/claims/'
     | '/labels/'
+    | '/my-claims/'
     | '/my-orders/'
     | '/orders/'
     | '/shipments/'
@@ -377,8 +437,12 @@ export interface FileRouteTypes {
     | '/users'
     | '/legal/$code'
     | '/legal'
+    | '/claims/$claimId'
+    | '/farm/claims'
     | '/farm/orders'
     | '/labels/$templateId'
+    | '/my-claims/$claimId'
+    | '/my-claims/new'
     | '/my-orders/$orderId'
     | '/orders/$orderId'
     | '/orders/new'
@@ -387,7 +451,9 @@ export interface FileRouteTypes {
     | '/settings/ordering'
     | '/shipments/$shipmentId'
     | '/shop/checkout'
+    | '/claims'
     | '/labels'
+    | '/my-claims'
     | '/my-orders'
     | '/orders'
     | '/shipments'
@@ -413,8 +479,12 @@ export interface FileRouteTypes {
     | '/_app/users'
     | '/legal/$code'
     | '/legal/'
+    | '/_app/claims/$claimId'
+    | '/_app/farm/claims'
     | '/_app/farm/orders'
     | '/_app/labels/$templateId'
+    | '/_app/my-claims/$claimId'
+    | '/_app/my-claims/new'
     | '/_app/my-orders/$orderId'
     | '/_app/orders/$orderId'
     | '/_app/orders/new'
@@ -423,7 +493,9 @@ export interface FileRouteTypes {
     | '/_app/settings/ordering'
     | '/_app/shipments/$shipmentId'
     | '/_app/shop/checkout'
+    | '/_app/claims/'
     | '/_app/labels/'
+    | '/_app/my-claims/'
     | '/_app/my-orders/'
     | '/_app/orders/'
     | '/_app/shipments/'
@@ -573,6 +645,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/claims/': {
+      id: '/_app/claims/'
+      path: '/claims'
+      fullPath: '/claims/'
+      preLoaderRoute: typeof AppClaimsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/claims/$claimId': {
+      id: '/_app/claims/$claimId'
+      path: '/claims/$claimId'
+      fullPath: '/claims/$claimId'
+      preLoaderRoute: typeof AppClaimsClaimIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/farm/claims': {
+      id: '/_app/farm/claims'
+      path: '/farm/claims'
+      fullPath: '/farm/claims'
+      preLoaderRoute: typeof AppFarmClaimsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/farm/orders': {
       id: '/_app/farm/orders'
       path: '/farm/orders'
@@ -592,6 +685,27 @@ declare module '@tanstack/react-router' {
       path: '/labels/$templateId'
       fullPath: '/labels/$templateId'
       preLoaderRoute: typeof AppLabelsTemplateIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/my-claims/': {
+      id: '/_app/my-claims/'
+      path: '/my-claims'
+      fullPath: '/my-claims/'
+      preLoaderRoute: typeof AppMyClaimsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/my-claims/$claimId': {
+      id: '/_app/my-claims/$claimId'
+      path: '/my-claims/$claimId'
+      fullPath: '/my-claims/$claimId'
+      preLoaderRoute: typeof AppMyClaimsClaimIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/my-claims/new': {
+      id: '/_app/my-claims/new'
+      path: '/my-claims/new'
+      fullPath: '/my-claims/new'
+      preLoaderRoute: typeof AppMyClaimsNewRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/my-orders/': {
@@ -696,8 +810,12 @@ interface AppRouteChildren {
   AppProductsRoute: typeof AppProductsRoute
   AppStandingOrdersRoute: typeof AppStandingOrdersRoute
   AppUsersRoute: typeof AppUsersRoute
+  AppClaimsClaimIdRoute: typeof AppClaimsClaimIdRoute
+  AppFarmClaimsRoute: typeof AppFarmClaimsRoute
   AppFarmOrdersRoute: typeof AppFarmOrdersRoute
   AppLabelsTemplateIdRoute: typeof AppLabelsTemplateIdRoute
+  AppMyClaimsClaimIdRoute: typeof AppMyClaimsClaimIdRoute
+  AppMyClaimsNewRoute: typeof AppMyClaimsNewRoute
   AppMyOrdersOrderIdRoute: typeof AppMyOrdersOrderIdRoute
   AppOrdersOrderIdRoute: typeof AppOrdersOrderIdRoute
   AppOrdersNewRoute: typeof AppOrdersNewRoute
@@ -706,7 +824,9 @@ interface AppRouteChildren {
   AppSettingsOrderingRoute: typeof AppSettingsOrderingRoute
   AppShipmentsShipmentIdRoute: typeof AppShipmentsShipmentIdRoute
   AppShopCheckoutRoute: typeof AppShopCheckoutRoute
+  AppClaimsIndexRoute: typeof AppClaimsIndexRoute
   AppLabelsIndexRoute: typeof AppLabelsIndexRoute
+  AppMyClaimsIndexRoute: typeof AppMyClaimsIndexRoute
   AppMyOrdersIndexRoute: typeof AppMyOrdersIndexRoute
   AppOrdersIndexRoute: typeof AppOrdersIndexRoute
   AppShipmentsIndexRoute: typeof AppShipmentsIndexRoute
@@ -728,8 +848,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppProductsRoute: AppProductsRoute,
   AppStandingOrdersRoute: AppStandingOrdersRoute,
   AppUsersRoute: AppUsersRoute,
+  AppClaimsClaimIdRoute: AppClaimsClaimIdRoute,
+  AppFarmClaimsRoute: AppFarmClaimsRoute,
   AppFarmOrdersRoute: AppFarmOrdersRoute,
   AppLabelsTemplateIdRoute: AppLabelsTemplateIdRoute,
+  AppMyClaimsClaimIdRoute: AppMyClaimsClaimIdRoute,
+  AppMyClaimsNewRoute: AppMyClaimsNewRoute,
   AppMyOrdersOrderIdRoute: AppMyOrdersOrderIdRoute,
   AppOrdersOrderIdRoute: AppOrdersOrderIdRoute,
   AppOrdersNewRoute: AppOrdersNewRoute,
@@ -738,7 +862,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsOrderingRoute: AppSettingsOrderingRoute,
   AppShipmentsShipmentIdRoute: AppShipmentsShipmentIdRoute,
   AppShopCheckoutRoute: AppShopCheckoutRoute,
+  AppClaimsIndexRoute: AppClaimsIndexRoute,
   AppLabelsIndexRoute: AppLabelsIndexRoute,
+  AppMyClaimsIndexRoute: AppMyClaimsIndexRoute,
   AppMyOrdersIndexRoute: AppMyOrdersIndexRoute,
   AppOrdersIndexRoute: AppOrdersIndexRoute,
   AppShipmentsIndexRoute: AppShipmentsIndexRoute,

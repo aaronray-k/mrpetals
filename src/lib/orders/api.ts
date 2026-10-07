@@ -29,6 +29,7 @@ export interface Shipment {
   origin_airport: string
   destination_airport: string | null
   closed_at: string | null
+  arrived_at: string | null
 }
 
 export interface BuyerRef {

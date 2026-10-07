@@ -45,6 +45,7 @@ const shipment: Shipment = {
   origin_airport: 'NBO',
   destination_airport: 'NRT',
   closed_at: null,
+    arrived_at: null,
 }
 const input = (withPrices: boolean): ProformaInput => ({
   order: { order_number: 'CFLPFJ0041', currency: 'USD', farm_delivery_date: '2026-08-01', incoterm: 'FOB' },

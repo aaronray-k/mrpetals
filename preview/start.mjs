@@ -43,7 +43,7 @@ async function setUpDatabase() {
     // signed-in session, so two-factor is paused while it loads and switched back on below.
     const seeding = !done.has('seed')
     if (seeding) await client.query("update public.security_settings set two_factor_roles = '{}'")
-    for (const [name, file] of [['seed', 'seed.sql'], ['seed-ordering', 'seed-ordering.sql'], ['seed-dashboards', 'seed-dashboards.sql'], ['seed-fees', 'seed-fees.sql']]) {
+    for (const [name, file] of [['seed', 'seed.sql'], ['seed-ordering', 'seed-ordering.sql'], ['seed-dashboards', 'seed-dashboards.sql'], ['seed-fees', 'seed-fees.sql'], ['seed-claims', 'seed-claims.sql']]) {
       if (done.has(name)) continue
       console.log(`demo data: ${file}`)
       const seed = fs.readFileSync(path.join(here, file), 'utf8').replaceAll(":'demo_password'", client.escapeLiteral(DEMO_PASSWORD))

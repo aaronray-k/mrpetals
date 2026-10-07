@@ -12,6 +12,7 @@ import { Badge } from '~/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Spinner } from '~/components/ui/spinner'
 import { ActionGroup, ActionsCard, type ActionItem } from './action-list'
+import { useClaims, useFarmNotices } from '~/lib/claims/api'
 
 const S1 = 'var(--series-1)'
 const S2 = 'var(--series-2)'
@@ -54,6 +55,8 @@ interface StaffData {
 
 export function StaffDashboard({ weeks }: { weeks: number }) {
   const q = useDashboard<StaffData>('staff', weeks)
+  const claims = useClaims()
+  const notices = useFarmNotices()
   if (!q.data) return <Loading q={q} />
   const d = q.data
   const a = d.actions
@@ -75,6 +78,20 @@ export function StaffDashboard({ weeks }: { weeks: number }) {
       title: 'Flights in the next 3 days, not cleared',
       empty: 'Every flight is cleared.',
       items: a.flights_soon.map((s) => ({ key: s.shipment_id, title: `${s.shipment_ref} · ${formatDate(s.flight_date)}`, detail: s.blockers.slice(0, 2).join('; '), urgent: true, to: '/shipments/$shipmentId', params: { shipmentId: s.shipment_id } })),
+    },
+    {
+      title: 'Buyer claims to review',
+      empty: 'No claims waiting.',
+      items: (claims.data ?? [])
+        .filter((c) => c.status === 'submitted')
+        .map((c) => ({ key: c.id, title: `${c.claim_number} · ${c.customers?.company_name ?? ''}`, detail: `${c.claim_lines.length} boxes · shipment ${c.shipments?.shipment_ref ?? ''}`, urgent: true, to: '/claims/$claimId', params: { claimId: c.id } })),
+    },
+    {
+      title: 'Farm replies on claim notices',
+      empty: 'Nothing from farms.',
+      items: (notices.data ?? [])
+        .filter((n) => n.status === 'queried' || n.status === 'credited')
+        .map((n) => ({ key: n.id, title: `${n.notice_number} · ${n.farms?.farm_name ?? ''}`, detail: n.status === 'queried' ? 'Has a question' : `Credit note ${n.credit_note_number} to check and close`, to: '/claims/$claimId', params: { claimId: n.claim_id } })),
     },
     {
       title: 'Products to review (Floricode)',
@@ -347,12 +364,20 @@ interface FarmData {
 
 export function FarmDashboard({ weeks }: { weeks: number }) {
   const q = useDashboard<FarmData>('farm', weeks)
+  const notices = useFarmNotices()
   if (!q.data) return <Loading q={q} />
   const d = q.data
   const a = d.actions
   const groups: { title: string; empty: string; items: ActionItem[] }[] = [
     { title: 'Purchase orders to answer', empty: 'Nothing to answer.', items: a.to_answer.map((p) => ({ key: p.po_id, title: `${p.po_number} · ${compact(n(p.stems))} stems`, detail: `Deliver by ${formatDate(p.delivery_date)}`, urgent: true, to: '/farm/orders' })) },
     { title: 'Deliveries in the next 7 days', empty: 'No deliveries due.', items: a.deliveries.map((p) => ({ key: p.po_id, title: `${p.po_number} · ${formatDate(p.delivery_date)}`, detail: `${compact(n(p.stems))} stems`, to: '/farm/orders' })) },
+    {
+      title: 'Claim notices to answer',
+      empty: 'No claims on your flowers.',
+      items: (notices.data ?? [])
+        .filter((x) => x.status === 'sent' || x.status === 'queried')
+        .map((x) => ({ key: x.id, title: `${x.notice_number} · ${x.currency} ${x.amount.toFixed(2)}`, detail: 'Send your credit note', urgent: true, to: '/farm/claims' })),
+    },
     { title: 'Boxes sent back to you (30 days)', empty: 'No boxes sent back.', items: a.returned.map((b) => ({ key: String(b.box_id), title: `Box ${b.box_id}`, detail: b.reasons.join(', '), to: '/farm/orders' })) },
   ]
   return (

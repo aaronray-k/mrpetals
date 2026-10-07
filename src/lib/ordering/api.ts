@@ -63,6 +63,7 @@ export interface OrderingSettings {
   min_lead_hours: number
   farm_delivery_hours: number
   standing_order_days_ahead: number
+  claim_window_hours: number
 }
 
 export function useOrderingSettings() {
@@ -70,7 +71,7 @@ export function useOrderingSettings() {
     queryKey: ['ordering-settings'],
     queryFn: async () => {
       const [settings, earliest] = await Promise.all([
-        rows<OrderingSettings>(getSupabase().from('ordering_settings').select('min_lead_hours, farm_delivery_hours, standing_order_days_ahead')),
+        rows<OrderingSettings>(getSupabase().from('ordering_settings').select('min_lead_hours, farm_delivery_hours, standing_order_days_ahead, claim_window_hours')),
         rpc<string>('earliest_ship_date'),
       ])
       return { ...settings[0]!, earliest_ship_date: earliest }
@@ -427,7 +428,7 @@ export async function openShipmentDocument(path: string) {
 export const closeShipmentWithOverride = (shipmentId: string, reason: string | null) =>
   rpc<void>('close_shipment', { p_shipment_id: shipmentId, p_override_reason: reason })
 
-export async function updateShipment(id: string, patch: { mawb?: string | null; flight_no?: string | null; flight_date?: string | null; destination_airport?: string | null }) {
+export async function updateShipment(id: string, patch: { mawb?: string | null; flight_no?: string | null; flight_date?: string | null; destination_airport?: string | null; arrived_at?: string | null }) {
   const { error } = await getSupabase().from('shipments').update(patch).eq('id', id)
   if (error) throw new Error(error.message)
 }
@@ -476,6 +477,7 @@ export interface Notification {
   body: string | null
   order_id: string | null
   po_id: string | null
+  attachments: { claim_id?: string; notice_id?: string } | null
   created_at: string
   read_at: string | null
   email_status: string

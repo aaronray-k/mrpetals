@@ -121,7 +121,7 @@ function ShipmentPage() {
         until the shipment is closed.
       </Tip>
 
-      <ShipmentDetailsForm key={`${shipment.mawb}-${shipment.flight_no}-${shipment.flight_date}-${shipment.destination_airport}`} shipment={shipment} canEdit={staff} onSaved={() => void queryClient.invalidateQueries({ queryKey: shipmentKeys.all })} />
+      <ShipmentDetailsForm key={`${shipment.mawb}-${shipment.flight_no}-${shipment.flight_date}-${shipment.destination_airport}-${shipment.arrived_at}`} shipment={shipment} canEdit={staff} onSaved={() => void queryClient.invalidateQueries({ queryKey: shipmentKeys.all })} />
       {hasAnyRole(roles, ['admin', 'consolidator', 'finance']) && (
         <ReleasePanel
           shipmentId={shipment.id}

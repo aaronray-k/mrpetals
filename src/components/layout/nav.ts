@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Barcode, Bell, CircleUser, Boxes, Building2, CalendarClock, ClipboardList, FileSpreadsheet, Flower2, LayoutDashboard, ListChecks, Mail, Percent, Plane, ScanLine, Settings, ShoppingBasket, Store, Tag, Tags, Truck, Users, type LucideIcon } from 'lucide-react'
+import { ArrowLeftRight, Barcode, Bell, CircleUser, MessageSquareWarning, Boxes, Building2, CalendarClock, ClipboardList, FileSpreadsheet, Flower2, LayoutDashboard, ListChecks, Mail, Percent, Plane, ScanLine, Settings, ShoppingBasket, Store, Tag, Tags, Truck, Users, type LucideIcon } from 'lucide-react'
 import { ROLES, type Role } from '~/lib/roles'
 
 export interface NavItem {
@@ -30,6 +30,7 @@ export const NAV: NavGroup[] = [
       { to: '/shop', label: 'Catalog', icon: ShoppingBasket, tip: 'Prices per variety and length; add to cart', roles: ['customer'] },
       { to: '/my-orders', label: 'My orders', icon: ListChecks, tip: 'Where each order is now', roles: ['customer'] },
       { to: '/standing-orders', label: 'Standing orders', icon: CalendarClock, tip: 'Orders that repeat every week', roles: ['customer'] },
+      { to: '/my-claims', label: 'My claims', icon: MessageSquareWarning, tip: 'Report a problem with flowers you received', roles: ['customer'] },
     ],
   },
   {
@@ -39,6 +40,8 @@ export const NAV: NavGroup[] = [
       { to: '/qc/scan', label: 'Scan boxes', icon: ScanLine, tip: 'QC: scan, check and send back boxes', roles: ['qc', 'senior_qc', 'admin', 'consolidator'] },
       { to: '/shipments', label: 'Shipments', icon: Plane, tip: 'Flights, boxes, labels and packing lists', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
       { to: '/farm/orders', label: 'My purchase orders', icon: Truck, tip: 'Confirm what ConsolFlora ordered from you', roles: ['farm'] },
+      { to: '/farm/claims', label: 'Claims on your flowers', icon: MessageSquareWarning, tip: 'Claim notices: send your credit note', roles: ['farm'] },
+      { to: '/claims', label: 'Claims', icon: MessageSquareWarning, tip: 'Buyer claims: review, credit notes, farm notices', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
     ],
   },
   {

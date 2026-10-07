@@ -230,6 +230,22 @@ email codes and 30-day remembered devices work the same way as authenticator app
 Still needed: the **mail sender** (email item) to deliver `email_outbox`; until then only authenticator apps work
 in production.
 
+## Item 10: Buyer claims
+
+Provided by migration `…017_claims.sql`.
+
+| Object | Purpose |
+|---|---|
+| `ordering_settings.claim_window_hours`, `shipments.arrived_at`, `claim_deadline()` | The claim window (24 hours after landing by default). |
+| `claims`, `claim_lines`, `claim_costs`, `claim_photos` + bucket `claim-photos` | The buyer's claim, per box, with photos and extra costs. Buyers see their own; staff, QC and Finance see all; farms never. |
+| `claimable_boxes()`, `submit_claim()`, `withdraw_claim()` | Buyer. |
+| `decide_claim_line()`, `decide_claim_cost()`, `finish_claim_review()` | Consolidator or Admin. Finishing creates the buyer's `credit_notes` row and the `farm_claim_notices`. |
+| `farm_claim_notices`, `farm_claim_notice_lines`, `farm_claim_messages` + bucket `farm-credit-notes` | Per farm, at the farm's price and currency; the farm's credit note and the conversation. |
+| `farm_send_credit_note()`, `claim_notice_message()`, `close_claim_notice()` | Farm and ConsolFlora. |
+
+Credit notes are recorded in the app; taking them off a future invoice is done in Odoo when invoicing moves
+there.
+
 ## Not needed yet
 
 - Odoo: no calls until the shipment and fulfilment items.

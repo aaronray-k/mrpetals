@@ -26,6 +26,7 @@ export function ShipmentDetailsForm({ shipment, canEdit, onSaved }: { shipment: 
   const [flight, setFlight] = React.useState(shipment.flight_no ?? '')
   const [date, setDate] = React.useState(shipment.flight_date ?? '')
   const [dest, setDest] = React.useState(shipment.destination_airport ?? '')
+  const [landed, setLanded] = React.useState(shipment.arrived_at ? toLocalInput(shipment.arrived_at) : '')
   const [error, setError] = React.useState<string | null>(null)
   const dirty = awb !== (shipment.mawb ?? '') || flight !== (shipment.flight_no ?? '') || date !== (shipment.flight_date ?? '') || dest !== (shipment.destination_airport ?? '')
 
@@ -71,6 +72,30 @@ export function ShipmentDetailsForm({ shipment, canEdit, onSaved }: { shipment: 
               {(d) => <Input id="shp-dest" value={dest} maxLength={3} disabled={!canEdit} onChange={(e) => setDest(e.target.value)} aria-describedby={d} />}
             </Field>
           </div>
+          {shipment.status === 'closed' && (
+            <div className="flex flex-wrap items-end gap-2">
+              <Field id="shp-landed" label="Landed at (destination)" hint="Buyers' claim window starts here. Until it is set: the day after the flight, 08:00 Nairobi time.">
+                {(d) => <Input id="shp-landed" type="datetime-local" value={landed} disabled={!canEdit} onChange={(e) => setLanded(e.target.value)} aria-describedby={d} />}
+              </Field>
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  disabled={landed === (shipment.arrived_at ? toLocalInput(shipment.arrived_at) : '')}
+                  onClick={async () => {
+                    try {
+                      await updateShipment(shipment.id, { arrived_at: landed ? new Date(landed).toISOString() : null })
+                      toast({ kind: 'success', title: 'Landing time saved' })
+                      onSaved()
+                    } catch (err) {
+                      setError((err as Error).message)
+                    }
+                  }}
+                >
+                  Save landing time
+                </Button>
+              )}
+            </div>
+          )}
           {error && (
             <p className="text-sm font-semibold text-destructive" role="alert">
               {error}
@@ -243,4 +268,10 @@ function DocumentRow({ shipmentId, customerId, type, doc, canEdit, onChanged }: 
       )}
     </div>
   )
+}
+
+/** ISO time as the value of a datetime-local input, in this browser's time zone. */
+function toLocalInput(iso: string) {
+  const d = new Date(iso)
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
 }

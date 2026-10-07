@@ -9,6 +9,8 @@ import { rolesFor } from '~/components/layout/nav'
 import { OrderTimeline } from '~/components/shop/order-progress'
 import { money } from '~/components/shop/money'
 import { formatDate } from '~/components/orders/shipment-status'
+import { useClaimableBoxes } from '~/lib/claims/api'
+import { formatDateTime } from '~/lib/utils'
 import { Alert } from '~/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Spinner } from '~/components/ui/spinner'
@@ -41,6 +43,7 @@ const BUNCHING: Record<string, string> = { standard: 'Standard bunching', custom
 function MyOrderPage() {
   const { orderId } = Route.useParams()
   const products = useProductNames()
+  const claimable = useClaimableBoxes()
   const q = useQuery({
     queryKey: ['my-order', orderId],
     queryFn: async () => {
@@ -77,6 +80,19 @@ function MyOrderPage() {
           Ships {formatDate(order.ship_date)} · placed {formatDate(order.created_at.slice(0, 10))} · {progress.payment_status === 'paid' ? 'paid' : 'not paid yet'}
         </p>
       </div>
+      {(() => {
+        const box = claimable.data?.find((b) => b.order_number === order.order_number)
+        return (
+          box && (
+            <Alert variant="warning" title="Something wrong with these flowers?">
+              You can report a problem until {formatDateTime(box.deadline)}.{' '}
+              <Link to="/my-claims/new" search={{ shipment: box.shipment_id }} className="font-semibold underline">
+                Report a problem
+              </Link>
+            </Alert>
+          )
+        )
+      })()}
       {progress.flight_note && (
         <p className="flex items-start gap-2 rounded-md bg-muted p-3 text-sm">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> {progress.flight_note}
