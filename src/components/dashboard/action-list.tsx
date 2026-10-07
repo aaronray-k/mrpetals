@@ -10,6 +10,7 @@ export interface ActionItem {
   /** Where the work is done. */
   to?: string
   params?: Record<string, string>
+  search?: Record<string, unknown>
   urgent?: boolean
 }
 
@@ -41,7 +42,7 @@ export function ActionGroup({ title, items, empty }: { title: string; items: Act
               <li key={it.key}>
                 {it.to ? (
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  <Link to={it.to as any} params={it.params as any} className="flex min-h-11 items-center gap-2 px-3 py-2 hover:bg-muted">
+                  <Link to={it.to as any} params={it.params as any} search={it.search as any} className="flex min-h-11 items-center gap-2 px-3 py-2 hover:bg-muted">
                     {body}
                   </Link>
                 ) : (

@@ -48,6 +48,12 @@ export function toLabelData(d: Record<string, unknown>): LabelData {
     boxDescription: optStr(d.boxDescription),
     grossWeightKg: optNum(d.grossWeightKg),
     packDate: str(d.packDate),
+    floricodeName: optStr(d.floricodeName),
+    floricodeFeatures: Object.fromEntries(
+      Object.entries((d.floricodeFeatures ?? {}) as Record<string, unknown>).filter(([, v]) => v != null && v !== '').map(([k, v]) => [k, String(v)]),
+    ),
+    vbnPackagingCode: optStr(d.vbnPackagingCode),
+    growerGln: optStr(d.growerGln),
   }
 }
 

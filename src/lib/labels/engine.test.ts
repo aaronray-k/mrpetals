@@ -14,7 +14,7 @@ import {
   type FieldElement,
   type LabelDesign,
 } from './layout'
-import { placeholderQrFormatter } from './qr-format'
+import { floricodeQrFormatter, placeholderQrFormatter } from './qr-format'
 import { fitText, printableText, textWidthEm } from './text-fit'
 
 const design = (w: number, h: number): LabelDesign => ({
@@ -105,7 +105,7 @@ describe('renderLabel', () => {
   it('draws the QR code with the active formatter and adds REPRINT only on reprints', () => {
     const d = design(150, 70)
     const normal = renderLabel(d, SAMPLE_LABEL_DATA)
-    expect(normal.qrText).toBe('CF1|10042|SHP-2026-0001|42/180')
+    expect(normal.qrText).toBe('CF2|10042|SHP-2026-0001|42/180|VBN:123456|Q01:A1|S20:070|S62:055|S98:2|PKG:901|GLN:6160001001002|Q:80')
     expect(normal.ops.filter((o) => o.kind === 'qr')).toHaveLength(1)
     expect(normal.ops.some((o) => o.kind === 'text' && o.text === 'REPRINT')).toBe(false)
     const reprint = renderLabel(d, SAMPLE_LABEL_DATA, { reprint: true })
@@ -126,6 +126,19 @@ describe('QR formatter', () => {
     expect(placeholderQrFormatter.parse(text)).toEqual({ boxId: 10042 })
     expect(placeholderQrFormatter.parse('https://example.com')).toBeNull()
     expect(placeholderQrFormatter.parse('CF1|abc|x|1/2')).toBeNull()
+  })
+
+  it('carries the Floricode codes, leaves out empty ones, and still reads the first labels', () => {
+    const text = floricodeQrFormatter.format(SAMPLE_LABEL_DATA)
+    expect(floricodeQrFormatter.parse(text)).toEqual({
+      boxId: 10042,
+      codes: { VBN: '123456', Q01: 'A1', S20: '070', S62: '055', S98: '2', PKG: '901', GLN: '6160001001002', Q: '80' },
+    })
+    const bare = floricodeQrFormatter.format({ ...SAMPLE_LABEL_DATA, vbnCode: null, floricodeFeatures: {}, vbnPackagingCode: null, growerGln: null })
+    expect(bare).toBe('CF2|10042|SHP-2026-0001|42/180|Q:80')
+    expect(floricodeQrFormatter.format({ ...SAMPLE_LABEL_DATA, shipmentRef: 'A|B:C' })).toContain('|A/B/C|')
+    expect(floricodeQrFormatter.parse('CF1|10000042|SHP-2026-0042|42/180')).toEqual({ boxId: 10000042 })
+    expect(floricodeQrFormatter.parse('CF2|10042|x|1/2|bad')).toBeNull()
   })
 })
 

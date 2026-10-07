@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Bell, Boxes, Building2, CalendarClock, ClipboardList, FileSpreadsheet, Flower2, LayoutDashboard, ListChecks, Mail, Percent, Plane, ScanLine, Settings, ShoppingBasket, Store, Tag, Tags, Truck, Users, type LucideIcon } from 'lucide-react'
+import { ArrowLeftRight, Barcode, Bell, Boxes, Building2, CalendarClock, ClipboardList, FileSpreadsheet, Flower2, LayoutDashboard, ListChecks, Mail, Percent, Plane, ScanLine, Settings, ShoppingBasket, Store, Tag, Tags, Truck, Users, type LucideIcon } from 'lucide-react'
 import { ROLES, type Role } from '~/lib/roles'
 
 export interface NavItem {
@@ -46,6 +46,7 @@ export const NAV: NavGroup[] = [
       { to: '/farms', label: 'Farms', icon: Building2, tip: 'Growers, sales agents and payment terms', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
       { to: '/customers', label: 'Customers', icon: Store, tip: 'Buyers, incoterms and credit limits', roles: ['admin', 'consolidator', 'finance'] },
       { to: '/products', label: 'Products', icon: Flower2, tip: 'Varieties, grades and stem lengths', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc', 'farm'] },
+      { to: '/floricode', label: 'Floricode', icon: Barcode, tip: 'VBN, feature and packaging codes; sync with Floricode', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
       { to: '/box-types', label: 'Box types', icon: Boxes, tip: 'Box sizes and volumetric weight', roles: ['admin', 'consolidator', 'qc', 'senior_qc'] },
       { to: '/prices', label: 'Selling prices', icon: Tag, tip: 'Pin a farm or fix a price per product', roles: ['admin', 'consolidator', 'finance'] },
       { to: '/exchange-rates', label: 'Exchange rates', icon: ArrowLeftRight, tip: 'Convert farm prices into each buyer\'s currency', roles: ['admin', 'consolidator', 'finance'] },

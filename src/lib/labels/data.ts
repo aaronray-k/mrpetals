@@ -36,6 +36,13 @@ export interface LabelData {
   grossWeightKg: number | null
   /** YYYY-MM-DD */
   packDate: string
+  /** Floricode's name for the VBN code, e.g. "R GR RED NAOMI!". */
+  floricodeName: string | null
+  /** Floricode feature codes, e.g. { S20: '070', Q01: 'A1' }. */
+  floricodeFeatures: Record<string, string>
+  /** Floricode packaging (fust) code of the box type. */
+  vbnPackagingCode: string | null
+  growerGln: string | null
 }
 
 /** Made-up box used for the designer preview and test prints. */
@@ -73,6 +80,10 @@ export const SAMPLE_LABEL_DATA: LabelData = {
   boxDescription: 'Quarter box',
   grossWeightKg: 9.5,
   packDate: '2026-10-06',
+  floricodeName: 'R GR RED NAOMI',
+  floricodeFeatures: { S20: '070', S62: '055', S98: '2', Q01: 'A1' },
+  vbnPackagingCode: '901',
+  growerGln: '6160001001002',
 }
 
 /** How the box id is printed. Box ids come from a database sequence and are never reused. */

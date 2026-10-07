@@ -26,11 +26,13 @@ export const LABEL_FIELDS = [
   { key: 'maturity', group: 'Product', en: 'Maturity', nl: 'Rijpheid', value: (d) => text(d.maturity) },
   { key: 'product_code', group: 'Product', en: 'Product', nl: 'Product', value: (d) => d.productCode },
   { key: 'vbn_code', group: 'Product', en: 'VBN code', nl: 'VBN-code', value: (d) => text(d.vbnCode) },
+  { key: 'floricode_name', group: 'Product', en: 'Floricode name', nl: 'Floricode-naam', value: (d) => text(d.floricodeName) },
   { key: 'stems_per_bunch', group: 'Product', en: 'Stems per bunch', nl: 'Stelen per bos', value: (d) => num(d.stemsPerBunch) },
   { key: 'bunches_per_box', group: 'Product', en: 'Bunches per box', nl: 'Bossen per doos', value: (d) => num(d.bunchesPerBox) },
   { key: 'stems_per_box', group: 'Product', en: 'Stems per box', nl: 'Stelen per doos', value: (d) => num(d.stemsPerBox) },
   { key: 'farm_box_count', group: 'Box', en: 'Farm box', nl: 'Kwekersdoos', value: (d) => `${d.farmBoxNo} / ${d.farmBoxTotal}` },
   { key: 'box_type', group: 'Box', en: 'Box type', nl: 'Doostype', value: (d) => d.boxCode },
+  { key: 'vbn_packaging', group: 'Box', en: 'Packaging code', nl: 'Fustcode', value: (d) => text(d.vbnPackagingCode) },
   { key: 'gross_weight', group: 'Box', en: 'Gross weight', nl: 'Brutogewicht', value: (d) => num(d.grossWeightKg, ' kg') },
   { key: 'pack_date', group: 'Box', en: 'Packed', nl: 'Verpakt', value: (d) => d.packDate },
   { key: 'shipment_ref', group: 'Shipment', en: 'Shipment', nl: 'Zending', value: (d) => d.shipmentRef },
@@ -44,6 +46,7 @@ export const LABEL_FIELDS = [
   { key: 'destination_country', group: 'Buyer', en: 'Country', nl: 'Land', value: (d) => d.destinationCountry },
   { key: 'farm_name', group: 'Farm', en: 'Grower', nl: 'Kweker', value: (d) => d.farmName },
   { key: 'farm_code', group: 'Farm', en: 'Grower code', nl: 'Kwekerscode', value: (d) => d.farmCode },
+  { key: 'grower_gln', group: 'Farm', en: 'Grower GLN', nl: 'GLN kweker', value: (d) => text(d.growerGln) },
   { key: 'origin_country', group: 'Farm', en: 'Origin', nl: 'Herkomst', value: (d) => d.originCountry },
 ] as const satisfies readonly FieldDef[]
 

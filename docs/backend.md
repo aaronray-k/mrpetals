@@ -162,6 +162,28 @@ Still needed from the backend:
 - **Exchange rates** for every buyer currency other than USD (entered in the app).
 - **Mail passwords** go in the server environment (`SMTP_PASSWORD`, `IMAP_PASSWORD`) when email is built.
 
+## Item 7: Floricode
+
+Provided by migration `…013_floricode.sql`.
+
+| Object | Purpose |
+|---|---|
+| `floricode_products`, `floricode_feature_types`, `floricode_feature_values`, `floricode_packaging`, `floricode_companies` | Floricode's lists. Everyone signed in reads the codes; companies are staff only. Only the sync writes them. |
+| `floricode_apply_sync(source, cursor, data)`, `floricode_log_failure()`, `floricode_sync_runs` | The sync (Admin only) and its log: when, from where, what changed. |
+| `product_reviews`, `review_products()`, `resolve_product_review()` | Products flagged for review, opened and closed automatically. |
+| `save_product()`, `products.floricode_features` | The product form: codes checked against Floricode; length, head size, maturity and grade filled from the features. |
+| `set_box_packaging_code()` | Floricode packaging code per box type. |
+| `box_label_data()` | Adds the Floricode name, features, packaging code and grower GLN for labels and the QR code. |
+
+The app server fetches the data (`src/server/floricode.functions.ts`) and hands it to the database as the
+signed-in Admin. Still needed:
+
+- **Floricode API access:** ConsolFlora's Floricode account, its API documentation, and on the app server
+  `FLORICODE_API_URL` and `FLORICODE_API_KEY`. The API client is the one function left to write
+  (`fetchFromApi`); everything after it is built. Without them, "Sync now" says Floricode is not connected.
+- `FLORICODE_SOURCE=demo` loads the demo master data instead. **Preview only**: never set it in production.
+- A daily scheduled sync can be added like the standing-orders job once the API is connected.
+
 ## Not needed yet
 
 - Odoo: no calls until the shipment and fulfilment items.

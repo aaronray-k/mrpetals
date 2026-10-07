@@ -9,7 +9,9 @@ What runs on the web service (`node preview/start.mjs`):
   `supabase/migrations` not yet applied, and the demo data once: `seed.sql` (demo farms, buyers, products, an order split
   across farms, boxes part-way through QC, and one demo account per role), `seed-ordering.sql` (buyer
   orders and a standing order) and `seed-dashboards.sql` (a USD to EUR rate and eight weeks of past flights
-  for the charts).
+  for the charts), then the first Floricode demo sync and `seed-floricode.sql` (codes on the demo products,
+  packaging codes, GLNs, and one product still without a code). "Sync now" on the Floricode page then brings
+  the demo changes: a blocked code, a renamed code, new codes and a blocked stem length.
 - **PostgREST** (downloaded by `build.sh`) for the database API, exactly as Supabase uses it.
 - **The app** (`srvx`, the normal production build).
 - **`gateway.mjs`** in front: password sign-in, refresh, change password and the admin users API in place

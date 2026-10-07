@@ -37,6 +37,7 @@ interface StaffData {
     unanswered_pos: { po_id: string; po_number: string; farm: string; order_id: string; sent_at: string; delivery_date: string | null }[]
     ready_for_packing: { order_id: string; order_number: string; buyer: string; ship_date: string | null }[]
     flights_soon: { shipment_id: string; shipment_ref: string; flight_date: string; blockers: string[] }[]
+    products_to_review?: { product_id: string; product_code: string; product: string; reasons: string[] }[]
   }
   tiles: { open_orders: number; stems_ordered: number; pos_waiting: number; boxes_waiting_qc: number }
   stems_per_week: { week: string; stems: number }[]
@@ -74,6 +75,11 @@ export function StaffDashboard({ weeks }: { weeks: number }) {
       title: 'Flights in the next 3 days, not cleared',
       empty: 'Every flight is cleared.',
       items: a.flights_soon.map((s) => ({ key: s.shipment_id, title: `${s.shipment_ref} · ${formatDate(s.flight_date)}`, detail: s.blockers.slice(0, 2).join('; '), urgent: true, to: '/shipments/$shipmentId', params: { shipmentId: s.shipment_id } })),
+    },
+    {
+      title: 'Products to review (Floricode)',
+      empty: 'Every product\'s codes are in order.',
+      items: (a.products_to_review ?? []).map((p) => ({ key: p.product_id, title: `${p.product_code} · ${p.product}`, detail: p.reasons.join(' '), to: '/products', search: { review: true } })),
     },
   ]
   const fills = d.fill_rate_by_farm

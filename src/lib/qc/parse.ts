@@ -1,10 +1,10 @@
-import { ACTIVE_QR_FORMATTER } from '~/lib/labels/qr-format'
+import { ACTIVE_QR_FORMATTER, type QrRead } from '~/lib/labels/qr-format'
 
 /**
  * What QC scanned or typed: a box label's QR code (read by the active QR formatter, so it follows
  * the Florisoft switch) or a plain 8-digit box id from the label.
  */
-export function parseScan(text: string): { boxId: number } | { error: string } {
+export function parseScan(text: string): QrRead | { error: string } {
   const t = text.trim()
   if (!t) return { error: 'Scan a box label, or type the box id.' }
   const fromQr = ACTIVE_QR_FORMATTER.parse(t)

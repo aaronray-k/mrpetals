@@ -186,6 +186,28 @@ the 8-digit box id, or use a handheld scanner.
 - The shipment page uses the same severities: **Flag…** for several boxes at once, and the sticker button
   on returned boxes.
 
+## Floricode
+
+**Floricode** (Master data) holds Floricode's lists: VBN product codes, features (stem length, flower head
+size, ripeness stage, quality group, flowers per stem), packaging codes and the company register.
+
+- **Sync now** (Admin) brings in Floricode's changes. The page shows where the codes come from, the last
+  successful sync, what changed, and any failed sync with its reason. The preview uses demo master data shaped
+  like Floricode's (example codes, not real ones): its first sync loads the lists, the next brings changes.
+- **Products** are added and edited on the Products page. The VBN code, stem length, head size, ripeness and
+  grade are picked from the Floricode lists; blocked codes can't be picked.
+- **Needs review:** a product is flagged when it has no VBN code, its code isn't in the list, Floricode blocked
+  its code (with the replacement to use) or one of its features, or Floricode renamed its code. Flags close by
+  themselves once fixed; a renamed code is closed with **Mark as checked**. The Admin and Consolidator
+  dashboard lists them. Flags are refreshed on every sync and every product save (imported products are
+  checked at the next sync).
+- **Box types** take their Floricode packaging code.
+- **Labels:** the label designer can place the Floricode name, packaging code and grower GLN. The QR code now
+  carries the Floricode codes:
+  `CF2|<box id>|<shipment>|<n>/<N>|VBN:13000|Q01:A1|S20:070|S62:055|S98:2|PKG:901|GLN:<grower>|Q:<stems>`.
+  The QC scanner still reads labels printed with the first format (`CF1|…`). When Florisoft's QR
+  specification arrives, it replaces this format in one place (`src/lib/labels/qr-format.ts`).
+
 ## Project layout
 
 ```
@@ -221,7 +243,7 @@ docs/backend.md           what the backend must provide
 | 4 | QC scanner | Done |
 | 5 | Ordering flow and shipment release: catalog, checkout, approval, cost calculator, partial farm answers, packing list, standing orders, payment, credit, documents, users | Done |
 | 6 | Dashboards per role (charts and action lists), buyer currencies and exchange rates | Done |
-| 7 | Floricode | Not started |
+| 7 | Floricode: codes, sync, product form, review flags, codes on labels and in the QR code | Done (demo data until Floricode API access) |
 | 8 | Legal and consent | Not started |
 | 9 | Accessibility and security (WCAG 2.2 AA, 2FA) | Not started |
 | 10 | Buyer claims (with QC photos) | Not started |

@@ -48,6 +48,17 @@ async function setUpDatabase() {
       await client.query('insert into preview.applied (name) values ($1)', [name])
       await client.query('commit')
     }
+    // Floricode: the first demo sync, as the demo Admin, then codes on the demo products.
+    if (!done.has('seed-floricode')) {
+      console.log('demo data: Floricode')
+      const demo = JSON.parse(fs.readFileSync(path.join(root, 'src', 'server', 'floricode-demo.json'), 'utf8'))
+      await client.query('begin')
+      await client.query("select set_config('request.jwt.claim.sub', 'd0000000-0000-0000-0000-00000000000a', true)")
+      await client.query("select public.floricode_apply_sync('demo', 'demo-initial', $1::jsonb)", [JSON.stringify(demo.initial)])
+      await client.query(fs.readFileSync(path.join(here, 'seed-floricode.sql'), 'utf8'))
+      await client.query("insert into preview.applied (name) values ('seed-floricode')")
+      await client.query('commit')
+    }
     // PostgREST picks up new functions and tables.
     await client.query("notify pgrst, 'reload schema'")
   } catch (e) {
@@ -85,6 +96,8 @@ run('app', path.join(root, 'node_modules', '.bin', 'srvx'), ['serve', '--prod', 
   VITE_SUPABASE_URL: `http://127.0.0.1:${PORT}`,
   VITE_SUPABASE_ANON_KEY: 'preview-anon',
   SUPABASE_SERVICE_ROLE_KEY: serviceKey,
+  // Floricode "Sync now" uses the demo master data (src/server/floricode-demo.json).
+  FLORICODE_SOURCE: 'demo',
   PORT: String(APP_PORT),
 })
 

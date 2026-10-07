@@ -17,6 +17,7 @@ import { Route as AppCustomersRouteImport } from './routes/_app/customers'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppExchangeRatesRouteImport } from './routes/_app/exchange-rates'
 import { Route as AppFarmsRouteImport } from './routes/_app/farms'
+import { Route as AppFloricodeRouteImport } from './routes/_app/floricode'
 import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppMarginsRouteImport } from './routes/_app/margins'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
@@ -77,6 +78,11 @@ const AppExchangeRatesRoute = AppExchangeRatesRouteImport.update({
 const AppFarmsRoute = AppFarmsRouteImport.update({
   id: '/farms',
   path: '/farms',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFloricodeRoute = AppFloricodeRouteImport.update({
+  id: '/floricode',
+  path: '/floricode',
   getParentRoute: () => AppRoute,
 } as any)
 const AppImportRoute = AppImportRouteImport.update({
@@ -198,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/exchange-rates': typeof AppExchangeRatesRoute
   '/farms': typeof AppFarmsRoute
+  '/floricode': typeof AppFloricodeRoute
   '/import': typeof AppImportRoute
   '/margins': typeof AppMarginsRoute
   '/notifications': typeof AppNotificationsRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/exchange-rates': typeof AppExchangeRatesRoute
   '/farms': typeof AppFarmsRoute
+  '/floricode': typeof AppFloricodeRoute
   '/import': typeof AppImportRoute
   '/margins': typeof AppMarginsRoute
   '/notifications': typeof AppNotificationsRoute
@@ -262,6 +270,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/exchange-rates': typeof AppExchangeRatesRoute
   '/_app/farms': typeof AppFarmsRoute
+  '/_app/floricode': typeof AppFloricodeRoute
   '/_app/import': typeof AppImportRoute
   '/_app/margins': typeof AppMarginsRoute
   '/_app/notifications': typeof AppNotificationsRoute
@@ -295,6 +304,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/exchange-rates'
     | '/farms'
+    | '/floricode'
     | '/import'
     | '/margins'
     | '/notifications'
@@ -326,6 +336,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/exchange-rates'
     | '/farms'
+    | '/floricode'
     | '/import'
     | '/margins'
     | '/notifications'
@@ -358,6 +369,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/exchange-rates'
     | '/_app/farms'
+    | '/_app/floricode'
     | '/_app/import'
     | '/_app/margins'
     | '/_app/notifications'
@@ -444,6 +456,13 @@ declare module '@tanstack/react-router' {
       path: '/farms'
       fullPath: '/farms'
       preLoaderRoute: typeof AppFarmsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/floricode': {
+      id: '/_app/floricode'
+      path: '/floricode'
+      fullPath: '/floricode'
+      preLoaderRoute: typeof AppFloricodeRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/import': {
@@ -609,6 +628,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppExchangeRatesRoute: typeof AppExchangeRatesRoute
   AppFarmsRoute: typeof AppFarmsRoute
+  AppFloricodeRoute: typeof AppFloricodeRoute
   AppImportRoute: typeof AppImportRoute
   AppMarginsRoute: typeof AppMarginsRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
@@ -639,6 +659,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppExchangeRatesRoute: AppExchangeRatesRoute,
   AppFarmsRoute: AppFarmsRoute,
+  AppFloricodeRoute: AppFloricodeRoute,
   AppImportRoute: AppImportRoute,
   AppMarginsRoute: AppMarginsRoute,
   AppNotificationsRoute: AppNotificationsRoute,
