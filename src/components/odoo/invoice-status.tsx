@@ -1,9 +1,9 @@
-import { AlertTriangle, CheckCircle2, Clock, Upload } from 'lucide-react'
-import { paymentLabel, type Invoice } from '~/lib/odoo/api'
+import { AlertTriangle, Ban, CheckCircle2, Clock, FilePen, Upload } from 'lucide-react'
+import { invoiceNumber, paymentLabel, type Invoice } from '~/lib/odoo/api'
 import { Badge } from '~/components/ui/badge'
 
 /** Where an invoice stands, in words with an icon. */
-export function InvoiceStatusBadge({ invoice }: { invoice: Pick<Invoice, 'status' | 'odoo_payment_state' | 'kind'> }) {
+export function InvoiceStatusBadge({ invoice }: { invoice: Pick<Invoice, 'status' | 'odoo_payment_state' | 'odoo_state' | 'kind'> }) {
   if (invoice.status === 'pending')
     return (
       <Badge variant="warning">
@@ -14,6 +14,18 @@ export function InvoiceStatusBadge({ invoice }: { invoice: Pick<Invoice, 'status
     return (
       <Badge variant="destructive">
         <AlertTriangle aria-hidden="true" /> Not in Odoo
+      </Badge>
+    )
+  if (invoice.odoo_state === 'draft')
+    return (
+      <Badge variant="warning">
+        <FilePen aria-hidden="true" /> Draft: to confirm
+      </Badge>
+    )
+  if (invoice.odoo_state === 'cancel')
+    return (
+      <Badge>
+        <Ban aria-hidden="true" /> Cancelled in Odoo
       </Badge>
     )
   const settled = invoice.odoo_payment_state === 'paid' || invoice.odoo_payment_state === 'reversed'
@@ -31,7 +43,7 @@ export function InvoiceLines({ invoices, showBuyer = false }: { invoices: Invoic
     <ul className="grid gap-2">
       {invoices.map((i) => (
         <li key={i.id} className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold">{i.odoo_name ?? (i.kind === 'credit_note' ? 'Credit note' : 'Invoice')}</span>
+          <span className="font-semibold">{invoiceNumber(i)}</span>
           {showBuyer && <span>{i.customers?.company_name}</span>}
           <span className="tabular-nums">{new Intl.NumberFormat('en-GB', { style: 'currency', currency: i.currency }).format(i.kind === 'credit_note' ? -i.amount : i.amount)}</span>
           <InvoiceStatusBadge invoice={i} />

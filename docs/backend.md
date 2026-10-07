@@ -254,7 +254,10 @@ Provided by migration `…018_odoo.sql`; the Odoo calls are in `src/server/odoo/
 | `invoices` | One per buyer per closed shipment (made by a trigger on closing), and one per claim credit note. Total, currency, reference, orders; Odoo number, state, payment status, amount due, link. Buyers read their own. |
 | `invoice_payload()` | What goes to Odoo: the buyer's business details, currency, date, reference, line name and total. Never farm prices or margins. |
 | `record_odoo_push()`, `record_odoo_fetch()` | Results from the app server. A paid invoice marks its orders paid; the buyer is told of a new invoice, Finance of a payment, staff of a failed push. |
-| `odoo_settings`, `odoo_sync_log`, `customers.odoo_partner_id` | Address, database, login, line name; every push, fetch and test. |
+| `odoo_settings`, `odoo_sync_log`, `customers.odoo_partner_id` | Address, database, login, line name; every push, fetch, test, confirm and reset. |
+| `odoo_settings.field_map`, `payment_term_map` (`…020_odoo_drafts.sql`) | Which Odoo invoice fields get the MAWB, proforma numbers and flight; which Odoo payment term each ConsolFlora term is. Sent in `invoice_payload()`. |
+| `record_odoo_action()` | Confirm (`action_post`), reset to draft (`button_draft`) or refill a draft, done by the app server for Admin, Consolidator and Finance; logged, refusals included. |
+| `apply_odoo_state()` | Every push, fetch and action: Odoo's number, state, due date. The first confirmation sets `posted_at` and tells the buyer; buyers only read confirmed invoices. A new draft notifies Finance. |
 
 Needed to connect: Odoo **Custom plan** (Odoo Online), an Odoo user with Accounting rights and an **API key**
 (`ODOO_API_KEY` on the app server), the address, database and login on Odoo settings, and each buyer currency

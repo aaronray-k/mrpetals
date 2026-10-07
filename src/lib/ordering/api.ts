@@ -477,7 +477,7 @@ export interface Notification {
   body: string | null
   order_id: string | null
   po_id: string | null
-  attachments: { claim_id?: string; notice_id?: string } | null
+  attachments: { claim_id?: string; notice_id?: string; invoice_id?: string } | null
   created_at: string
   read_at: string | null
   email_status: string

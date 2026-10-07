@@ -230,11 +230,18 @@ export function FinanceDashboard({ weeks }: { weeks: number }) {
   const a = d.actions
   const groups: { title: string; empty: string; items: ActionItem[] }[] = [
     {
+      title: 'Draft invoices to confirm',
+      empty: 'No drafts waiting.',
+      items: (invoices.data ?? [])
+        .filter((i) => i.status === 'pushed' && i.odoo_state === 'draft')
+        .map((i) => ({ key: i.id, title: `${i.customers?.company_name ?? ''} · ${money(i.kind === 'credit_note' ? -i.amount : i.amount, i.currency)}`, detail: i.reference, to: '/invoices/$invoiceId', params: { invoiceId: i.id } })),
+    },
+    {
       title: 'Invoices not in Odoo yet',
       empty: 'Every invoice is in Odoo.',
       items: (invoices.data ?? [])
         .filter((i) => i.status !== 'pushed')
-        .map((i) => ({ key: i.id, title: `${i.customers?.company_name ?? ''} · ${money(i.amount, i.currency)}`, detail: i.last_error ?? i.reference, urgent: i.status === 'failed', to: '/invoices' })),
+        .map((i) => ({ key: i.id, title: `${i.customers?.company_name ?? ''} · ${money(i.amount, i.currency)}`, detail: i.last_error ?? i.reference, urgent: i.status === 'failed', to: '/invoices/$invoiceId', params: { invoiceId: i.id } })),
     },
     {
       title: 'Prepaid orders to collect (flights within 7 days)',

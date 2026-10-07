@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { authMiddleware, requireRoles, type AuthContext } from './auth'
-import { odooClient, type InvoicePayload, type OdooAdapter } from './odoo/client'
+import { MAPPED_FIELDS, odooClient, type InvoicePayload, type OdooAdapter, type OdooField } from './odoo/client'
 import { demoOdoo } from './odoo/demo'
 
 /**
@@ -19,7 +19,7 @@ async function adapter(ctx: AuthContext, opts: { forTest?: boolean } = {}): Prom
     return {
       source: 'demo',
       odoo: demoOdoo(async (kind) => {
-        const { count } = await ctx.supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('kind', kind).eq('status', 'pushed')
+        const { count } = await ctx.supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('kind', kind).not('posted_at', 'is', null)
         return (count ?? 0) + 1
       }),
     }
@@ -129,4 +129,83 @@ export const fetchInvoices = createServerFn({ method: 'POST' })
     }
     await context.supabase.rpc('mark_odoo_fetched')
     return { updated, failed, skipped: null }
+  })
+
+/** One invoice for the viewer: the invoice and, when it is in the Odoo ConsolFlora is connected to, Odoo's version of it. */
+async function inOdoo(ctx: AuthContext, id: string) {
+  const a = await adapter(ctx)
+  const { data: inv, error } = await ctx.supabase.from('invoices').select('status, odoo_source').eq('id', id).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!inv) throw new Error('This invoice doesn\'t exist, or you may not see it.')
+  if (!a.odoo) return { a, reason: a.reason ?? 'Odoo is not connected.' }
+  if (inv.status !== 'pushed') return { a, reason: 'This invoice isn\'t in Odoo yet.' }
+  if (inv.odoo_source && inv.odoo_source !== a.source) return { a, reason: 'This invoice went to the demo Odoo; the real Odoo doesn\'t have it.' }
+  return { a, odoo: a.odoo, reason: null }
+}
+
+export const getInvoiceDetail = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .validator(z.object({ id: z.string().uuid() }))
+  .handler(async ({ data, context }) => {
+    requireRoles(context, [...ROLES])
+    const { odoo, reason } = await inOdoo(context, data.id)
+    const p = await payload(context, data.id)
+    if (!odoo) return { detail: null, reason, payload: p }
+    try {
+      const detail = await odoo.detail(p)
+      // The viewer is also a fetch: keep ConsolFlora's copy of the state up to date.
+      await context.supabase.rpc('record_odoo_fetch', { p_invoice_id: data.id, p_result: detail })
+      return { detail, reason: null, payload: p }
+    } catch (e) {
+      return { detail: null, reason: (e as Error).message, payload: p }
+    }
+  })
+
+export const getInvoicePdf = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .validator(z.object({ id: z.string().uuid() }))
+  .handler(async ({ data, context }) => {
+    requireRoles(context, [...ROLES])
+    const { odoo } = await inOdoo(context, data.id)
+    if (!odoo) return null
+    return odoo.pdf(await payload(context, data.id))
+  })
+
+/** Confirm, reset to draft, or write ConsolFlora's details into a draft again, in Odoo. */
+export const invoiceAction = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ id: z.string().uuid(), action: z.enum(['confirm', 'reset', 'update']) }))
+  .handler(async ({ data, context }) => {
+    requireRoles(context, [...ROLES])
+    const { odoo, reason } = await inOdoo(context, data.id)
+    if (!odoo) throw new Error(reason ?? 'Odoo is not connected.')
+    const p = await payload(context, data.id)
+    try {
+      const move = data.action === 'confirm' ? await odoo.confirm(p) : data.action === 'reset' ? await odoo.resetToDraft(p) : await odoo.updateDraft(p)
+      const { error } = await context.supabase.rpc('record_odoo_action', { p_invoice_id: data.id, p_action: data.action, p_ok: true, p_result: move })
+      if (error) throw new Error(error.message)
+      return { ok: true as const, move }
+    } catch (e) {
+      const message = (e as Error).message
+      await context.supabase.rpc('record_odoo_action', { p_invoice_id: data.id, p_action: data.action, p_ok: false, p_result: {}, p_error: message })
+      return { ok: false as const, message }
+    }
+  })
+
+/** For Odoo settings: Odoo's text fields on invoices (with a guess for each ConsolFlora value) and its payment terms. */
+export const getOdooMappingOptions = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    requireRoles(context, ['admin'])
+    const a = await adapter(context, { forTest: true })
+    const { data: cust } = await context.supabase.from('customers').select('payment_terms').eq('active', true)
+    const buyerTerms = [...new Set((cust ?? []).map((c: { payment_terms: string }) => c.payment_terms))].sort()
+    if (!a.odoo) return { error: a.reason ?? 'Odoo is not connected.', fields: [] as OdooField[], terms: [] as { id: number; name: string }[], guesses: {}, buyerTerms }
+    try {
+      const [fields, terms] = await Promise.all([a.odoo.fields(), a.odoo.paymentTerms()])
+      const guesses = Object.fromEntries(MAPPED_FIELDS.map((m) => [m.key, fields.find((f) => m.guess.test(f.label) || m.guess.test(f.name))?.name ?? null]))
+      return { error: null, fields, terms, guesses, buyerTerms }
+    } catch (e) {
+      return { error: (e as Error).message, fields: [] as OdooField[], terms: [] as { id: number; name: string }[], guesses: {}, buyerTerms }
+    }
   })

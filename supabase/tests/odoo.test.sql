@@ -24,7 +24,7 @@ update profiles set farm_id = (select id from farms where farm_code = 'OF1') whe
 insert into products (product_code, flower_type, variety, grade, stem_length_cm, stems_per_bunch) values ('OD60', 'Rose', 'Odoo Red', 'A1', 60, 20);
 insert into price_list (farm_id, product_id, currency, price_per_stem, valid_from)
 select f.id, p.id, 'USD', 0.30, '2020-01-01' from farms f, products p where f.farm_code = 'OF1' and p.product_code = 'OD60';
-insert into shipments (shipment_ref, flight_date, destination_airport) values ('ODS1', current_date + 20, 'NRT');
+insert into shipments (shipment_ref, flight_date, destination_airport, mawb, flight_no) values ('ODS1', current_date + 20, 'NRT', '706-12345675', 'KQ 1406');
 
 create temp table t (name text primary key, id uuid);
 grant all on t to authenticated;
@@ -89,6 +89,47 @@ values ('CN-T-2', (select id from claims where claim_number = 'CLM-T-2'), (selec
 select pg_temp.check((select count(*) from invoices where kind = 'credit_note') = 2, 'a second claim on the same flight gets its own credit note');
 set role authenticated;
 
+-- ---------------------------------------------------------------- Drafts, confirmed from ConsolFlora
+reset role;
+update odoo_settings set field_map = '{"mawb": "x_studio_mawb", "flight": "x_studio_flight", "proforma": "x_studio_proforma"}', payment_term_map = '{"Net 30": 4}';
+set role authenticated;
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000c';
+insert into t select 'I2', id from invoices where customer_id = (select id from customers where customer_code = 'OB2') and kind = 'invoice';
+select pg_temp.check((select invoice_payload(pg_temp.id('I2')) ->> 'mawb') = '706-12345675' and (select invoice_payload(pg_temp.id('I2')) ->> 'flight') = 'KQ 1406'
+  and (select invoice_payload(pg_temp.id('I2')) ->> 'proforma') like 'CFLOB2000%' and (select invoice_payload(pg_temp.id('I2')) ->> 'payment_term_id') = '4'
+  and (select invoice_payload(pg_temp.id('I2')) -> 'field_map' ->> 'mawb') = 'x_studio_mawb', 'Odoo gets the MAWB, flight, proforma numbers and payment term to fill in');
+select pg_temp.check((select invoice_payload(pg_temp.id('I1')) ->> 'proforma') ~ '^CFLOB1000\d, CFLOB1000\d$', 'a buyer''s orders on the flight are all in the proforma field');
+select record_odoo_push(pg_temp.id('I2'), true, '{"move_id": 42, "name": "/", "state": "draft", "payment_state": "not_paid", "amount_due": 50, "source": "api"}');
+reset role;
+select pg_temp.check((select odoo_state || ':' || coalesce(odoo_name, '-') || ':' || (posted_at is null) from invoices where id = pg_temp.id('I2')) = 'draft:-:true', 'it arrives as a draft, without an Odoo number');
+select pg_temp.check((select count(*) from notifications where attachments ->> 'invoice_id' = pg_temp.id('I2')::text and kind = 'invoice_issued') = 0, 'the buyer is not told of a draft');
+select pg_temp.check((select count(*) from notifications where attachments ->> 'invoice_id' = pg_temp.id('I2')::text and audience = 'finance' and kind = 'invoice_draft') = 1, 'Finance hears there is a draft to confirm');
+set role authenticated;
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-0000000000b2';
+select pg_temp.check((select count(*) from invoices) = 0, 'the buyer doesn''t see the draft');
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000d';
+select record_odoo_action(pg_temp.id('I2'), 'confirm', true, '{"name": "INV/2026/00042", "state": "posted", "payment_state": "not_paid", "amount_due": 50, "due_date": "2026-12-01"}');
+reset role;
+select pg_temp.check((select odoo_name || ':' || odoo_state || ':' || odoo_due_date || ':' || (posted_at is not null) from invoices where id = pg_temp.id('I2')) = 'INV/2026/00042:posted:2026-12-01:true',
+  'confirming gives it Odoo''s number and due date');
+select pg_temp.check((select body from notifications where attachments ->> 'invoice_id' = pg_temp.id('I2')::text and kind = 'invoice_issued') like '%due 01 Dec 2026.',
+  'and then the buyer is told, with the due date');
+set role authenticated;
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-0000000000b2';
+select pg_temp.check((select count(*) from invoices) = 1, 'now the buyer sees it');
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000c';
+select record_odoo_action(pg_temp.id('I2'), 'reset', true, '{"name": "INV/2026/00042", "state": "draft", "payment_state": "not_paid", "amount_due": 50}');
+select record_odoo_action(pg_temp.id('I2'), 'confirm', true, '{"name": "INV/2026/00042", "state": "posted", "payment_state": "not_paid", "amount_due": 50}');
+select record_odoo_action(pg_temp.id('I2'), 'reset', false, '{}', 'This invoice is paid.');
+reset role;
+select pg_temp.check((select count(*) from notifications where attachments ->> 'invoice_id' = pg_temp.id('I2')::text and kind = 'invoice_issued') = 1, 'confirming again after a reset doesn''t tell the buyer twice');
+select pg_temp.check((select string_agg(action || ':' || ok, ',' order by id) from odoo_sync_log where invoice_id = pg_temp.id('I2')) = 'push:false,push:true,confirm:true,reset:true,confirm:true,reset:false',
+  'every confirm and reset is in the activity log, refusals included');
+set role authenticated;
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-0000000000b2';
+select pg_temp.check_refused($$select record_odoo_action(pg_temp.id('I2'), 'confirm', true, '{"state": "posted"}')$$, 'Only Admin, Consolidator and Finance');
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000d';
+
 -- ---------------------------------------------------------------- Go-live
 select pg_temp.check((select send_from from odoo_settings) is null, 'no go-live until sending is switched on');
 reset role;
@@ -101,7 +142,7 @@ set role authenticated;
 
 -- ---------------------------------------------------------------- Who sees what
 set request.jwt.claim.sub = 'c0000000-0000-0000-0000-0000000000b2';
-select pg_temp.check((select count(*) from invoices) = 1, 'a buyer sees only their own invoices');
+select pg_temp.check((select count(*) from invoices) = 1 and (select customer_id from invoices) = (select id from customers where customer_code = 'OB2'), 'a buyer sees only their own invoices');
 select pg_temp.check(invoice_payload(pg_temp.id('I1')) is null, 'and no payloads');
 select pg_temp.check_refused($$select record_odoo_push(pg_temp.id('I1'), true, '{}')$$, 'Only Admin, Consolidator and Finance');
 set request.jwt.claim.sub = 'c0000000-0000-0000-0000-0000000000f1';

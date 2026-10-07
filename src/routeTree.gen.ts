@@ -20,7 +20,6 @@ import { Route as AppExchangeRatesRouteImport } from './routes/_app/exchange-rat
 import { Route as AppFarmsRouteImport } from './routes/_app/farms'
 import { Route as AppFloricodeRouteImport } from './routes/_app/floricode'
 import { Route as AppImportRouteImport } from './routes/_app/import'
-import { Route as AppInvoicesRouteImport } from './routes/_app/invoices'
 import { Route as AppMarginsRouteImport } from './routes/_app/margins'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppPricesRouteImport } from './routes/_app/prices'
@@ -33,6 +32,8 @@ import { Route as AppClaimsIndexRouteImport } from './routes/_app/claims/index'
 import { Route as AppClaimsClaimIdRouteImport } from './routes/_app/claims/$claimId'
 import { Route as AppFarmClaimsRouteImport } from './routes/_app/farm/claims'
 import { Route as AppFarmOrdersRouteImport } from './routes/_app/farm/orders'
+import { Route as AppInvoicesIndexRouteImport } from './routes/_app/invoices/index'
+import { Route as AppInvoicesInvoiceIdRouteImport } from './routes/_app/invoices/$invoiceId'
 import { Route as AppLabelsIndexRouteImport } from './routes/_app/labels/index'
 import { Route as AppLabelsTemplateIdRouteImport } from './routes/_app/labels/$templateId'
 import { Route as AppMyClaimsIndexRouteImport } from './routes/_app/my-claims/index'
@@ -106,11 +107,6 @@ const AppImportRoute = AppImportRouteImport.update({
   path: '/import',
   getParentRoute: () => AppRoute,
 } as any)
-const AppInvoicesRoute = AppInvoicesRouteImport.update({
-  id: '/invoices',
-  path: '/invoices',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppMarginsRoute = AppMarginsRouteImport.update({
   id: '/margins',
   path: '/margins',
@@ -169,6 +165,16 @@ const AppFarmClaimsRoute = AppFarmClaimsRouteImport.update({
 const AppFarmOrdersRoute = AppFarmOrdersRouteImport.update({
   id: '/farm/orders',
   path: '/farm/orders',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInvoicesIndexRoute = AppInvoicesIndexRouteImport.update({
+  id: '/invoices/',
+  path: '/invoices/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInvoicesInvoiceIdRoute = AppInvoicesInvoiceIdRouteImport.update({
+  id: '/invoices/$invoiceId',
+  path: '/invoices/$invoiceId',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLabelsIndexRoute = AppLabelsIndexRouteImport.update({
@@ -273,7 +279,6 @@ export interface FileRoutesByFullPath {
   '/farms': typeof AppFarmsRoute
   '/floricode': typeof AppFloricodeRoute
   '/import': typeof AppImportRoute
-  '/invoices': typeof AppInvoicesRoute
   '/margins': typeof AppMarginsRoute
   '/notifications': typeof AppNotificationsRoute
   '/prices': typeof AppPricesRoute
@@ -285,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/claims/$claimId': typeof AppClaimsClaimIdRoute
   '/farm/claims': typeof AppFarmClaimsRoute
   '/farm/orders': typeof AppFarmOrdersRoute
+  '/invoices/$invoiceId': typeof AppInvoicesInvoiceIdRoute
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
   '/my-claims/$claimId': typeof AppMyClaimsClaimIdRoute
   '/my-claims/new': typeof AppMyClaimsNewRoute
@@ -298,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/shop/checkout': typeof AppShopCheckoutRoute
   '/claims/': typeof AppClaimsIndexRoute
+  '/invoices/': typeof AppInvoicesIndexRoute
   '/labels/': typeof AppLabelsIndexRoute
   '/my-claims/': typeof AppMyClaimsIndexRoute
   '/my-orders/': typeof AppMyOrdersIndexRoute
@@ -316,7 +323,6 @@ export interface FileRoutesByTo {
   '/farms': typeof AppFarmsRoute
   '/floricode': typeof AppFloricodeRoute
   '/import': typeof AppImportRoute
-  '/invoices': typeof AppInvoicesRoute
   '/margins': typeof AppMarginsRoute
   '/notifications': typeof AppNotificationsRoute
   '/prices': typeof AppPricesRoute
@@ -328,6 +334,7 @@ export interface FileRoutesByTo {
   '/claims/$claimId': typeof AppClaimsClaimIdRoute
   '/farm/claims': typeof AppFarmClaimsRoute
   '/farm/orders': typeof AppFarmOrdersRoute
+  '/invoices/$invoiceId': typeof AppInvoicesInvoiceIdRoute
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
   '/my-claims/$claimId': typeof AppMyClaimsClaimIdRoute
   '/my-claims/new': typeof AppMyClaimsNewRoute
@@ -341,6 +348,7 @@ export interface FileRoutesByTo {
   '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/shop/checkout': typeof AppShopCheckoutRoute
   '/claims': typeof AppClaimsIndexRoute
+  '/invoices': typeof AppInvoicesIndexRoute
   '/labels': typeof AppLabelsIndexRoute
   '/my-claims': typeof AppMyClaimsIndexRoute
   '/my-orders': typeof AppMyOrdersIndexRoute
@@ -361,7 +369,6 @@ export interface FileRoutesById {
   '/_app/farms': typeof AppFarmsRoute
   '/_app/floricode': typeof AppFloricodeRoute
   '/_app/import': typeof AppImportRoute
-  '/_app/invoices': typeof AppInvoicesRoute
   '/_app/margins': typeof AppMarginsRoute
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/prices': typeof AppPricesRoute
@@ -373,6 +380,7 @@ export interface FileRoutesById {
   '/_app/claims/$claimId': typeof AppClaimsClaimIdRoute
   '/_app/farm/claims': typeof AppFarmClaimsRoute
   '/_app/farm/orders': typeof AppFarmOrdersRoute
+  '/_app/invoices/$invoiceId': typeof AppInvoicesInvoiceIdRoute
   '/_app/labels/$templateId': typeof AppLabelsTemplateIdRoute
   '/_app/my-claims/$claimId': typeof AppMyClaimsClaimIdRoute
   '/_app/my-claims/new': typeof AppMyClaimsNewRoute
@@ -386,6 +394,7 @@ export interface FileRoutesById {
   '/_app/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/_app/shop/checkout': typeof AppShopCheckoutRoute
   '/_app/claims/': typeof AppClaimsIndexRoute
+  '/_app/invoices/': typeof AppInvoicesIndexRoute
   '/_app/labels/': typeof AppLabelsIndexRoute
   '/_app/my-claims/': typeof AppMyClaimsIndexRoute
   '/_app/my-orders/': typeof AppMyOrdersIndexRoute
@@ -406,7 +415,6 @@ export interface FileRouteTypes {
     | '/farms'
     | '/floricode'
     | '/import'
-    | '/invoices'
     | '/margins'
     | '/notifications'
     | '/prices'
@@ -418,6 +426,7 @@ export interface FileRouteTypes {
     | '/claims/$claimId'
     | '/farm/claims'
     | '/farm/orders'
+    | '/invoices/$invoiceId'
     | '/labels/$templateId'
     | '/my-claims/$claimId'
     | '/my-claims/new'
@@ -431,6 +440,7 @@ export interface FileRouteTypes {
     | '/shipments/$shipmentId'
     | '/shop/checkout'
     | '/claims/'
+    | '/invoices/'
     | '/labels/'
     | '/my-claims/'
     | '/my-orders/'
@@ -449,7 +459,6 @@ export interface FileRouteTypes {
     | '/farms'
     | '/floricode'
     | '/import'
-    | '/invoices'
     | '/margins'
     | '/notifications'
     | '/prices'
@@ -461,6 +470,7 @@ export interface FileRouteTypes {
     | '/claims/$claimId'
     | '/farm/claims'
     | '/farm/orders'
+    | '/invoices/$invoiceId'
     | '/labels/$templateId'
     | '/my-claims/$claimId'
     | '/my-claims/new'
@@ -474,6 +484,7 @@ export interface FileRouteTypes {
     | '/shipments/$shipmentId'
     | '/shop/checkout'
     | '/claims'
+    | '/invoices'
     | '/labels'
     | '/my-claims'
     | '/my-orders'
@@ -493,7 +504,6 @@ export interface FileRouteTypes {
     | '/_app/farms'
     | '/_app/floricode'
     | '/_app/import'
-    | '/_app/invoices'
     | '/_app/margins'
     | '/_app/notifications'
     | '/_app/prices'
@@ -505,6 +515,7 @@ export interface FileRouteTypes {
     | '/_app/claims/$claimId'
     | '/_app/farm/claims'
     | '/_app/farm/orders'
+    | '/_app/invoices/$invoiceId'
     | '/_app/labels/$templateId'
     | '/_app/my-claims/$claimId'
     | '/_app/my-claims/new'
@@ -518,6 +529,7 @@ export interface FileRouteTypes {
     | '/_app/shipments/$shipmentId'
     | '/_app/shop/checkout'
     | '/_app/claims/'
+    | '/_app/invoices/'
     | '/_app/labels/'
     | '/_app/my-claims/'
     | '/_app/my-orders/'
@@ -613,13 +625,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppImportRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/invoices': {
-      id: '/_app/invoices'
-      path: '/invoices'
-      fullPath: '/invoices'
-      preLoaderRoute: typeof AppInvoicesRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/margins': {
       id: '/_app/margins'
       path: '/margins'
@@ -702,6 +707,20 @@ declare module '@tanstack/react-router' {
       path: '/farm/orders'
       fullPath: '/farm/orders'
       preLoaderRoute: typeof AppFarmOrdersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/invoices/': {
+      id: '/_app/invoices/'
+      path: '/invoices'
+      fullPath: '/invoices/'
+      preLoaderRoute: typeof AppInvoicesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/invoices/$invoiceId': {
+      id: '/_app/invoices/$invoiceId'
+      path: '/invoices/$invoiceId'
+      fullPath: '/invoices/$invoiceId'
+      preLoaderRoute: typeof AppInvoicesInvoiceIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/labels/': {
@@ -842,7 +861,6 @@ interface AppRouteChildren {
   AppFarmsRoute: typeof AppFarmsRoute
   AppFloricodeRoute: typeof AppFloricodeRoute
   AppImportRoute: typeof AppImportRoute
-  AppInvoicesRoute: typeof AppInvoicesRoute
   AppMarginsRoute: typeof AppMarginsRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppPricesRoute: typeof AppPricesRoute
@@ -852,6 +870,7 @@ interface AppRouteChildren {
   AppClaimsClaimIdRoute: typeof AppClaimsClaimIdRoute
   AppFarmClaimsRoute: typeof AppFarmClaimsRoute
   AppFarmOrdersRoute: typeof AppFarmOrdersRoute
+  AppInvoicesInvoiceIdRoute: typeof AppInvoicesInvoiceIdRoute
   AppLabelsTemplateIdRoute: typeof AppLabelsTemplateIdRoute
   AppMyClaimsClaimIdRoute: typeof AppMyClaimsClaimIdRoute
   AppMyClaimsNewRoute: typeof AppMyClaimsNewRoute
@@ -865,6 +884,7 @@ interface AppRouteChildren {
   AppShipmentsShipmentIdRoute: typeof AppShipmentsShipmentIdRoute
   AppShopCheckoutRoute: typeof AppShopCheckoutRoute
   AppClaimsIndexRoute: typeof AppClaimsIndexRoute
+  AppInvoicesIndexRoute: typeof AppInvoicesIndexRoute
   AppLabelsIndexRoute: typeof AppLabelsIndexRoute
   AppMyClaimsIndexRoute: typeof AppMyClaimsIndexRoute
   AppMyOrdersIndexRoute: typeof AppMyOrdersIndexRoute
@@ -882,7 +902,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppFarmsRoute: AppFarmsRoute,
   AppFloricodeRoute: AppFloricodeRoute,
   AppImportRoute: AppImportRoute,
-  AppInvoicesRoute: AppInvoicesRoute,
   AppMarginsRoute: AppMarginsRoute,
   AppNotificationsRoute: AppNotificationsRoute,
   AppPricesRoute: AppPricesRoute,
@@ -892,6 +911,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppClaimsClaimIdRoute: AppClaimsClaimIdRoute,
   AppFarmClaimsRoute: AppFarmClaimsRoute,
   AppFarmOrdersRoute: AppFarmOrdersRoute,
+  AppInvoicesInvoiceIdRoute: AppInvoicesInvoiceIdRoute,
   AppLabelsTemplateIdRoute: AppLabelsTemplateIdRoute,
   AppMyClaimsClaimIdRoute: AppMyClaimsClaimIdRoute,
   AppMyClaimsNewRoute: AppMyClaimsNewRoute,
@@ -905,6 +925,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppShipmentsShipmentIdRoute: AppShipmentsShipmentIdRoute,
   AppShopCheckoutRoute: AppShopCheckoutRoute,
   AppClaimsIndexRoute: AppClaimsIndexRoute,
+  AppInvoicesIndexRoute: AppInvoicesIndexRoute,
   AppLabelsIndexRoute: AppLabelsIndexRoute,
   AppMyClaimsIndexRoute: AppMyClaimsIndexRoute,
   AppMyOrdersIndexRoute: AppMyOrdersIndexRoute,

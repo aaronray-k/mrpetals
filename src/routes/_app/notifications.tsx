@@ -85,6 +85,11 @@ function NotificationsPage() {
                     Open claim
                   </Link>
                 ) : null)}
+              {n.attachments?.invoice_id && hasAnyRole(roles, ['admin', 'consolidator', 'finance']) && (
+                <Link to="/invoices/$invoiceId" params={{ invoiceId: n.attachments.invoice_id }} className="inline-flex min-h-6 items-center font-semibold underline underline-offset-2">
+                  Open invoice
+                </Link>
+              )}
               {n.attachments?.notice_id && hasAnyRole(roles, ['farm']) && (
                 <Link to="/farm/claims" className="inline-flex min-h-6 items-center font-semibold underline underline-offset-2">
                   Open claim notice

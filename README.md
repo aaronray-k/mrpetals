@@ -275,12 +275,22 @@ Odoo makes the invoices; ConsolFlora keeps the detail and sends only the total.
   buyer's currency, the flight date and a reference such as `SHP-2026-0101 / CFLPFJ0001, CFLPFJ0003`. The buyer is
   matched to an Odoo customer by their code (or created). No tax is sent: Odoo's own setup applies.
 - Each **claim credit note** goes to Odoo as a credit note: "Cut Flowers – credit (CLM-2026-00001)".
+- They arrive in Odoo as **drafts**, with Odoo's own invoice fields filled in: the **MAWB**, the **proforma numbers**
+  (the buyer's orders on the flight, e.g. CFLPFJ0001, CFLPFJ0003), the **flight number**, and the buyer's
+  **payment terms** as an Odoo payment term (Odoo works out the due date). Admin, Consolidator or Finance open an
+  invoice to see it as Odoo has it, with a **preview on the side** (live from Odoo, or Odoo's PDF once Odoo has
+  made one), and **Confirm** it or **Reset to draft** without signing in to Odoo. **Fill in again from
+  ConsolFlora** rewrites a draft (and a warning shows when Odoo's copy differs). The buyer is told, with the due
+  date, only once an invoice is confirmed, and buyers see only confirmed invoices. Finance is told of each new
+  draft; the Finance dashboard lists the drafts to confirm.
 - **Invoices** (Admin, Consolidator, Finance) lists them with the Odoo number (a link into Odoo), what is still
   due and the payment status. Anything Odoo didn't take shows why, with **Send waiting to Odoo** to retry.
   **Refresh from Odoo** fetches payments (also done when the page opens, if the last fetch is over 10 minutes
   old); a paid invoice marks its orders paid here. Buyers see their invoice on the order.
 - **Odoo settings** (Admin): address, database, login, the line name, on/off, **Test connection** and recent
-  activity. The API key is only in the server environment (`ODOO_API_KEY`). Odoo Online needs the **Custom plan**
+  activity. **Invoice fields in Odoo** reads the invoice form's text fields from Odoo and suggests which holds
+  the MAWB, proforma number and flight (from their labels), and matches each buyer payment term to an Odoo one
+  by its number of days; confirm and save once. The API key is only in the server environment (`ODOO_API_KEY`). Odoo Online needs the **Custom plan**
   for this. **Test connection** works while sending is off and checks the login, invoicing rights and that every
   buyer currency is active in Odoo. Switching sending on sets the **go-live** moment: invoices made before it are
   never sent. Without `ODOO_API_KEY` (or on the preview until one is set) a demo Odoo is used; demo invoices are
@@ -342,7 +352,7 @@ docs/backend.md           what the backend must provide
 | 8 | Legal and consent: agreements per role at sign-in, public legal pages, marketing choice | Done (texts pending legal review) |
 | 9 | Accessibility and security: two-factor sign-in (app or email, remembered devices), WCAG 2.2 AA sweep | Done (email codes wait for the mailbox) |
 | 10 | Buyer claims: buyer report with photos, consolidator review, buyer credit notes, farm claim notices and farm credit notes | Done |
-| 11 | Invoices in Odoo: one invoice per buyer per flight (one Cut Flowers line), credit notes, push and fetch | Done (demo Odoo until connected) |
+| 11 | Invoices in Odoo: one invoice per buyer per flight (one Cut Flowers line), credit notes, push and fetch | Done: drafts confirmed in ConsolFlora, with preview (demo Odoo until connected) |
 | 12 | Messages and email (Zoho: SMTP out, IMAP replies into the app); important notifications emailed; settings page already there | Not started |
 
 A clickable preview with demo data runs on Render; see `preview/README.md`.

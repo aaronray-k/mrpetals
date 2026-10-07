@@ -11,9 +11,46 @@ export interface InvoicePayload {
   date: string
   line_label: string
   odoo_move_id: number | null
+  odoo_state?: string | null
+  odoo_name?: string | null
   pushed_at: string | null
+  posted_at?: string | null
   orders_paid: boolean
+  /** Filled into Odoo's own invoice fields, per field_map. */
+  mawb?: string | null
+  flight?: string | null
+  proforma?: string | null
+  field_map?: Partial<Record<MappedField, string>>
+  payment_terms?: string | null
+  payment_term_id?: number | null
   partner: { odoo_partner_id: number | null; name: string; code: string; email: string | null; country: string | null; city: string | null; street: string | null; vat: string | null }
+}
+export type MappedField = 'mawb' | 'proforma' | 'flight'
+export const MAPPED_FIELDS: { key: MappedField; label: string; guess: RegExp }[] = [
+  { key: 'mawb', label: 'MAWB / AWB', guess: /\bm?awb|air ?way ?bill/i },
+  { key: 'proforma', label: 'Proforma invoice no.', guess: /pro-? ?forma/i },
+  { key: 'flight', label: 'Flight number', guess: /flight ?(no\b|num|#|details)|^flight$/i },
+]
+export interface OdooField {
+  name: string
+  label: string
+  type: string
+}
+/** One invoice as Odoo has it, for the live preview. */
+export interface OdooMoveDetail extends OdooMove {
+  partner: string | null
+  company: string | null
+  currency: string | null
+  reference: string | null
+  invoice_date: string | null
+  due_date: string | null
+  payment_term: string | null
+  amount_untaxed: number
+  amount_tax: number
+  amount_total: number
+  lines: { name: string; quantity: number; price_unit: number; subtotal: number }[]
+  fields: { key: MappedField; field: string; value: string | null }[]
+  has_pdf: boolean
 }
 export interface OdooMove {
   move_id: number
@@ -22,6 +59,7 @@ export interface OdooMove {
   payment_state: string
   amount_due: number
   url: string
+  due_date?: string | null
   partner_id?: number
   source?: 'demo' | 'api'
 }
@@ -30,7 +68,32 @@ export interface OdooAdapter {
   test(currencies: string[]): Promise<string>
   push(p: InvoicePayload): Promise<OdooMove>
   fetch(p: InvoicePayload): Promise<OdooMove>
+  /** Odoo's text fields on invoices, to choose where the MAWB, proforma and flight go. */
+  fields(): Promise<OdooField[]>
+  paymentTerms(): Promise<{ id: number; name: string }[]>
+  detail(p: InvoicePayload): Promise<OdooMoveDetail>
+  /** Odoo's PDF of the invoice, if Odoo has made one (it does when the invoice is printed or sent). */
+  pdf(p: InvoicePayload): Promise<{ name: string; base64: string } | null>
+  confirm(p: InvoicePayload): Promise<OdooMove>
+  resetToDraft(p: InvoicePayload): Promise<OdooMove>
+  /** Writes ConsolFlora's details (reference, total, fields, payment terms) into a draft again. */
+  updateDraft(p: InvoicePayload): Promise<OdooMove>
 }
+
+/** The values ConsolFlora fills into Odoo's fields: the mapped text fields and the payment terms. */
+export function filledFields(p: InvoicePayload): Record<string, unknown> {
+  const v: Record<string, unknown> = {}
+  for (const f of MAPPED_FIELDS) {
+    const field = p.field_map?.[f.key]
+    if (field) v[field] = p[f.key] || false
+  }
+  if (p.payment_term_id) v.invoice_payment_term_id = p.payment_term_id
+  return v
+}
+export const lineLabel = (p: InvoicePayload) =>
+  p.kind === 'invoice' ? p.line_label : `${p.line_label} – credit (${p.reference.split(' / claim ')[1] ?? p.reference})`
+const many2one = (v: unknown) => (Array.isArray(v) ? String(v[1]) : null)
+const str = (v: unknown) => (v === false || v == null ? null : String(v))
 
 export interface OdooConfig {
   url: string
@@ -86,9 +149,18 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
     return r[0].id
   }
   async function read(moveId: number, partner?: number): Promise<OdooMove> {
-    const r = (await kw('account.move', 'read', [[moveId]], { fields: ['name', 'state', 'payment_state', 'amount_residual'] })) as { name: string; state: string; payment_state: string; amount_residual: number }[]
+    const r = (await kw('account.move', 'read', [[moveId]], { fields: ['name', 'state', 'payment_state', 'amount_residual', 'invoice_date_due'] })) as { name: string; state: string; payment_state: string; amount_residual: number; invoice_date_due: string | false }[]
     if (!r[0]) throw new Error(`Odoo invoice ${moveId} no longer exists.`)
-    return { move_id: moveId, name: r[0].name, state: r[0].state, payment_state: r[0].payment_state, amount_due: r[0].amount_residual, url: link(moveId), partner_id: partner }
+    return { move_id: moveId, name: r[0].name, state: r[0].state, payment_state: r[0].payment_state, amount_due: r[0].amount_residual, due_date: str(r[0].invoice_date_due), url: link(moveId), partner_id: partner }
+  }
+  function moveOf(p: InvoicePayload) {
+    if (!p.odoo_move_id) throw new Error('This invoice isn\'t in Odoo yet.')
+    return p.odoo_move_id
+  }
+  async function state(moveId: number) {
+    const r = (await kw('account.move', 'read', [[moveId]], { fields: ['state'] })) as { state: string }[]
+    if (!r[0]) throw new Error(`Odoo invoice ${moveId} no longer exists.`)
+    return r[0].state
   }
 
   return {
@@ -117,23 +189,78 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
       // Already there (an earlier push that wasn't recorded)? Then don't make a second one.
       const existing = (await kw('account.move', 'search', [[['ref', '=', p.reference], ['move_type', '=', moveType], ['partner_id', '=', partner], ['state', '!=', 'cancel']]], { limit: 1 })) as number[]
       if (existing[0]) return read(existing[0], partner)
-      const label = p.kind === 'invoice' ? p.line_label : `${p.line_label} – credit (${p.reference.split(' / claim ')[1] ?? p.reference})`
+      // A draft: Admin, Consolidator or Finance confirm it (in ConsolFlora or Odoo); Odoo dates it then.
       const moveId = (await kw('account.move', 'create', [
         {
           move_type: moveType,
           partner_id: partner,
           currency_id: await currencyId(p.currency),
-          invoice_date: p.date,
           ref: p.reference,
-          invoice_line_ids: [[0, 0, { name: label, quantity: 1, price_unit: p.amount }]],
+          invoice_line_ids: [[0, 0, { name: lineLabel(p), quantity: 1, price_unit: p.amount }]],
+          ...filledFields(p),
         },
       ])) as number
-      await kw('account.move', 'action_post', [[moveId]])
       return read(moveId, partner)
     },
     async fetch(p) {
-      if (!p.odoo_move_id) throw new Error('Not in Odoo yet.')
-      return read(p.odoo_move_id)
+      return read(moveOf(p))
+    },
+    async fields() {
+      const all = (await kw('account.move', 'fields_get', [], { attributes: ['string', 'type', 'readonly', 'store'] })) as Record<string, { string: string; type: string; readonly?: boolean; store?: boolean }>
+      return Object.entries(all)
+        .filter(([name, f]) => ['char', 'text'].includes(f.type) && f.store !== false && (name.startsWith('x_') || !f.readonly))
+        .map(([name, f]) => ({ name, label: f.string, type: f.type }))
+        .sort((a, b) => Number(b.name.startsWith('x_')) - Number(a.name.startsWith('x_')) || a.label.localeCompare(b.label))
+    },
+    async paymentTerms() {
+      return (await kw('account.payment.term', 'search_read', [[]], { fields: ['name'], order: 'name' })) as { id: number; name: string }[]
+    },
+    async detail(p) {
+      const id = moveOf(p)
+      const mapped = MAPPED_FIELDS.filter((f) => p.field_map?.[f.key])
+      const r = (await kw('account.move', 'read', [[id]], {
+        fields: ['name', 'state', 'payment_state', 'amount_residual', 'amount_untaxed', 'amount_tax', 'amount_total', 'invoice_date', 'invoice_date_due',
+          'partner_id', 'company_id', 'currency_id', 'ref', 'invoice_payment_term_id', ...mapped.map((f) => p.field_map![f.key]!)],
+      })) as Record<string, unknown>[]
+      const m = r[0]
+      if (!m) throw new Error(`Odoo invoice ${id} no longer exists.`)
+      const lines = (await kw('account.move.line', 'search_read', [[['move_id', '=', id], ['display_type', '=', 'product']]], {
+        fields: ['name', 'quantity', 'price_unit', 'price_subtotal'],
+      })) as { name: string | false; quantity: number; price_unit: number; price_subtotal: number }[]
+      const pdfs = (await kw('ir.attachment', 'search', [[['res_model', '=', 'account.move'], ['res_id', '=', id], ['mimetype', '=', 'application/pdf']]], { limit: 1 })) as number[]
+      return {
+        move_id: id, name: String(m.name), state: String(m.state), payment_state: String(m.payment_state), amount_due: Number(m.amount_residual), url: link(id),
+        due_date: str(m.invoice_date_due), invoice_date: str(m.invoice_date), partner: many2one(m.partner_id), company: many2one(m.company_id), currency: many2one(m.currency_id),
+        reference: str(m.ref), payment_term: many2one(m.invoice_payment_term_id),
+        amount_untaxed: Number(m.amount_untaxed), amount_tax: Number(m.amount_tax), amount_total: Number(m.amount_total),
+        lines: lines.map((l) => ({ name: l.name || '', quantity: l.quantity, price_unit: l.price_unit, subtotal: l.price_subtotal })),
+        fields: mapped.map((f) => ({ key: f.key, field: p.field_map![f.key]!, value: str(m[p.field_map![f.key]!]) })),
+        has_pdf: !!pdfs[0],
+      }
+    },
+    async pdf(p) {
+      const r = (await kw('ir.attachment', 'search_read', [[['res_model', '=', 'account.move'], ['res_id', '=', moveOf(p)], ['mimetype', '=', 'application/pdf']]], {
+        fields: ['name', 'datas'], order: 'id desc', limit: 1,
+      })) as { name: string; datas: string }[]
+      return r[0] ? { name: r[0].name, base64: r[0].datas } : null
+    },
+    async confirm(p) {
+      const id = moveOf(p)
+      if ((await state(id)) !== 'posted') await kw('account.move', 'action_post', [[id]])
+      return read(id)
+    },
+    async resetToDraft(p) {
+      const id = moveOf(p)
+      if ((await state(id)) !== 'draft') await kw('account.move', 'button_draft', [[id]])
+      return read(id)
+    },
+    async updateDraft(p) {
+      const id = moveOf(p)
+      if ((await state(id)) !== 'draft') throw new Error('Only a draft can be changed. Reset it to draft first.')
+      const lines = (await kw('account.move.line', 'search', [[['move_id', '=', id], ['display_type', '=', 'product']]])) as number[]
+      const line = lines.length === 1 ? [[1, lines[0], { name: lineLabel(p), quantity: 1, price_unit: p.amount }]] : [...lines.map((l) => [2, l]), [0, 0, { name: lineLabel(p), quantity: 1, price_unit: p.amount }]]
+      await kw('account.move', 'write', [[id], { ref: p.reference, invoice_line_ids: line, ...filledFields(p) }])
+      return read(id)
     },
   }
 }

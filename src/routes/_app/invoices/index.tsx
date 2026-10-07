@@ -1,8 +1,8 @@
 import * as React from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { ExternalLink, RefreshCw, Upload } from 'lucide-react'
-import { fetchFromOdoo, pushToOdoo, useInvoices, useOdooSettings, useOdooStatus, type Invoice } from '~/lib/odoo/api'
+import { RefreshCw, Upload } from 'lucide-react'
+import { fetchFromOdoo, invoiceNumber, pushToOdoo, useInvoices, useOdooSettings, useOdooStatus, type Invoice } from '~/lib/odoo/api'
 import { cn, formatDateTime } from '~/lib/utils'
 import { PageHeader } from '~/components/layout/app-shell'
 import { RequireRole } from '~/components/layout/require-role'
@@ -18,7 +18,7 @@ import { Spinner } from '~/components/ui/spinner'
 import { TBody, TD, TH, THead, TR, Table } from '~/components/ui/table'
 import { useToast } from '~/components/ui/toaster'
 
-export const Route = createFileRoute('/_app/invoices')({
+export const Route = createFileRoute('/_app/invoices/')({
   head: () => ({ meta: [{ title: 'Invoices · ConsolFlora' }] }),
   component: () => (
     <RequireRole roles={rolesFor('/invoices')}>
@@ -27,10 +27,11 @@ export const Route = createFileRoute('/_app/invoices')({
   ),
 })
 
-type Filter = 'attention' | 'unpaid' | 'paid' | 'all'
+type Filter = 'drafts' | 'attention' | 'unpaid' | 'paid' | 'all'
 const FILTERS: { key: Filter; label: string; test: (i: Invoice) => boolean }[] = [
+  { key: 'drafts', label: 'Drafts to confirm', test: (i) => i.status === 'pushed' && i.odoo_state === 'draft' },
   { key: 'attention', label: 'Not in Odoo', test: (i) => i.status !== 'pushed' },
-  { key: 'unpaid', label: 'Unpaid', test: (i) => i.status === 'pushed' && !['paid', 'reversed'].includes(i.odoo_payment_state ?? '') },
+  { key: 'unpaid', label: 'Unpaid', test: (i) => i.status === 'pushed' && i.odoo_state === 'posted' && !['paid', 'reversed'].includes(i.odoo_payment_state ?? '') },
   { key: 'paid', label: 'Paid', test: (i) => ['paid', 'reversed'].includes(i.odoo_payment_state ?? '') },
   { key: 'all', label: 'All', test: () => true },
 ]
@@ -41,7 +42,7 @@ function InvoicesPage() {
   const status = useOdooStatus()
   const toast = useToast()
   const queryClient = useQueryClient()
-  const [filter, setFilter] = React.useState<Filter>('attention')
+  const [filter, setFilter] = React.useState<Filter>('drafts')
   const [busy, setBusy] = React.useState<'push' | 'fetch' | null>(null)
   const autoFetched = React.useRef(false)
   const refresh = () => {
@@ -114,15 +115,16 @@ function InvoicesPage() {
       <div className="grid grid-cols-1 gap-4">
         <Tip id="invoices.how" title="How invoicing works">
           When a shipment closes, each buyer on it gets one invoice for all their orders on that flight; claim credit notes become Odoo credit
-          notes. They go to Odoo straight away, or with <strong>Send waiting to Odoo</strong> if Odoo couldn't take them. Payments come back from
-          Odoo, and a paid invoice marks its orders paid here.
+          notes. They arrive in Odoo as drafts, with the MAWB, proforma numbers, flight and payment terms filled in. Open one to check it
+          against Odoo's preview and <strong>Confirm</strong> it; the buyer is told once it is confirmed. Payments come back from Odoo, and a
+          paid invoice marks its orders paid here.
         </Tip>
         {status.data?.source === 'none' && (
           <Alert variant="warning" title="Odoo is not connected">
             {status.data.reason} <Link to="/settings/odoo" className="font-semibold underline">Odoo settings</Link>
           </Alert>
         )}
-        {status.data?.source === 'demo' && <p className="text-sm text-muted-foreground">Preview: invoices go to a demo Odoo, and the demo buyer pays each invoice a few minutes after it is posted.</p>}
+        {status.data?.source === 'demo' && <p className="text-sm text-muted-foreground">Preview: invoices go to a demo Odoo, and the demo buyer pays each invoice a few minutes after it is confirmed.</p>}
         {settings.data?.last_fetch_at && <p className="text-sm text-muted-foreground">Last fetched from Odoo {formatDateTime(settings.data.last_fetch_at)}.</p>}
         <fieldset className="flex w-fit flex-wrap gap-1 rounded-md border border-input bg-card p-1">
           <legend className="sr-only">Show</legend>
@@ -153,14 +155,9 @@ function InvoicesPage() {
                 {rows.map((i) => (
                   <TR key={i.id}>
                     <TD className="whitespace-nowrap">
-                      {i.odoo_url ? (
-                        <a href={i.odoo_url} target="_blank" rel="noopener" className="inline-flex items-center gap-1 font-semibold underline">
-                          {i.odoo_name} <ExternalLink className="size-3.5" aria-hidden="true" />
-                          <span className="sr-only">(opens Odoo)</span>
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground">{i.kind === 'credit_note' ? 'Credit note' : 'Invoice'}</span>
-                      )}
+                      <Link to="/invoices/$invoiceId" params={{ invoiceId: i.id }} className="inline-flex min-h-6 items-center font-semibold underline underline-offset-2">
+                        {invoiceNumber(i)}
+                      </Link>
                     </TD>
                     <TD>{i.customers?.company_name}</TD>
                     <TD>
