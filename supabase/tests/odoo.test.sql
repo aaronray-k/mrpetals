@@ -62,6 +62,7 @@ select pg_temp.check((select invoice_payload(pg_temp.id('I1')) -> 'partner' ->> 
 select record_odoo_push(pg_temp.id('I1'), true, '{"move_id": 41, "name": "INV/2026/00041", "state": "posted", "payment_state": "not_paid", "amount_due": 176, "partner_id": 7, "url": "https://x.odoo.com/odoo/action-account.action_move_out_invoice_type/41"}');
 select pg_temp.check((select status || ':' || odoo_name from invoices where id = pg_temp.id('I1')) = 'pushed:INV/2026/00041', 'the Odoo number is kept');
 select pg_temp.check((select odoo_partner_id from customers where customer_code = 'OB1') = 7, 'and the Odoo customer, for next time');
+select pg_temp.check((select odoo_source from invoices where id = pg_temp.id('I1')) is null, 'no source given: left empty');
 select record_odoo_fetch(pg_temp.id('I1'), '{"name": "INV/2026/00041", "state": "posted", "payment_state": "paid", "amount_due": 0}');
 reset role;
 select pg_temp.check((select bool_and(payment_status = 'paid' and payment_reference = 'Odoo INV/2026/00041') from customer_orders where id in (pg_temp.id('A1'), pg_temp.id('A2'))),
@@ -86,6 +87,16 @@ insert into claims (claim_number, customer_id, shipment_id, currency, status) va
 insert into credit_notes (credit_note_number, claim_id, customer_id, currency, amount)
 values ('CN-T-2', (select id from claims where claim_number = 'CLM-T-2'), (select id from customers where customer_code = 'OB1'), 'USD', 5);
 select pg_temp.check((select count(*) from invoices where kind = 'credit_note') = 2, 'a second claim on the same flight gets its own credit note');
+set role authenticated;
+
+-- ---------------------------------------------------------------- Go-live
+select pg_temp.check((select send_from from odoo_settings) is null, 'no go-live until sending is switched on');
+reset role;
+update odoo_settings set enabled = true;
+select pg_temp.check((select send_from from odoo_settings) between now() - interval '1 minute' and now(), 'switching sending on sets the go-live moment');
+update odoo_settings set enabled = false;
+update odoo_settings set enabled = true;
+select pg_temp.check((select send_from from odoo_settings) between now() - interval '1 minute' and now(), 'and switching off and on again keeps it');
 set role authenticated;
 
 -- ---------------------------------------------------------------- Who sees what

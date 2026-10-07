@@ -115,8 +115,9 @@ run('app', path.join(root, 'node_modules', '.bin', 'srvx'), ['serve', '--prod', 
   SUPABASE_SERVICE_ROLE_KEY: serviceKey,
   // Floricode "Sync now" uses the demo master data (src/server/floricode-demo.json).
   FLORICODE_SOURCE: 'demo',
-  // Invoices go to a demo Odoo (src/server/odoo/demo.ts) until a real one is connected.
-  ODOO_SOURCE: 'demo',
+  // Invoices go to a demo Odoo (src/server/odoo/demo.ts) until ODOO_API_KEY is set; then to the real Odoo on
+  // Odoo settings, once an Admin switches sending on there.
+  ...(process.env.ODOO_API_KEY ? {} : { ODOO_SOURCE: 'demo' }),
   PORT: String(APP_PORT),
 })
 

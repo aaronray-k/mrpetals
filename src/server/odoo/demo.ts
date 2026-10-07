@@ -17,6 +17,7 @@ export function demoOdoo(nextNumber: (kind: InvoicePayload['kind']) => Promise<n
       payment_state: paid ? 'paid' : 'not_paid',
       amount_due: paid ? 0 : p.amount,
       url: `https://demo.odoo.example/web#id=${moveId(p)}&model=account.move&view_type=form`,
+      source: 'demo',
     }
   }
   return {

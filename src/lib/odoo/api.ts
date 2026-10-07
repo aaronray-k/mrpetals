@@ -23,6 +23,7 @@ export interface Invoice {
   created_at: string
   pushed_at: string | null
   fetched_at: string | null
+  odoo_source: 'demo' | 'api' | null
   customers: { company_name: string; customer_code: string } | null
 }
 
@@ -47,18 +48,19 @@ export interface OdooSettings {
   enabled: boolean
   line_label: string
   last_fetch_at: string | null
+  send_from: string | null
 }
 export function useOdooSettings() {
   return useQuery({
     queryKey: ['odoo-settings'],
     queryFn: async () => {
-      const { data, error } = await getSupabase().from('odoo_settings').select('url, database, login, enabled, line_label, last_fetch_at').maybeSingle()
+      const { data, error } = await getSupabase().from('odoo_settings').select('url, database, login, enabled, line_label, last_fetch_at, send_from').maybeSingle()
       if (error) throw new Error(error.message)
       return data as OdooSettings | null
     },
   })
 }
-export async function saveOdooSettings(s: Omit<OdooSettings, 'last_fetch_at'>) {
+export async function saveOdooSettings(s: Omit<OdooSettings, 'last_fetch_at' | 'send_from'>) {
   const { data, error } = await getSupabase().from('odoo_settings').update(s).eq('id', true).select('id')
   if (error) throw new Error(error.message)
   if (!data?.length) throw new Error('Only Admin users can change Odoo settings.')

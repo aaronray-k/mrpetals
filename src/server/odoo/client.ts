@@ -23,9 +23,11 @@ export interface OdooMove {
   amount_due: number
   url: string
   partner_id?: number
+  source?: 'demo' | 'api'
 }
 export interface OdooAdapter {
-  test(): Promise<string>
+  /** Checks the login, API access (Odoo Online: Custom plan), invoicing rights and the currencies given. */
+  test(currencies: string[]): Promise<string>
   push(p: InvoicePayload): Promise<OdooMove>
   fetch(p: InvoicePayload): Promise<OdooMove>
 }
@@ -41,11 +43,16 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
   let uid: number | null = null
   let id = 0
   async function call(service: string, method: string, args: unknown[]) {
-    const res = await fetch(`${cfg.url.replace(/\/$/, '')}/jsonrpc`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', method: 'call', params: { service, method, args }, id: ++id }),
-    })
+    let res: Response
+    try {
+      res = await fetch(`${cfg.url.replace(/\/$/, '')}/jsonrpc`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'call', params: { service, method, args }, id: ++id }),
+      })
+    } catch {
+      throw new Error(`Couldn't reach ${cfg.url}. Check the Odoo address on Odoo settings.`)
+    }
     if (!res.ok) throw new Error(`Odoo answered ${res.status} ${res.statusText}`)
     const body = (await res.json()) as { result?: unknown; error?: { message: string; data?: { message?: string } } }
     if (body.error) throw new Error(body.error.data?.message ?? body.error.message)
@@ -85,10 +92,23 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
   }
 
   return {
-    async test() {
+    async test(currencies) {
       const v = (await call('common', 'version', [])) as { server_version?: string }
       await login()
-      return `Connected to Odoo ${v.server_version ?? ''} as ${cfg.login}.`
+      let canInvoice = false
+      try {
+        canInvoice = (await kw('account.move', 'check_access_rights', ['create'], { raise_exception: false })) as boolean
+      } catch (e) {
+        throw new Error(`Signed in, but Odoo refused the API: ${(e as Error).message}. On Odoo Online the external API needs the Custom plan.`)
+      }
+      if (!canInvoice) throw new Error(`Signed in as ${cfg.login}, but this user can't create invoices. Give it Accounting rights (Invoicing: Billing or more).`)
+      const inactive: string[] = []
+      for (const c of currencies) {
+        const r = (await kw('res.currency', 'search_read', [[['name', '=', c]]], { fields: ['active'], context: { active_test: false }, limit: 1 })) as { active: boolean }[]
+        if (!r[0]?.active) inactive.push(c)
+      }
+      if (inactive.length) throw new Error(`Connected, but ${inactive.join(' and ')} ${inactive.length === 1 ? 'is' : 'are'} not active in Odoo. Activate under Accounting → Configuration → Currencies.`)
+      return `Connected to Odoo ${v.server_version ?? ''} as ${cfg.login}: invoices can be created${currencies.length ? `, and ${currencies.join(', ')} ${currencies.length === 1 ? 'is' : 'are'} active` : ''}.`
     },
     async push(p) {
       if (p.odoo_move_id) return read(p.odoo_move_id)

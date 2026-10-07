@@ -14,7 +14,7 @@ import { demoOdoo } from './odoo/demo'
 export type OdooSource = 'demo' | 'api' | 'none'
 const ROLES = ['admin', 'consolidator', 'finance'] as const
 
-async function adapter(ctx: AuthContext): Promise<{ source: OdooSource; odoo: OdooAdapter | null; reason?: string }> {
+async function adapter(ctx: AuthContext, opts: { forTest?: boolean } = {}): Promise<{ source: OdooSource; odoo: OdooAdapter | null; reason?: string; sendFrom?: string | null }> {
   if (process.env.ODOO_SOURCE === 'demo') {
     return {
       source: 'demo',
@@ -24,12 +24,14 @@ async function adapter(ctx: AuthContext): Promise<{ source: OdooSource; odoo: Od
       }),
     }
   }
-  const { data } = await ctx.supabase.from('odoo_settings').select('url, database, login, enabled').maybeSingle()
+  const { data } = await ctx.supabase.from('odoo_settings').select('url, database, login, enabled, send_from').maybeSingle()
   const key = process.env.ODOO_API_KEY
-  if (!data?.enabled) return { source: 'none', odoo: null, reason: 'Odoo is switched off in Odoo settings.' }
-  if (!data.url || !data.database || !data.login) return { source: 'none', odoo: null, reason: 'Fill in the Odoo address, database and login in Odoo settings.' }
   if (!key) return { source: 'none', odoo: null, reason: 'Add ODOO_API_KEY to the server environment.' }
-  return { source: 'api', odoo: odooClient({ url: data.url, database: data.database, login: data.login, apiKey: key }) }
+  if (!data?.url || !data.database || !data.login) return { source: 'none', odoo: null, reason: 'Fill in the Odoo address, database and login in Odoo settings.' }
+  const client = odooClient({ url: data.url, database: data.database, login: data.login, apiKey: key })
+  // Test connection works while sending is still off, so the setup can be checked before anything reaches the books.
+  if (!data.enabled) return { source: 'none', odoo: opts.forTest ? client : null, reason: 'Sending invoices to Odoo is switched off in Odoo settings.' }
+  return { source: 'api', odoo: client, sendFrom: data.send_from as string | null }
 }
 
 async function payload(ctx: AuthContext, id: string) {
@@ -51,12 +53,14 @@ export const testOdoo = createServerFn({ method: 'POST' })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
     requireRoles(context, ['admin'])
-    const a = await adapter(context)
+    const a = await adapter(context, { forTest: true })
+    const { data: cur } = await context.supabase.from('customers').select('currency').eq('active', true)
+    const currencies = [...new Set((cur ?? []).map((c: { currency: string }) => c.currency))].sort()
     let ok = false
     let message = a.reason ?? ''
     if (a.odoo) {
       try {
-        message = await a.odoo.test()
+        message = await a.odoo.test(currencies)
         ok = true
       } catch (e) {
         message = (e as Error).message
@@ -77,6 +81,8 @@ export const pushInvoices = createServerFn({ method: 'POST' })
     let q = context.supabase.from('invoices').select('id').in('status', ['pending', 'failed']).order('created_at')
     if (data.shipmentId) q = q.eq('shipment_id', data.shipmentId)
     if (data.invoiceIds?.length) q = q.in('id', data.invoiceIds)
+    // Nothing from before go-live goes to the real Odoo.
+    if (a.source === 'api' && a.sendFrom) q = q.gte('created_at', a.sendFrom)
     const { data: rows, error } = await q
     if (error) throw new Error(error.message)
     let pushed = 0
@@ -84,7 +90,7 @@ export const pushInvoices = createServerFn({ method: 'POST' })
     for (const r of rows ?? []) {
       try {
         const move = await a.odoo.push(await payload(context, r.id))
-        const { error: e } = await context.supabase.rpc('record_odoo_push', { p_invoice_id: r.id, p_ok: true, p_result: move })
+        const { error: e } = await context.supabase.rpc('record_odoo_push', { p_invoice_id: r.id, p_ok: true, p_result: { ...move, source: a.source } })
         if (e) throw new Error(e.message)
         pushed++
       } catch (e) {
@@ -106,6 +112,7 @@ export const fetchInvoices = createServerFn({ method: 'POST' })
       .from('invoices')
       .select('id, odoo_payment_state, odoo_state')
       .eq('status', 'pushed')
+      .eq('odoo_source', a.source) // never ask the real Odoo about demo invoices, or the other way round
       .or('odoo_payment_state.is.null,odoo_payment_state.not.in.(paid,reversed)')
     if (error) throw new Error(error.message)
     let updated = 0

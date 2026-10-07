@@ -96,6 +96,11 @@ function SettingsForm({ settings }: { settings: OdooSettings }) {
               {(d) => <Input id="odoo-label" value={label} onChange={(e) => setLabel(e.target.value)} aria-describedby={d} />}
             </Field>
             <Switch checked={enabled} onCheckedChange={setEnabled} label="Send invoices to Odoo" />
+            <p className="text-sm text-muted-foreground">
+              {settings.send_from
+                ? `Sending since ${formatDateTime(settings.send_from)}. Invoices made before then are not sent.`
+                : 'Test the connection first; it works while sending is off. When you switch sending on, invoices made before that moment are not sent (go-live).'}
+            </p>
             <div className="flex flex-wrap gap-2">
               <Button type="submit">Save settings</Button>
               <Button

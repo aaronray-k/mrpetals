@@ -4,7 +4,7 @@ import { odooClient, type InvoicePayload } from './client'
 type Call = { service: string; method: string; args: unknown[] }
 
 /** A fake Odoo answering JSON-RPC calls; records every call. */
-function fakeOdoo(opts: { existingMove?: number; currencyActive?: boolean } = {}) {
+function fakeOdoo(opts: { existingMove?: number; currencyActive?: boolean; canInvoice?: boolean } = {}) {
   const calls: Call[] = []
   vi.stubGlobal('fetch', async (_url: string, init: { body: string }) => {
     const { params } = JSON.parse(init.body) as { params: Call }
@@ -13,6 +13,7 @@ function fakeOdoo(opts: { existingMove?: number; currencyActive?: boolean } = {}
     let result: unknown = null
     if (params.service === 'common' && params.method === 'authenticate') result = 2
     else if (params.service === 'common' && params.method === 'version') result = { server_version: '18.0' }
+    else if (model === 'account.move' && method === 'check_access_rights') result = opts.canInvoice ?? true
     else if (model === 'res.partner' && method === 'search') result = []
     else if (model === 'res.country' && method === 'search') result = [113]
     else if (model === 'res.partner' && method === 'create') result = 55
@@ -77,5 +78,14 @@ describe('Odoo client', () => {
   it('explains an inactive currency', async () => {
     fakeOdoo({ currencyActive: false })
     await expect(client().push({ ...payload, currency: 'EUR' })).rejects.toThrow('Currency EUR is not active in Odoo')
+  })
+
+  it('Test connection checks the login, invoicing rights and the buyer currencies', async () => {
+    fakeOdoo()
+    await expect(client().test(['EUR', 'USD'])).resolves.toBe('Connected to Odoo 18.0 as api@consolflora.com: invoices can be created, and EUR, USD are active.')
+    fakeOdoo({ canInvoice: false })
+    await expect(client().test(['USD'])).rejects.toThrow("can't create invoices")
+    fakeOdoo({ currencyActive: false })
+    await expect(client().test(['EUR'])).rejects.toThrow('EUR is not active in Odoo')
   })
 })

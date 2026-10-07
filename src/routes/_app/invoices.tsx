@@ -11,6 +11,7 @@ import { InvoiceStatusBadge } from '~/components/odoo/invoice-status'
 import { money } from '~/components/shop/money'
 import { Tip } from '~/components/tips/tips'
 import { Alert } from '~/components/ui/alert'
+import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Card } from '~/components/ui/card'
 import { Spinner } from '~/components/ui/spinner'
@@ -69,8 +70,12 @@ function InvoicesPage() {
     }
   })
 
+  const real = status.data?.source === 'api'
+  const sendFrom = settings.data?.send_from ? Date.parse(settings.data.send_from) : null
+  // Before go-live (or demo data on the preview): never sent to the real Odoo.
+  const beforeGoLive = (i: Invoice) => real && i.status !== 'pushed' && sendFrom != null && Date.parse(i.created_at) < sendFrom
   const rows = (invoices.data ?? []).filter(FILTERS.find((f) => f.key === filter)!.test)
-  const waiting = (invoices.data ?? []).filter((i) => i.status !== 'pushed').length
+  const waiting = (invoices.data ?? []).filter((i) => i.status !== 'pushed' && !beforeGoLive(i)).length
 
   return (
     <>
@@ -166,7 +171,12 @@ function InvoicesPage() {
                     <TD className="text-right tabular-nums">{money(i.kind === 'credit_note' ? -i.amount : i.amount, i.currency)}</TD>
                     <TD className="text-right tabular-nums">{i.odoo_amount_due == null ? '—' : money(i.odoo_amount_due, i.currency)}</TD>
                     <TD>
-                      <InvoiceStatusBadge invoice={i} />
+                      {beforeGoLive(i) ? (
+                        <Badge>Before Odoo go-live: not sent</Badge>
+                      ) : (
+                        <InvoiceStatusBadge invoice={i} />
+                      )}
+                      {real && i.odoo_source === 'demo' && <Badge className="ml-1">Demo Odoo</Badge>}
                     </TD>
                   </TR>
                 ))}

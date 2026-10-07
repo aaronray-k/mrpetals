@@ -281,7 +281,10 @@ Odoo makes the invoices; ConsolFlora keeps the detail and sends only the total.
   old); a paid invoice marks its orders paid here. Buyers see their invoice on the order.
 - **Odoo settings** (Admin): address, database, login, the line name, on/off, **Test connection** and recent
   activity. The API key is only in the server environment (`ODOO_API_KEY`). Odoo Online needs the **Custom plan**
-  for this. The preview uses a demo Odoo (`INV/2026/00001`…) where the demo buyer pays after a few minutes.
+  for this. **Test connection** works while sending is off and checks the login, invoicing rights and that every
+  buyer currency is active in Odoo. Switching sending on sets the **go-live** moment: invoices made before it are
+  never sent. Without `ODOO_API_KEY` (or on the preview until one is set) a demo Odoo is used; demo invoices are
+  never sent to, or fetched from, the real Odoo.
 
 ## Two-factor sign-in and accessibility
 
