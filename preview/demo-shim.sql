@@ -27,6 +27,8 @@ create table if not exists auth.refresh_tokens (
   created_at timestamptz not null default now(),
   revoked boolean not null default false
 );
+-- Each sign-in is one session; refreshing keeps it (Supabase puts session_id in the access token).
+alter table auth.refresh_tokens add column if not exists session_id uuid not null default gen_random_uuid();
 create or replace function auth.uid() returns uuid language sql stable as $$
   select coalesce(nullif(current_setting('request.jwt.claim.sub', true), ''),
                   nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')::uuid

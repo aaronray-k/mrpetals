@@ -213,6 +213,23 @@ Provided by migration `…015_service_fees.sql`.
 | `order_charges.kind = 'service_fee'`, `sync_service_fee()` | The fee per shipment, kept on the buyer's earliest active order on each flight by a trigger on `customer_orders`. |
 | `my_service()` | The buyer's service and fee, for the catalog and checkout. |
 
+## Item 9: Two-factor sign-in
+
+Provided by migration `…016_two_factor.sql`. Built in the database rather than with Supabase Auth MFA, so that
+email codes and 30-day remembered devices work the same way as authenticator apps.
+
+| Object | Purpose |
+|---|---|
+| `security_settings` | Which roles need two-factor (Admin, Consolidator, Finance), days a device is remembered (30), and the preview-only `demo_show_email_codes` (must stay false in production). |
+| `two_factor_totp`, `start_totp_setup()`, `verify_totp()` | Authenticator app (RFC 6238 TOTP, checked in SQL with pgcrypto). A code can't be used twice. |
+| `two_factor_email_codes`, `send_two_factor_email()`, `verify_email_code()`, `email_outbox` | Email codes (10 minutes). Queued in `email_outbox` for the mail sender built with the email item. |
+| `two_factor_sessions`, `current_session_id()`, `two_factor_ok()` | Verified sign-in sessions, from the JWT `session_id`. `has_role()` and `has_any_role()` require it. |
+| `two_factor_devices`, `use_remembered_device()`, `forget_my_devices()` | Remembered devices: a random token in the browser, stored hashed, valid 30 days. |
+| `admin_reset_two_factor()`, `admin_list_two_factor()` | Users page. |
+
+Still needed: the **mail sender** (email item) to deliver `email_outbox`; until then only authenticator apps work
+in production.
+
 ## Not needed yet
 
 - Odoo: no calls until the shipment and fulfilment items.

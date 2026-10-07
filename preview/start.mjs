@@ -39,6 +39,10 @@ async function setUpDatabase() {
       await client.query('insert into preview.applied (name) values ($1)', [file])
       await client.query('commit')
     }
+    // A fresh database: the demo data is made through the app's functions as the demo Admin, with no
+    // signed-in session, so two-factor is paused while it loads and switched back on below.
+    const seeding = !done.has('seed')
+    if (seeding) await client.query("update public.security_settings set two_factor_roles = '{}'")
     for (const [name, file] of [['seed', 'seed.sql'], ['seed-ordering', 'seed-ordering.sql'], ['seed-dashboards', 'seed-dashboards.sql'], ['seed-fees', 'seed-fees.sql']]) {
       if (done.has(name)) continue
       console.log(`demo data: ${file}`)
@@ -65,6 +69,12 @@ async function setUpDatabase() {
       await client.query('select public.refresh_legal_ok(id) from public.profiles')
       await client.query("insert into preview.applied (name) values ('legal-reset')")
       await client.query('commit')
+    }
+    if (seeding) await client.query("update public.security_settings set two_factor_roles = array['admin', 'consolidator', 'finance']::public.app_role[]")
+    // Preview only: email isn't connected, so two-factor email codes are shown on screen.
+    if (!done.has('two-factor-demo')) {
+      await client.query('update public.security_settings set demo_show_email_codes = true')
+      await client.query("insert into preview.applied (name) values ('two-factor-demo')")
     }
     // PostgREST picks up new functions and tables.
     await client.query("notify pgrst, 'reload schema'")

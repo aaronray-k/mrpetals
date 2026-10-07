@@ -25,6 +25,7 @@ export function ColumnChart({
   ariaLabel: string
 }) {
   const [hover, setHover] = React.useState<number | null>(null)
+  const [focused, setFocused] = React.useState<number | null>(null)
   const W = 640
   const H = 220
   const pad = { l: 48, r: 8, t: 12, b: 28 }
@@ -70,11 +71,21 @@ export function ColumnChart({
                 aria-label={`${d.label}: ${series.map((s) => `${s.label} ${format(d.values[s.key] ?? 0)}`).join(', ')}`}
                 onMouseEnter={() => setHover(i)}
                 onMouseLeave={() => setHover(null)}
-                onFocus={() => setHover(i)}
-                onBlur={() => setHover(null)}
+                onFocus={() => {
+                  setHover(i)
+                  setFocused(i)
+                }}
+                onBlur={() => {
+                  setHover(null)
+                  setFocused(null)
+                }}
                 className="outline-none"
               >
                 <rect x={pad.l + band * i} y={pad.t} width={band} height={innerH} fill={hover === i ? 'var(--chart-grid)' : 'transparent'} opacity={0.5} />
+                {/* Keyboard focus: a clear ring around the column's band. */}
+                {focused === i && (
+                  <rect x={pad.l + band * i + 1.5} y={pad.t + 1.5} width={band - 3} height={innerH - 3} rx={4} fill="none" stroke="var(--ring)" strokeWidth={3} />
+                )}
                 {series.map((s, si) => {
                   const v = Math.max(0, d.values[s.key] ?? 0)
                   if (!v) return null

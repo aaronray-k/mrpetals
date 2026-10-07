@@ -4,6 +4,7 @@ import { AppShell } from '~/components/layout/app-shell'
 import { SetupNeeded } from '~/components/layout/setup-needed'
 import { ChangePassword } from '~/components/layout/change-password'
 import { LegalGate } from '~/components/legal/consent-step'
+import { TwoFactorGate } from '~/components/auth/two-factor-gate'
 import { Spinner } from '~/components/ui/spinner'
 
 // The session lives in the browser, so signed-in pages render on the client only.
@@ -19,10 +20,12 @@ function AppLayout() {
   if (status === 'signed-out') return <Navigate to="/sign-in" replace />
   if (session?.user.user_metadata?.must_change_password) return <ChangePassword />
   return (
-    <LegalGate>
-      <AppShell>
-        <Outlet />
-      </AppShell>
-    </LegalGate>
+    <TwoFactorGate>
+      <LegalGate>
+        <AppShell>
+          <Outlet />
+        </AppShell>
+      </LegalGate>
+    </TwoFactorGate>
   )
 }

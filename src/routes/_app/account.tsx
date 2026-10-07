@@ -12,6 +12,8 @@ import { Spinner } from '~/components/ui/spinner'
 import { Switch } from '~/components/ui/switch'
 import { TBody, TD, TH, THead, TR, Table } from '~/components/ui/table'
 import { useToast } from '~/components/ui/toaster'
+import { Button } from '~/components/ui/button'
+import { forgetMyDevices, setRememberedDevice, twoFactorStatus } from '~/lib/two-factor'
 
 export const Route = createFileRoute('/_app/account')({
   head: () => ({ meta: [{ title: 'My account · ConsolFlora' }] }),
@@ -114,6 +116,7 @@ function AccountPage() {
             )}
           </CardContent>
         </Card>
+        <TwoFactorCard />
         {hasAnyRole(roles, ['customer', 'farm']) && (
           <Card>
             <CardHeader>
@@ -143,5 +146,49 @@ function AccountPage() {
         )}
       </div>
     </>
+  )
+}
+
+function TwoFactorCard() {
+  const { session } = useAuth()
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const status = useQuery({ queryKey: ['two-factor-account', session?.user.id], queryFn: twoFactorStatus })
+  if (!status.data?.required) return null
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Two-factor sign-in</CardTitle>
+        <CardDescription>Your role signs in with a password and a 6-digit code.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3">
+        <p>
+          Authenticator app: <strong>{status.data.totp ? 'set up' : 'not set up'}</strong>. Email codes:{' '}
+          <strong>{status.data.email_available ? 'available' : 'available once the mailbox is connected'}</strong>.
+        </p>
+        <p>
+          Remembered devices: <strong>{status.data.devices}</strong> (each for {status.data.remember_days} days).
+        </p>
+        {status.data.devices > 0 && (
+          <Button
+            variant="outline"
+            className="justify-self-start"
+            onClick={async () => {
+              try {
+                const n = await forgetMyDevices()
+                if (session) setRememberedDevice(session.user.id, null)
+                toast({ kind: 'success', title: `${n} ${n === 1 ? 'device' : 'devices'} forgotten`, description: 'Every device asks for a code at the next sign-in.' })
+                void queryClient.invalidateQueries({ queryKey: ['two-factor-account'] })
+              } catch (e) {
+                toast({ kind: 'error', title: 'Not changed', description: (e as Error).message })
+              }
+            }}
+          >
+            Forget all remembered devices
+          </Button>
+        )}
+        <p className="text-sm text-muted-foreground">Lost your phone? Ask an Admin to reset your two-factor sign-in.</p>
+      </CardContent>
+    </Card>
   )
 }

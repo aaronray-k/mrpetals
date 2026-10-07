@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { KeyRound, Pencil, UserPlus } from 'lucide-react'
 import { getSupabase } from '~/lib/supabase'
+import { adminResetTwoFactor } from '~/lib/two-factor'
 import { useReferenceData } from '~/lib/orders/api'
 import { ROLES, ROLE_LABELS, type Role } from '~/lib/roles'
 import { formatDateTime } from '~/lib/utils'
@@ -60,6 +61,14 @@ function tempPassword() {
 }
 
 function UsersPage() {
+  const twoFactor = useQuery({
+    queryKey: ['admin-two-factor'],
+    queryFn: async () => {
+      const { data, error } = await getSupabase().rpc('admin_list_two_factor')
+      if (error) throw new Error(error.message)
+      return new Map(((data ?? []) as { user_id: string; required: boolean; totp: boolean; devices: number }[]).map((t) => [t.user_id, t]))
+    },
+  })
   const agreements = useQuery({
     queryKey: ['admin-agreements'],
     queryFn: async () => {
@@ -113,6 +122,7 @@ function UsersPage() {
                   <TH>Linked to</TH>
                   <TH>Status</TH>
                   <TH>Agreements</TH>
+                  <TH>Two-factor</TH>
                   <TH>Last sign-in</TH>
                   <TH>
                     <span className="sr-only">Actions</span>
@@ -131,6 +141,9 @@ function UsersPage() {
                     <TD>{u.active ? <Badge variant="success">Active</Badge> : <Badge>Switched off</Badge>}</TD>
                     <TD>
                       <Agreements a={agreements.data?.get(u.id)} />
+                    </TD>
+                    <TD>
+                      <TwoFactorCell userId={u.id} name={u.full_name || u.email} t={twoFactor.data?.get(u.id)} />
                     </TD>
                     <TD className="whitespace-nowrap">{u.last_sign_in_at ? formatDateTime(u.last_sign_in_at) : 'Never'}</TD>
                     <TD className="whitespace-nowrap">
@@ -344,6 +357,37 @@ function Agreements({ a }: { a: { legal_ok: boolean; pending: string[]; accepted
       )}
       {last && <span className="text-muted-foreground">Last agreed {formatDateTime(last.accepted_at)}</span>}
       <span className="text-muted-foreground">Marketing email: {a.marketing_opt_in ? 'yes' : 'no'}</span>
+    </div>
+  )
+}
+
+/** Two-factor for roles that need it, and the reset for a lost phone. */
+function TwoFactorCell({ userId, name, t }: { userId: string; name: string; t: { required: boolean; totp: boolean; devices: number } | undefined }) {
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  if (!t?.required) return <span className="text-sm text-muted-foreground">Not needed</span>
+  return (
+    <div className="grid gap-1 text-sm">
+      {t.totp ? <Badge variant="success">App set up</Badge> : <Badge variant="warning">Not set up</Badge>}
+      {t.devices > 0 && <span className="text-muted-foreground">{t.devices} remembered {t.devices === 1 ? 'device' : 'devices'}</span>}
+      {(t.totp || t.devices > 0) && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            if (!window.confirm(`Reset two-factor sign-in for ${name}? They set up their authenticator app again at the next sign-in.`)) return
+            try {
+              await adminResetTwoFactor(userId)
+              toast({ kind: 'success', title: `Two-factor reset for ${name}` })
+              void queryClient.invalidateQueries({ queryKey: ['admin-two-factor'] })
+            } catch (e) {
+              toast({ kind: 'error', title: 'Not reset', description: (e as Error).message })
+            }
+          }}
+        >
+          Reset<span className="sr-only"> two-factor for {name}</span>
+        </Button>
+      )}
     </div>
   )
 }

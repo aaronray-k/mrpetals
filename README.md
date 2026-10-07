@@ -248,6 +248,23 @@ staff** to the Terms of use, and **everyone** to the Privacy and Cookie notices.
   is a **placeholder marked "pending legal review"** (`src/lib/legal/documents.ts`).
 - Only business contact details are kept: there are no ID number or date of birth fields anywhere.
 
+## Two-factor sign-in and accessibility
+
+**Admin, Consolidator and Finance** sign in with their password and then a 6-digit code:
+
+- from an **authenticator app** (Google or Microsoft Authenticator): set up once by scanning a QR code, or
+- by **email** to their account address (once the Zoho mailbox is connected; the preview shows the code on screen).
+
+"Remember this device for 30 days" skips the code on that device. Five wrong codes lock the step for 15 minutes.
+The database checks the code per sign-in session, so these roles have no access until it is done, even
+through the API. **My account** shows the setup and can forget remembered devices; an Admin can **reset**
+someone's two-factor on the **Users** page (lost phone). Other roles sign in with their password only.
+
+Accessibility (WCAG 2.2 AA) is checked with axe on every page for every role, on phone and desktop and in dark
+mode: labels on every input, tap targets of at least 24 × 24 px, status messages announced, severity and states
+shown in words and icons as well as colour, visible keyboard focus (including chart columns), and no sideways
+scrolling at 390 px.
+
 ## Project layout
 
 ```
@@ -285,7 +302,7 @@ docs/backend.md           what the backend must provide
 | 6 | Dashboards per role (charts and action lists), buyer currencies and exchange rates | Done |
 | 7 | Floricode: codes, sync, product form, review flags, codes on labels and in the QR code | Done (demo data until Floricode API access) |
 | 8 | Legal and consent: agreements per role at sign-in, public legal pages, marketing choice | Done (texts pending legal review) |
-| 9 | Accessibility and security (WCAG 2.2 AA, 2FA) | Not started |
+| 9 | Accessibility and security: two-factor sign-in (app or email, remembered devices), WCAG 2.2 AA sweep | Done (email codes wait for the mailbox) |
 | 10 | Buyer claims (with QC photos) | Not started |
 | 11 | Messages and email (Zoho: SMTP out, IMAP replies into the app); settings page already there | Not started |
 

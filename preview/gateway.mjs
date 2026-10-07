@@ -55,11 +55,12 @@ function userJson(u) {
 export function createGateway({ pool, jwtSecret, restPort, appPort }) {
   const failures = new Map() // ip -> { count, until }
 
-  async function session(u) {
+  // A new sign-in starts a new session; a refresh keeps the session it came from.
+  async function session(u, sessionId = crypto.randomUUID()) {
     const refresh = crypto.randomBytes(24).toString('base64url')
-    await pool.query('insert into auth.refresh_tokens (token, user_id) values ($1, $2)', [refresh, u.id])
+    await pool.query('insert into auth.refresh_tokens (token, user_id, session_id) values ($1, $2, $3)', [refresh, u.id, sessionId])
     const exp = Math.floor(Date.now() / 1000) + ACCESS_TTL
-    const access = signJwt(jwtSecret, { sub: u.id, email: u.email, role: 'authenticated', aud: 'authenticated', exp })
+    const access = signJwt(jwtSecret, { sub: u.id, email: u.email, role: 'authenticated', aud: 'authenticated', session_id: sessionId, exp })
     return { access_token: access, token_type: 'bearer', expires_in: ACCESS_TTL, expires_at: exp, refresh_token: refresh, user: userJson(u) }
   }
 
@@ -90,13 +91,13 @@ export function createGateway({ pool, jwtSecret, restPort, appPort }) {
     }
     if (route === '/token' && url.searchParams.get('grant_type') === 'refresh_token') {
       const { rows } = await pool.query(
-        'update auth.refresh_tokens set revoked = true where token = $1 and not revoked and created_at > now() - interval \'30 days\' returning user_id',
+        'update auth.refresh_tokens set revoked = true where token = $1 and not revoked and created_at > now() - interval \'30 days\' returning user_id, session_id',
         [String(json.refresh_token ?? '')],
       )
       if (!rows[0]) return authError(400, 'refresh_token_not_found', 'Invalid Refresh Token: Refresh Token Not Found')
       const u = (await pool.query('select * from auth.users where id = $1 and not banned', [rows[0].user_id])).rows[0]
       if (!u) return authError(400, 'user_banned', 'User is banned')
-      return [200, await session(u)]
+      return [200, await session(u, rows[0].session_id)]
     }
     if (route === '/logout') {
       if (claims?.sub) await pool.query('update auth.refresh_tokens set revoked = true where user_id = $1', [claims.sub])
