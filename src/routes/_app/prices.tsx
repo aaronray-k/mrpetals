@@ -32,11 +32,14 @@ function PricesPage() {
   const incoterms = useIncoterms()
   const overrides = usePriceOverrides()
   const [incoterm, setIncoterm] = React.useState('FOB')
+  const [currency, setCurrency] = React.useState('USD')
   const [buyerId, setBuyerId] = React.useState('')
   const canEdit = hasAnyRole(roles, ['admin'])
-  const buyersForTerm = (ref.data?.buyers ?? []).filter((b) => b.incoterm === incoterm)
+  const currencies = [...new Set(['USD', 'EUR', ...(ref.data?.buyers ?? []).map((b) => b.currency)])].sort()
+  const buyersForTerm = (ref.data?.buyers ?? []).filter((b) => b.incoterm === incoterm && b.currency === currency)
+  const findOverride = (productId: string) => overrides.data?.find((o) => o.product_id === productId && o.incoterm === incoterm && o.currency === currency)
   const previewBuyer = buyerId || buyersForTerm[0]?.id || null
-  const catalog = useCatalog(previewBuyer)
+  const catalog = useCatalog(previewBuyer, previewBuyer != null)
 
   if (ref.isLoading || overrides.isLoading) return <Spinner />
   return (
@@ -45,10 +48,19 @@ function PricesPage() {
       <div className="grid grid-cols-1 gap-4">
         <Tip id="prices.how" title="Pinning a farm or fixing a price">
           Pin a farm to buy a product from that farm by default (the calculator recommends it, and the price follows that farm). Or fix the
-          selling price per stem. Clear both to go back to cheapest farm plus margin.
+          selling price per stem, in the buyer's currency: a fixed USD price applies to USD buyers only. A pinned farm applies to every currency unless pinned separately. Clear both to go back to cheapest
+          farm plus margin.
         </Tip>
         {!canEdit && <Alert title="Only Admin users can change selling prices." />}
         <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="p-currency">Buyer currency</Label>
+            <Select id="p-currency" value={currency} onChange={(e) => { setCurrency(e.target.value); setBuyerId('') }}>
+              {currencies.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </Select>
+          </div>
           <div className="grid gap-1.5">
             <Label htmlFor="p-incoterm">Incoterm</Label>
             <Select id="p-incoterm" value={incoterm} onChange={(e) => { setIncoterm(e.target.value); setBuyerId('') }}>
@@ -60,7 +72,7 @@ function PricesPage() {
           <div className="grid gap-1.5">
             <Label htmlFor="p-buyer">See prices as buyer</Label>
             <Select id="p-buyer" value={previewBuyer ?? ''} onChange={(e) => setBuyerId(e.target.value)}>
-              {buyersForTerm.length === 0 && <option value="">No {incoterm} buyers</option>}
+              {buyersForTerm.length === 0 && <option value="">No {incoterm} buyers in {currency}</option>}
               {buyersForTerm.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.company_name}
@@ -71,13 +83,13 @@ function PricesPage() {
         </div>
         <div className="rounded-lg border bg-card">
           <Table>
-            <caption className="sr-only">Selling prices for {incoterm}</caption>
+            <caption className="sr-only">Selling prices for {incoterm} in {currency}</caption>
             <THead>
               <TR>
                 <TH>Product</TH>
                 <TH className="text-right">Buyer price now</TH>
                 <TH>Pinned farm</TH>
-                <TH>Fixed price per stem</TH>
+                <TH>Fixed price per stem ({currency})</TH>
                 {canEdit && (
                   <TH>
                     <span className="sr-only">Save</span>
@@ -88,12 +100,13 @@ function PricesPage() {
             <TBody>
               {(ref.data?.products ?? []).map((p) => (
                 <PriceRow
-                  key={`${p.id}-${incoterm}-${JSON.stringify(overrides.data?.find((o) => o.product_id === p.id && o.incoterm === incoterm) ?? null)}`}
+                  key={`${p.id}-${incoterm}-${currency}-${JSON.stringify(findOverride(p.id) ?? null)}`}
                   productId={p.id}
                   label={`${productLabel(p)} (${p.product_code})`}
                   incoterm={incoterm}
-                  now={catalog.data?.find((c) => c.product_id === p.id)}
-                  override={overrides.data?.find((o) => o.product_id === p.id && o.incoterm === incoterm)}
+                  currency={currency}
+                  now={previewBuyer ? catalog.data?.find((c) => c.product_id === p.id) : undefined}
+                  override={findOverride(p.id)}
                   farms={ref.data?.farms ?? []}
                   canEdit={canEdit}
                 />
@@ -110,6 +123,7 @@ function PriceRow({
   productId,
   label,
   incoterm,
+  currency,
   now,
   override,
   farms,
@@ -118,6 +132,7 @@ function PriceRow({
   productId: string
   label: string
   incoterm: string
+  currency: string
   now: { price_per_stem: number; currency: string } | undefined
   override: { pinned_farm_id: string | null; sell_price_per_stem: number | null } | undefined
   farms: { id: string; farm_name: string }[]
@@ -131,7 +146,7 @@ function PriceRow({
   return (
     <TR>
       <TD>{label}</TD>
-      <TD className="text-right tabular-nums">{now ? `${now.price_per_stem.toFixed(3)} ${now.currency}` : 'No farm price'}</TD>
+      <TD className="text-right tabular-nums">{now ? `${now.price_per_stem.toFixed(3)} ${now.currency}` : 'No price'}</TD>
       <TD>
         <label className="sr-only" htmlFor={`pin-${productId}`}>
           Pinned farm for {label}
@@ -161,7 +176,7 @@ function PriceRow({
               const n = price.trim() === '' ? null : Number(price)
               if (n != null && (!Number.isFinite(n) || n < 0)) return toast({ kind: 'error', title: 'Enter a price of 0 or more' })
               try {
-                await savePriceOverride({ product_id: productId, incoterm, pinned_farm_id: farm || null, sell_price_per_stem: n })
+                await savePriceOverride({ product_id: productId, incoterm, currency, pinned_farm_id: farm || null, sell_price_per_stem: n })
                 toast({ kind: 'success', title: 'Price saved' })
                 void queryClient.invalidateQueries({ queryKey: ['price-overrides'] })
                 void queryClient.invalidateQueries({ queryKey: ['catalog'] })

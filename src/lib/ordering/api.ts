@@ -34,9 +34,10 @@ export interface CatalogItem {
   farms: number
 }
 
-export function useCatalog(customerId?: string | null) {
+export function useCatalog(customerId?: string | null, enabled = true) {
   return useQuery({
     queryKey: ['catalog', customerId ?? 'me'],
+    enabled,
     queryFn: async () =>
       (await rpc<CatalogItem[]>('catalog', { p_customer_id: customerId ?? null })).map((c) => ({
         ...c,
@@ -439,6 +440,7 @@ export interface PriceOverride {
   id: string
   product_id: string
   incoterm: string
+  currency: string
   pinned_farm_id: string | null
   sell_price_per_stem: number | null
 }
@@ -458,8 +460,8 @@ export async function savePriceOverride(o: Omit<PriceOverride, 'id'>) {
   const supabase = getSupabase()
   const { error } =
     o.pinned_farm_id == null && o.sell_price_per_stem == null
-      ? await supabase.from('price_overrides').delete().eq('product_id', o.product_id).eq('incoterm', o.incoterm)
-      : await supabase.from('price_overrides').upsert(o, { onConflict: 'product_id,incoterm' })
+      ? await supabase.from('price_overrides').delete().eq('product_id', o.product_id).eq('incoterm', o.incoterm).eq('currency', o.currency)
+      : await supabase.from('price_overrides').upsert(o, { onConflict: 'product_id,incoterm,currency' })
   if (error) throw new Error(error.message)
 }
 

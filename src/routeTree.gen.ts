@@ -15,6 +15,7 @@ import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AppBoxTypesRouteImport } from './routes/_app/box-types'
 import { Route as AppCustomersRouteImport } from './routes/_app/customers'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppExchangeRatesRouteImport } from './routes/_app/exchange-rates'
 import { Route as AppFarmsRouteImport } from './routes/_app/farms'
 import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppMarginsRouteImport } from './routes/_app/margins'
@@ -32,6 +33,7 @@ import { Route as AppOrdersIndexRouteImport } from './routes/_app/orders/index'
 import { Route as AppOrdersOrderIdRouteImport } from './routes/_app/orders/$orderId'
 import { Route as AppOrdersNewRouteImport } from './routes/_app/orders/new'
 import { Route as AppQcScanRouteImport } from './routes/_app/qc/scan'
+import { Route as AppSettingsEmailRouteImport } from './routes/_app/settings/email'
 import { Route as AppSettingsOrderingRouteImport } from './routes/_app/settings/ordering'
 import { Route as AppShipmentsIndexRouteImport } from './routes/_app/shipments/index'
 import { Route as AppShipmentsShipmentIdRouteImport } from './routes/_app/shipments/$shipmentId'
@@ -65,6 +67,11 @@ const AppCustomersRoute = AppCustomersRouteImport.update({
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppExchangeRatesRoute = AppExchangeRatesRouteImport.update({
+  id: '/exchange-rates',
+  path: '/exchange-rates',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFarmsRoute = AppFarmsRouteImport.update({
@@ -152,6 +159,11 @@ const AppQcScanRoute = AppQcScanRouteImport.update({
   path: '/qc/scan',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsEmailRoute = AppSettingsEmailRouteImport.update({
+  id: '/settings/email',
+  path: '/settings/email',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsOrderingRoute = AppSettingsOrderingRouteImport.update({
   id: '/settings/ordering',
   path: '/settings/ordering',
@@ -184,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/box-types': typeof AppBoxTypesRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
+  '/exchange-rates': typeof AppExchangeRatesRoute
   '/farms': typeof AppFarmsRoute
   '/import': typeof AppImportRoute
   '/margins': typeof AppMarginsRoute
@@ -198,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/orders/new': typeof AppOrdersNewRoute
   '/qc/scan': typeof AppQcScanRoute
+  '/settings/email': typeof AppSettingsEmailRoute
   '/settings/ordering': typeof AppSettingsOrderingRoute
   '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/shop/checkout': typeof AppShopCheckoutRoute
@@ -213,6 +227,7 @@ export interface FileRoutesByTo {
   '/box-types': typeof AppBoxTypesRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
+  '/exchange-rates': typeof AppExchangeRatesRoute
   '/farms': typeof AppFarmsRoute
   '/import': typeof AppImportRoute
   '/margins': typeof AppMarginsRoute
@@ -227,6 +242,7 @@ export interface FileRoutesByTo {
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/orders/new': typeof AppOrdersNewRoute
   '/qc/scan': typeof AppQcScanRoute
+  '/settings/email': typeof AppSettingsEmailRoute
   '/settings/ordering': typeof AppSettingsOrderingRoute
   '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/shop/checkout': typeof AppShopCheckoutRoute
@@ -244,6 +260,7 @@ export interface FileRoutesById {
   '/_app/box-types': typeof AppBoxTypesRoute
   '/_app/customers': typeof AppCustomersRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/exchange-rates': typeof AppExchangeRatesRoute
   '/_app/farms': typeof AppFarmsRoute
   '/_app/import': typeof AppImportRoute
   '/_app/margins': typeof AppMarginsRoute
@@ -258,6 +275,7 @@ export interface FileRoutesById {
   '/_app/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/_app/orders/new': typeof AppOrdersNewRoute
   '/_app/qc/scan': typeof AppQcScanRoute
+  '/_app/settings/email': typeof AppSettingsEmailRoute
   '/_app/settings/ordering': typeof AppSettingsOrderingRoute
   '/_app/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/_app/shop/checkout': typeof AppShopCheckoutRoute
@@ -275,6 +293,7 @@ export interface FileRouteTypes {
     | '/box-types'
     | '/customers'
     | '/dashboard'
+    | '/exchange-rates'
     | '/farms'
     | '/import'
     | '/margins'
@@ -289,6 +308,7 @@ export interface FileRouteTypes {
     | '/orders/$orderId'
     | '/orders/new'
     | '/qc/scan'
+    | '/settings/email'
     | '/settings/ordering'
     | '/shipments/$shipmentId'
     | '/shop/checkout'
@@ -304,6 +324,7 @@ export interface FileRouteTypes {
     | '/box-types'
     | '/customers'
     | '/dashboard'
+    | '/exchange-rates'
     | '/farms'
     | '/import'
     | '/margins'
@@ -318,6 +339,7 @@ export interface FileRouteTypes {
     | '/orders/$orderId'
     | '/orders/new'
     | '/qc/scan'
+    | '/settings/email'
     | '/settings/ordering'
     | '/shipments/$shipmentId'
     | '/shop/checkout'
@@ -334,6 +356,7 @@ export interface FileRouteTypes {
     | '/_app/box-types'
     | '/_app/customers'
     | '/_app/dashboard'
+    | '/_app/exchange-rates'
     | '/_app/farms'
     | '/_app/import'
     | '/_app/margins'
@@ -348,6 +371,7 @@ export interface FileRouteTypes {
     | '/_app/orders/$orderId'
     | '/_app/orders/new'
     | '/_app/qc/scan'
+    | '/_app/settings/email'
     | '/_app/settings/ordering'
     | '/_app/shipments/$shipmentId'
     | '/_app/shop/checkout'
@@ -406,6 +430,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/exchange-rates': {
+      id: '/_app/exchange-rates'
+      path: '/exchange-rates'
+      fullPath: '/exchange-rates'
+      preLoaderRoute: typeof AppExchangeRatesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/farms': {
@@ -527,6 +558,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQcScanRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings/email': {
+      id: '/_app/settings/email'
+      path: '/settings/email'
+      fullPath: '/settings/email'
+      preLoaderRoute: typeof AppSettingsEmailRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/settings/ordering': {
       id: '/_app/settings/ordering'
       path: '/settings/ordering'
@@ -569,6 +607,7 @@ interface AppRouteChildren {
   AppBoxTypesRoute: typeof AppBoxTypesRoute
   AppCustomersRoute: typeof AppCustomersRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppExchangeRatesRoute: typeof AppExchangeRatesRoute
   AppFarmsRoute: typeof AppFarmsRoute
   AppImportRoute: typeof AppImportRoute
   AppMarginsRoute: typeof AppMarginsRoute
@@ -583,6 +622,7 @@ interface AppRouteChildren {
   AppOrdersOrderIdRoute: typeof AppOrdersOrderIdRoute
   AppOrdersNewRoute: typeof AppOrdersNewRoute
   AppQcScanRoute: typeof AppQcScanRoute
+  AppSettingsEmailRoute: typeof AppSettingsEmailRoute
   AppSettingsOrderingRoute: typeof AppSettingsOrderingRoute
   AppShipmentsShipmentIdRoute: typeof AppShipmentsShipmentIdRoute
   AppShopCheckoutRoute: typeof AppShopCheckoutRoute
@@ -597,6 +637,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppBoxTypesRoute: AppBoxTypesRoute,
   AppCustomersRoute: AppCustomersRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppExchangeRatesRoute: AppExchangeRatesRoute,
   AppFarmsRoute: AppFarmsRoute,
   AppImportRoute: AppImportRoute,
   AppMarginsRoute: AppMarginsRoute,
@@ -611,6 +652,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppOrdersOrderIdRoute: AppOrdersOrderIdRoute,
   AppOrdersNewRoute: AppOrdersNewRoute,
   AppQcScanRoute: AppQcScanRoute,
+  AppSettingsEmailRoute: AppSettingsEmailRoute,
   AppSettingsOrderingRoute: AppSettingsOrderingRoute,
   AppShipmentsShipmentIdRoute: AppShipmentsShipmentIdRoute,
   AppShopCheckoutRoute: AppShopCheckoutRoute,

@@ -13,6 +13,7 @@ if [ "$(run -Atc "select count(*) from pg_tables where schemaname = 'public'")" 
 fi
 run -f "$here/supabase-shim.sql"
 for f in "$here"/../migrations/*.sql; do run -f "$f"; done
+# Alphabetical order: import_rls.test.sql must run first, on the empty database.
 for t in "$here"/*.test.sql; do
   echo "== $(basename "$t")"
   run -o /dev/null -f "$t"

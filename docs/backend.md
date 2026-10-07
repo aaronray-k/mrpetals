@@ -139,10 +139,28 @@ Still needed from the backend:
 
 - **pg_cron** (or another scheduler) calling `generate_standing_orders()` hourly.
 - **`SUPABASE_SERVICE_ROLE_KEY`** on the app server, for the Users page.
-- **Mail (item 6):** Zoho SMTP and IMAP settings and a mailbox (e.g. orders@consolflora.com), entered by you
+- **Mail (last item):** Zoho SMTP and IMAP settings and a mailbox (e.g. orders@consolflora.com), entered by you
   in the server environment, to send notifications and bring replies back into the app.
 - The proforma and packing list are not yet attached to emails automatically; buyers see the order and its
   progress in the app, and staff download the files.
+
+## Item 6: Dashboards and currency
+
+Provided by migrations `…011_currency.sql` and `…012_dashboards.sql`.
+
+| Object | Purpose |
+|---|---|
+| `exchange_rates`, `fx()` | Rates per currency pair from a date (the reverse rate is used when only that one exists). Staff read; Admin and Finance write. |
+| `farm_price_in()`, `margin_in()`, `sell_price_in()` | Farm price, margin and buyer price in the buyer's currency. `margin_rules.currency` says which currency a margin is in. |
+| `price_overrides.currency` | Fixed prices per incoterm and currency. |
+| `catalog()`, `place_order()`, `line_farm_options()`, `generate_standing_orders()`, `order_packing_list`, `order_values` | Now in the buyer's currency. |
+| `dashboard_staff()`, `dashboard_finance()`, `dashboard_qc()`, `dashboard_farm()`, `dashboard_buyer()` | One call per dashboard (period in weeks), each checking the caller's role. Farms and buyers only see their own. |
+| `mail_settings` | Zoho host, port, user and from-address, Admin only. No passwords. |
+
+Still needed from the backend:
+
+- **Exchange rates** for every buyer currency other than USD (entered in the app).
+- **Mail passwords** go in the server environment (`SMTP_PASSWORD`, `IMAP_PASSWORD`) when email is built.
 
 ## Not needed yet
 

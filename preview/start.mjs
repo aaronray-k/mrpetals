@@ -39,7 +39,7 @@ async function setUpDatabase() {
       await client.query('insert into preview.applied (name) values ($1)', [file])
       await client.query('commit')
     }
-    for (const [name, file] of [['seed', 'seed.sql'], ['seed-ordering', 'seed-ordering.sql']]) {
+    for (const [name, file] of [['seed', 'seed.sql'], ['seed-ordering', 'seed-ordering.sql'], ['seed-dashboards', 'seed-dashboards.sql']]) {
       if (done.has(name)) continue
       console.log(`demo data: ${file}`)
       const seed = fs.readFileSync(path.join(here, file), 'utf8').replaceAll(":'demo_password'", client.escapeLiteral(DEMO_PASSWORD))

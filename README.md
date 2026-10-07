@@ -136,7 +136,32 @@ buyer. Saving makes a new version; old versions never change.
 7. **Standing orders**: buyers set ship days (e.g. Monday and Thursday) and lines; each week's order is
    created 5 days ahead, already approved. Buyers can skip a week or change the standing order.
 8. **Following an order**: buyers see each step under **My orders**; everyone gets **Notifications**
-   (emailed once the mail settings are in, item 6).
+   (emailed once the mail settings are in; email is the last item).
+
+## Dashboards and currency
+
+The **Dashboard** opens with "Needs your action" lists and charts for your role. Pick **4 weeks**, **8 weeks**
+(the default) or **6 months**; every chart has **Show as table**.
+
+- **Orders and farms** (Admin, Consolidator): orders to approve, stems still to place, farms not answering
+  within 24 hours, orders ready for their packing list, flights in the next 3 days that can't close yet;
+  stems per week, farm fill rate, margin per week. **Orders by buyer** opens each buyer to list their open
+  orders, with a link to place each one with farms.
+- **Finance** (Admin, Finance): prepaid orders to collect, buyers over their limit, farm lines with no grower
+  price, missing exchange rates; credit use, paid and unpaid per week, margin by incoterm.
+- **QC**: boxes waiting per flight, Major failures to clear, BACK TO FARM stickers to print; reasons and pass
+  rate per farm.
+- **My farm**: POs to answer, deliveries this week, boxes sent back; stems confirmed per week.
+- **My orders** (buyers): orders to pay, waiting for approval, coming shipments; stems and spend.
+
+**Currency:** each buyer works in their own currency (on the customer record), from catalog prices to the
+proforma. Farm prices and margins are converted with **Exchange rates** (Admin or Finance enter e.g.
+1 USD = 0.92 EUR, from a date). With no rate, the buyer sees no price for those products rather than a
+wrong one, and Finance gets a warning. Fixed prices on **Selling prices** are set per currency. Prices are
+frozen on the order when it is placed.
+
+**Email settings** (Admin) holds the Zoho mailbox details for later. Passwords never go in the app: they go
+in the server environment. Email stays off until the email item.
 
 ## QC scanning
 
@@ -195,11 +220,11 @@ docs/backend.md           what the backend must provide
 | 3 | Boxes on POs and packing lists | Done |
 | 4 | QC scanner | Done |
 | 5 | Ordering flow and shipment release: catalog, checkout, approval, cost calculator, partial farm answers, packing list, standing orders, payment, credit, documents, users | Done |
-| 6 | Messages and email (Zoho: SMTP out, IMAP replies into the app) | Not started |
-| 7 | Dashboards per role: charts and action lists | Not started |
-| 8 | Floricode | Not started |
-| 9 | Legal and consent | Not started |
-| 10 | Accessibility and security (WCAG 2.2 AA, 2FA) | Not started |
-| 11 | Buyer claims (with QC photos) | Not started |
+| 6 | Dashboards per role (charts and action lists), buyer currencies and exchange rates | Done |
+| 7 | Floricode | Not started |
+| 8 | Legal and consent | Not started |
+| 9 | Accessibility and security (WCAG 2.2 AA, 2FA) | Not started |
+| 10 | Buyer claims (with QC photos) | Not started |
+| 11 | Messages and email (Zoho: SMTP out, IMAP replies into the app); settings page already there | Not started |
 
 A clickable preview with demo data runs on Render; see `preview/README.md`.

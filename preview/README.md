@@ -6,8 +6,10 @@ database. **Not for real data.** Production runs on Supabase (see `docs/backend.
 What runs on the web service (`node preview/start.mjs`):
 
 - **Database setup** on start: `demo-shim.sql` (the bits of Supabase the migrations expect), every file in
-  `supabase/migrations` not yet applied, and `seed.sql` once (demo farms, buyers, products, an order split
-  across farms, boxes part-way through QC, and one demo account per role).
+  `supabase/migrations` not yet applied, and the demo data once: `seed.sql` (demo farms, buyers, products, an order split
+  across farms, boxes part-way through QC, and one demo account per role), `seed-ordering.sql` (buyer
+  orders and a standing order) and `seed-dashboards.sql` (a USD to EUR rate and eight weeks of past flights
+  for the charts).
 - **PostgREST** (downloaded by `build.sh`) for the database API, exactly as Supabase uses it.
 - **The app** (`srvx`, the normal production build).
 - **`gateway.mjs`** in front: password sign-in, refresh, change password and the admin users API in place
