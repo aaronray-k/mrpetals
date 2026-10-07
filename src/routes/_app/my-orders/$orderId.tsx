@@ -10,6 +10,8 @@ import { OrderTimeline } from '~/components/shop/order-progress'
 import { money } from '~/components/shop/money'
 import { formatDate } from '~/components/orders/shipment-status'
 import { useClaimableBoxes } from '~/lib/claims/api'
+import { useInvoices } from '~/lib/odoo/api'
+import { InvoiceLines } from '~/components/odoo/invoice-status'
 import { formatDateTime } from '~/lib/utils'
 import { Alert } from '~/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
@@ -44,6 +46,7 @@ function MyOrderPage() {
   const { orderId } = Route.useParams()
   const products = useProductNames()
   const claimable = useClaimableBoxes()
+  const invoices = useInvoices({ orderId })
   const q = useQuery({
     queryKey: ['my-order', orderId],
     queryFn: async () => {
@@ -93,6 +96,16 @@ function MyOrderPage() {
           )
         )
       })()}
+      {!!invoices.data?.length && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Invoice</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InvoiceLines invoices={invoices.data} />
+          </CardContent>
+        </Card>
+      )}
       {progress.flight_note && (
         <p className="flex items-start gap-2 rounded-md bg-muted p-3 text-sm">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> {progress.flight_note}

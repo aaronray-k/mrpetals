@@ -20,6 +20,7 @@ import { Route as AppExchangeRatesRouteImport } from './routes/_app/exchange-rat
 import { Route as AppFarmsRouteImport } from './routes/_app/farms'
 import { Route as AppFloricodeRouteImport } from './routes/_app/floricode'
 import { Route as AppImportRouteImport } from './routes/_app/import'
+import { Route as AppInvoicesRouteImport } from './routes/_app/invoices'
 import { Route as AppMarginsRouteImport } from './routes/_app/margins'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppPricesRouteImport } from './routes/_app/prices'
@@ -44,6 +45,7 @@ import { Route as AppOrdersOrderIdRouteImport } from './routes/_app/orders/$orde
 import { Route as AppOrdersNewRouteImport } from './routes/_app/orders/new'
 import { Route as AppQcScanRouteImport } from './routes/_app/qc/scan'
 import { Route as AppSettingsEmailRouteImport } from './routes/_app/settings/email'
+import { Route as AppSettingsOdooRouteImport } from './routes/_app/settings/odoo'
 import { Route as AppSettingsOrderingRouteImport } from './routes/_app/settings/ordering'
 import { Route as AppShipmentsIndexRouteImport } from './routes/_app/shipments/index'
 import { Route as AppShipmentsShipmentIdRouteImport } from './routes/_app/shipments/$shipmentId'
@@ -102,6 +104,11 @@ const AppFloricodeRoute = AppFloricodeRouteImport.update({
 const AppImportRoute = AppImportRouteImport.update({
   id: '/import',
   path: '/import',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInvoicesRoute = AppInvoicesRouteImport.update({
+  id: '/invoices',
+  path: '/invoices',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMarginsRoute = AppMarginsRouteImport.update({
@@ -224,6 +231,11 @@ const AppSettingsEmailRoute = AppSettingsEmailRouteImport.update({
   path: '/settings/email',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsOdooRoute = AppSettingsOdooRouteImport.update({
+  id: '/settings/odoo',
+  path: '/settings/odoo',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsOrderingRoute = AppSettingsOrderingRouteImport.update({
   id: '/settings/ordering',
   path: '/settings/ordering',
@@ -261,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/farms': typeof AppFarmsRoute
   '/floricode': typeof AppFloricodeRoute
   '/import': typeof AppImportRoute
+  '/invoices': typeof AppInvoicesRoute
   '/margins': typeof AppMarginsRoute
   '/notifications': typeof AppNotificationsRoute
   '/prices': typeof AppPricesRoute
@@ -280,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/orders/new': typeof AppOrdersNewRoute
   '/qc/scan': typeof AppQcScanRoute
   '/settings/email': typeof AppSettingsEmailRoute
+  '/settings/odoo': typeof AppSettingsOdooRoute
   '/settings/ordering': typeof AppSettingsOrderingRoute
   '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/shop/checkout': typeof AppShopCheckoutRoute
@@ -302,6 +316,7 @@ export interface FileRoutesByTo {
   '/farms': typeof AppFarmsRoute
   '/floricode': typeof AppFloricodeRoute
   '/import': typeof AppImportRoute
+  '/invoices': typeof AppInvoicesRoute
   '/margins': typeof AppMarginsRoute
   '/notifications': typeof AppNotificationsRoute
   '/prices': typeof AppPricesRoute
@@ -321,6 +336,7 @@ export interface FileRoutesByTo {
   '/orders/new': typeof AppOrdersNewRoute
   '/qc/scan': typeof AppQcScanRoute
   '/settings/email': typeof AppSettingsEmailRoute
+  '/settings/odoo': typeof AppSettingsOdooRoute
   '/settings/ordering': typeof AppSettingsOrderingRoute
   '/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/shop/checkout': typeof AppShopCheckoutRoute
@@ -345,6 +361,7 @@ export interface FileRoutesById {
   '/_app/farms': typeof AppFarmsRoute
   '/_app/floricode': typeof AppFloricodeRoute
   '/_app/import': typeof AppImportRoute
+  '/_app/invoices': typeof AppInvoicesRoute
   '/_app/margins': typeof AppMarginsRoute
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/prices': typeof AppPricesRoute
@@ -364,6 +381,7 @@ export interface FileRoutesById {
   '/_app/orders/new': typeof AppOrdersNewRoute
   '/_app/qc/scan': typeof AppQcScanRoute
   '/_app/settings/email': typeof AppSettingsEmailRoute
+  '/_app/settings/odoo': typeof AppSettingsOdooRoute
   '/_app/settings/ordering': typeof AppSettingsOrderingRoute
   '/_app/shipments/$shipmentId': typeof AppShipmentsShipmentIdRoute
   '/_app/shop/checkout': typeof AppShopCheckoutRoute
@@ -388,6 +406,7 @@ export interface FileRouteTypes {
     | '/farms'
     | '/floricode'
     | '/import'
+    | '/invoices'
     | '/margins'
     | '/notifications'
     | '/prices'
@@ -407,6 +426,7 @@ export interface FileRouteTypes {
     | '/orders/new'
     | '/qc/scan'
     | '/settings/email'
+    | '/settings/odoo'
     | '/settings/ordering'
     | '/shipments/$shipmentId'
     | '/shop/checkout'
@@ -429,6 +449,7 @@ export interface FileRouteTypes {
     | '/farms'
     | '/floricode'
     | '/import'
+    | '/invoices'
     | '/margins'
     | '/notifications'
     | '/prices'
@@ -448,6 +469,7 @@ export interface FileRouteTypes {
     | '/orders/new'
     | '/qc/scan'
     | '/settings/email'
+    | '/settings/odoo'
     | '/settings/ordering'
     | '/shipments/$shipmentId'
     | '/shop/checkout'
@@ -471,6 +493,7 @@ export interface FileRouteTypes {
     | '/_app/farms'
     | '/_app/floricode'
     | '/_app/import'
+    | '/_app/invoices'
     | '/_app/margins'
     | '/_app/notifications'
     | '/_app/prices'
@@ -490,6 +513,7 @@ export interface FileRouteTypes {
     | '/_app/orders/new'
     | '/_app/qc/scan'
     | '/_app/settings/email'
+    | '/_app/settings/odoo'
     | '/_app/settings/ordering'
     | '/_app/shipments/$shipmentId'
     | '/_app/shop/checkout'
@@ -587,6 +611,13 @@ declare module '@tanstack/react-router' {
       path: '/import'
       fullPath: '/import'
       preLoaderRoute: typeof AppImportRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/invoices': {
+      id: '/_app/invoices'
+      path: '/invoices'
+      fullPath: '/invoices'
+      preLoaderRoute: typeof AppInvoicesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/margins': {
@@ -757,6 +788,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsEmailRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings/odoo': {
+      id: '/_app/settings/odoo'
+      path: '/settings/odoo'
+      fullPath: '/settings/odoo'
+      preLoaderRoute: typeof AppSettingsOdooRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/settings/ordering': {
       id: '/_app/settings/ordering'
       path: '/settings/ordering'
@@ -804,6 +842,7 @@ interface AppRouteChildren {
   AppFarmsRoute: typeof AppFarmsRoute
   AppFloricodeRoute: typeof AppFloricodeRoute
   AppImportRoute: typeof AppImportRoute
+  AppInvoicesRoute: typeof AppInvoicesRoute
   AppMarginsRoute: typeof AppMarginsRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppPricesRoute: typeof AppPricesRoute
@@ -821,6 +860,7 @@ interface AppRouteChildren {
   AppOrdersNewRoute: typeof AppOrdersNewRoute
   AppQcScanRoute: typeof AppQcScanRoute
   AppSettingsEmailRoute: typeof AppSettingsEmailRoute
+  AppSettingsOdooRoute: typeof AppSettingsOdooRoute
   AppSettingsOrderingRoute: typeof AppSettingsOrderingRoute
   AppShipmentsShipmentIdRoute: typeof AppShipmentsShipmentIdRoute
   AppShopCheckoutRoute: typeof AppShopCheckoutRoute
@@ -842,6 +882,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFarmsRoute: AppFarmsRoute,
   AppFloricodeRoute: AppFloricodeRoute,
   AppImportRoute: AppImportRoute,
+  AppInvoicesRoute: AppInvoicesRoute,
   AppMarginsRoute: AppMarginsRoute,
   AppNotificationsRoute: AppNotificationsRoute,
   AppPricesRoute: AppPricesRoute,
@@ -859,6 +900,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppOrdersNewRoute: AppOrdersNewRoute,
   AppQcScanRoute: AppQcScanRoute,
   AppSettingsEmailRoute: AppSettingsEmailRoute,
+  AppSettingsOdooRoute: AppSettingsOdooRoute,
   AppSettingsOrderingRoute: AppSettingsOrderingRoute,
   AppShipmentsShipmentIdRoute: AppShipmentsShipmentIdRoute,
   AppShopCheckoutRoute: AppShopCheckoutRoute,

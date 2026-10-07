@@ -266,6 +266,23 @@ staff** to the Terms of use, and **everyone** to the Privacy and Cookie notices.
 
 Everyone is notified at each step, and the dashboards list claims to review, farm replies, and notices to answer.
 
+## Invoices in Odoo
+
+Odoo makes the invoices; ConsolFlora keeps the detail and sends only the total.
+
+- When a shipment **closes**, each buyer on it gets **one invoice for all their orders on that flight**. It goes to
+  Odoo straight away as **one line, "Cut Flowers"**, with the grand total (flowers, service fees and charges) in the
+  buyer's currency, the flight date and a reference such as `SHP-2026-0101 / CFLPFJ0001, CFLPFJ0003`. The buyer is
+  matched to an Odoo customer by their code (or created). No tax is sent: Odoo's own setup applies.
+- Each **claim credit note** goes to Odoo as a credit note: "Cut Flowers – credit (CLM-2026-00001)".
+- **Invoices** (Admin, Consolidator, Finance) lists them with the Odoo number (a link into Odoo), what is still
+  due and the payment status. Anything Odoo didn't take shows why, with **Send waiting to Odoo** to retry.
+  **Refresh from Odoo** fetches payments (also done when the page opens, if the last fetch is over 10 minutes
+  old); a paid invoice marks its orders paid here. Buyers see their invoice on the order.
+- **Odoo settings** (Admin): address, database, login, the line name, on/off, **Test connection** and recent
+  activity. The API key is only in the server environment (`ODOO_API_KEY`). Odoo Online needs the **Custom plan**
+  for this. The preview uses a demo Odoo (`INV/2026/00001`…) where the demo buyer pays after a few minutes.
+
 ## Two-factor sign-in and accessibility
 
 **Admin, Consolidator and Finance** sign in with their password and then a 6-digit code:
@@ -322,6 +339,7 @@ docs/backend.md           what the backend must provide
 | 8 | Legal and consent: agreements per role at sign-in, public legal pages, marketing choice | Done (texts pending legal review) |
 | 9 | Accessibility and security: two-factor sign-in (app or email, remembered devices), WCAG 2.2 AA sweep | Done (email codes wait for the mailbox) |
 | 10 | Buyer claims: buyer report with photos, consolidator review, buyer credit notes, farm claim notices and farm credit notes | Done |
-| 11 | Messages and email (Zoho: SMTP out, IMAP replies into the app); settings page already there | Not started |
+| 11 | Invoices in Odoo: one invoice per buyer per flight (one Cut Flowers line), credit notes, push and fetch | Done (demo Odoo until connected) |
+| 12 | Messages and email (Zoho: SMTP out, IMAP replies into the app); important notifications emailed; settings page already there | Not started |
 
 A clickable preview with demo data runs on Render; see `preview/README.md`.

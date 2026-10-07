@@ -15,6 +15,7 @@ openCreditNoteDocument,
   type ClaimLine,
 } from '~/lib/claims/api'
 import { useQcReasons } from '~/lib/qc/api'
+import { pushToOdoo } from '~/lib/odoo/api'
 import { formatDateTime } from '~/lib/utils'
 import { PageHeader } from '~/components/layout/app-shell'
 import { RequireRole } from '~/components/layout/require-role'
@@ -109,6 +110,8 @@ function ClaimReview() {
                   setBusy(true)
                   try {
                     const r = await finishClaimReview(claim.id, note)
+                    // The buyer's credit note goes to Odoo as a credit note (failures wait on the Invoices page).
+                    if (r.credit_note) void pushToOdoo().catch(() => {})
                     toast({
                       kind: 'success',
                       title: 'Claim decided',

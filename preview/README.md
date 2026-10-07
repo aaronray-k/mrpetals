@@ -30,3 +30,5 @@ Every demo account is asked to agree to its legal documents at its first sign-in
 Admin, Consolidator and Finance demo accounts set up two-factor sign-in at their first sign-in (an authenticator app, or an email code, which the preview shows on screen because email is not connected).
 
 Claims demo (`seed-claims.sql`): one claim waiting for review and one decided, with a claim notice to Kibo. On the preview only, the claim window is 30 days so the demo buyer can report on the past weeks' flights; the default is 24 hours.
+
+Invoices go to a demo Odoo on the preview (`ODOO_SOURCE=demo`, set by `start.mjs`): Odoo-style numbers, and the demo buyer pays each invoice a few minutes after it is posted.

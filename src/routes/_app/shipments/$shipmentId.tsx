@@ -16,6 +16,8 @@ import {
 } from '~/lib/orders/api'
 import { downloadOrderSheet } from '~/lib/orders/download-sheet'
 import { closeShipmentWithOverride, useShipmentRelease } from '~/lib/ordering/api'
+import { pushToOdoo, useInvoices } from '~/lib/odoo/api'
+import { InvoiceLines } from '~/components/odoo/invoice-status'
 import { ReleasePanel, ShipmentDetailsForm } from '~/components/shipments/release-panel'
 import { useAuth } from '~/lib/auth'
 import { QC_CLEAR_ROLES, QC_ROLES, STAFF_ROLES, hasAnyRole } from '~/lib/roles'
@@ -121,6 +123,7 @@ function ShipmentPage() {
         until the shipment is closed.
       </Tip>
 
+      {shipment.status === 'closed' && hasAnyRole(roles, ['admin', 'consolidator', 'finance']) && <ShipmentInvoices shipmentId={shipment.id} />}
       <ShipmentDetailsForm key={`${shipment.mawb}-${shipment.flight_no}-${shipment.flight_date}-${shipment.destination_airport}-${shipment.arrived_at}`} shipment={shipment} canEdit={staff} onSaved={() => void queryClient.invalidateQueries({ queryKey: shipmentKeys.all })} />
       {hasAnyRole(roles, ['admin', 'consolidator', 'finance']) && (
         <ReleasePanel
@@ -184,7 +187,14 @@ function ShipmentPage() {
               onClick={async () => {
                 try {
                   await closeShipmentWithOverride(shipment.id, overrideReason.trim() || null)
-                  toast({ kind: 'success', title: `${shipment.shipment_ref} closed`, description: 'Box numbers are now frozen.' })
+                  toast({ kind: 'success', title: `${shipment.shipment_ref} closed`, description: 'Box numbers are now frozen. Invoices are going to Odoo.' })
+                  // One invoice per buyer was made on closing; send them to Odoo now (failures wait on the Invoices page).
+                  void pushToOdoo({ shipmentId: shipment.id })
+                    .then((r) => {
+                      if (r.failed) toast({ kind: 'error', title: `${r.failed} invoices didn't reach Odoo`, description: 'See the Invoices page.' })
+                      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+                    })
+                    .catch(() => {})
                   setClosing(false)
                   refresh()
                   void queryClient.invalidateQueries({ queryKey: shipmentKeys.all })
@@ -325,5 +335,20 @@ function CloseBlockers({ shipmentId, isAdmin, reason, onReason }: { shipmentId: 
         <p className="mt-2">Clear these first, or ask an Admin to close it anyway.</p>
       )}
     </Alert>
+  )
+}
+
+function ShipmentInvoices({ shipmentId }: { shipmentId: string }) {
+  const invoices = useInvoices({ shipmentId })
+  if (!invoices.data?.length) return null
+  return (
+    <Card className="mb-4">
+      <CardHeader>
+        <CardTitle>Invoices in Odoo</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <InvoiceLines invoices={invoices.data} showBuyer />
+      </CardContent>
+    </Card>
   )
 }

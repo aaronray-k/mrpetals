@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/com
 import { Spinner } from '~/components/ui/spinner'
 import { ActionGroup, ActionsCard, type ActionItem } from './action-list'
 import { useClaims, useFarmNotices } from '~/lib/claims/api'
+import { useInvoices } from '~/lib/odoo/api'
 
 const S1 = 'var(--series-1)'
 const S2 = 'var(--series-2)'
@@ -223,10 +224,18 @@ interface FinanceData {
 
 export function FinanceDashboard({ weeks }: { weeks: number }) {
   const q = useDashboard<FinanceData>('finance', weeks)
+  const invoices = useInvoices()
   if (!q.data) return <Loading q={q} />
   const d = q.data
   const a = d.actions
   const groups: { title: string; empty: string; items: ActionItem[] }[] = [
+    {
+      title: 'Invoices not in Odoo yet',
+      empty: 'Every invoice is in Odoo.',
+      items: (invoices.data ?? [])
+        .filter((i) => i.status !== 'pushed')
+        .map((i) => ({ key: i.id, title: `${i.customers?.company_name ?? ''} · ${money(i.amount, i.currency)}`, detail: i.last_error ?? i.reference, urgent: i.status === 'failed', to: '/invoices' })),
+    },
     {
       title: 'Prepaid orders to collect (flights within 7 days)',
       empty: 'Nothing waiting for payment.',

@@ -243,8 +243,23 @@ Provided by migration `…017_claims.sql`.
 | `farm_claim_notices`, `farm_claim_notice_lines`, `farm_claim_messages` + bucket `farm-credit-notes` | Per farm, at the farm's price and currency; the farm's credit note and the conversation. |
 | `farm_send_credit_note()`, `claim_notice_message()`, `close_claim_notice()` | Farm and ConsolFlora. |
 
-Credit notes are recorded in the app; taking them off a future invoice is done in Odoo when invoicing moves
-there.
+Credit notes go to Odoo as credit notes (item 11).
+
+## Item 11: Invoices in Odoo
+
+Provided by migration `…018_odoo.sql`; the Odoo calls are in `src/server/odoo/` (Odoo's external JSON-RPC API).
+
+| Object | Purpose |
+|---|---|
+| `invoices` | One per buyer per closed shipment (made by a trigger on closing), and one per claim credit note. Total, currency, reference, orders; Odoo number, state, payment status, amount due, link. Buyers read their own. |
+| `invoice_payload()` | What goes to Odoo: the buyer's business details, currency, date, reference, line name and total. Never farm prices or margins. |
+| `record_odoo_push()`, `record_odoo_fetch()` | Results from the app server. A paid invoice marks its orders paid; the buyer is told of a new invoice, Finance of a payment, staff of a failed push. |
+| `odoo_settings`, `odoo_sync_log`, `customers.odoo_partner_id` | Address, database, login, line name; every push, fetch and test. |
+
+Needed to connect: Odoo **Custom plan** (Odoo Online), an Odoo user with Accounting rights and an **API key**
+(`ODOO_API_KEY` on the app server), the address, database and login on Odoo settings, and each buyer currency
+**active** in Odoo. Payments are fetched when Finance opens Invoices or presses Refresh; a scheduled fetch (for
+example hourly) can be added on the server once connected.
 
 ## Not needed yet
 
