@@ -259,6 +259,10 @@ Provided by migration `…018_odoo.sql`; the Odoo calls are in `src/server/odoo/
 | `record_odoo_action()` | Confirm (`action_post`), reset to draft (`button_draft`) or refill a draft, done by the app server for Admin, Consolidator and Finance; logged, refusals included. |
 | `apply_odoo_state()` | Every push, fetch and action: Odoo's number, state, due date. The first confirmation sets `posted_at` and tells the buyer; buyers only read confirmed invoices. A new draft notifies Finance. |
 
+`term_due_date(terms, placed)` (`…021_payment_terms.sql`) gives the due date for "15th of following month";
+`invoice_payload()` sends it as `due_date` for invoices (from the latest order's placed date), and then no
+`payment_term_id`. New farms default to that term (column default and a trigger for empty imports).
+
 Statements of account need no tables: `getLedger` (Admin and Finance, `src/server/odoo.functions.ts`) reads
 Odoo's `account.move.line` on payable (suppliers) or receivable (buyers) accounts, posted (and optionally draft),
 plus the sum of earlier lines per partner and currency for the balance brought forward. The statement, overdue

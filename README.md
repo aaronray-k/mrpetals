@@ -296,6 +296,16 @@ Odoo makes the invoices; ConsolFlora keeps the detail and sends only the total.
   never sent. Without `ODOO_API_KEY` (or on the preview until one is set) a demo Odoo is used; demo invoices are
   never sent to, or fetched from, the real Odoo.
 
+## Payment terms
+
+Terms are Prepaid, Net 7, Net 15, Net 30 and **15th of following month** (everything for a month's orders is due
+on the 15th of the next month). New suppliers start on 15th of following month (an empty cell on the Farms sheet
+gives it; on an existing supplier it keeps their terms). For a buyer on it, ConsolFlora sets the due date on the
+Odoo invoice itself: the 15th of the month after the **latest order on the invoice was placed** (Nairobi time),
+whatever day the invoice is confirmed, with no Odoo payment term. Supplier bills are entered in Odoo, so their due
+dates (and "overdue" on supplier statements) come from Odoo: give those vendors a payment term there of
+"15 days after end of month".
+
 ## Statements of account
 
 **Statements of account** (Admin and Finance; also a shortcut on their dashboards) reads Odoo's ledger live:

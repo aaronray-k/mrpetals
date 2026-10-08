@@ -86,9 +86,9 @@ describe('Farms', () => {
 
   it('reports a missing required column once, not per row', () => {
     const book = wb({ Farms: [FARM] })
-    book.sheets[0]!.headers = book.sheets[0]!.headers.filter((h) => h !== 'payment_terms')
+    book.sheets[0]!.headers = book.sheets[0]!.headers.filter((h) => h !== 'sales_agent_email')
     const r = validateSheet(book, 'Farms', snap())
-    expect(messages(r)).toEqual(['Column payment_terms is missing from the Farms sheet. It is required.'])
+    expect(messages(r)).toEqual(['Column sales_agent_email is missing from the Farms sheet. It is required.'])
   })
 })
 

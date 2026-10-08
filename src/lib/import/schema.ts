@@ -95,7 +95,8 @@ export const SHEETS: Record<SheetName, SheetDef> = {
       req('sales_agent_email', 'email'),
       c('sales_agent_phone', 'phone'),
       req('currency', 'text', { list: 'Currency' }),
-      req('payment_terms', 'text', { list: 'PaymentTerms' }),
+      // Empty: "15th of following month" for a new supplier; an existing one keeps its terms.
+      c('payment_terms', 'text', { list: 'PaymentTerms' }),
       req('active', 'yesno'),
     ],
     key: ['farm_code'],

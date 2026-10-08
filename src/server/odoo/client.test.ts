@@ -187,4 +187,11 @@ describe('Odoo client', () => {
     // Statements only read: nothing is written to Odoo.
     expect(calls.some((c) => ['create', 'write', 'action_post', 'button_draft', 'unlink'].includes(c.args[4] as string))).toBe(false)
   })
+
+  it('a due date set by ConsolFlora replaces any Odoo payment term', async () => {
+    const calls = fakeOdoo({ state: 'draft' })
+    await client().push({ ...mapped, due_date: '2026-11-15' })
+    const values = (calls.find((c) => c.args[3] === 'account.move' && c.args[4] === 'create')!.args[5] as Record<string, unknown>[])[0]!
+    expect(values).toMatchObject({ invoice_date_due: '2026-11-15', invoice_payment_term_id: false })
+  })
 })

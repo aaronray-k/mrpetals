@@ -23,6 +23,8 @@ export interface InvoicePayload {
   field_map?: Partial<Record<MappedField, string>>
   payment_terms?: string | null
   payment_term_id?: number | null
+  /** Set by ConsolFlora for terms like "15th of following month"; replaces any Odoo payment term on the invoice. */
+  due_date?: string | null
   partner: { odoo_partner_id: number | null; name: string; code: string; email: string | null; country: string | null; city: string | null; street: string | null; vat: string | null }
 }
 export type MappedField = 'mawb' | 'proforma' | 'flight'
@@ -121,7 +123,11 @@ export function filledFields(p: InvoicePayload): Record<string, unknown> {
     const field = p.field_map?.[f.key]
     if (field) v[field] = p[f.key] || false
   }
-  if (p.payment_term_id) v.invoice_payment_term_id = p.payment_term_id
+  if (p.due_date) {
+    // ConsolFlora's own due date: no Odoo payment term (not even the customer's default), so Odoo keeps the date.
+    v.invoice_payment_term_id = false
+    v.invoice_date_due = p.due_date
+  } else if (p.payment_term_id) v.invoice_payment_term_id = p.payment_term_id
   return v
 }
 export const lineLabel = (p: InvoicePayload) =>

@@ -80,6 +80,7 @@ function InvoicePage() {
     if (Math.abs(d.amount_untaxed - i.amount) > 0.005) differences.push(`Odoo's amount before tax is ${money(d.amount_untaxed, i.currency)}, ConsolFlora's ${money(i.amount, i.currency)}.`)
     for (const f of d.fields) if ((f.value ?? '') !== (p[f.key] ?? '')) differences.push(`${FIELD_LABEL[f.key]} in Odoo is "${f.value ?? ''}", ConsolFlora has "${p[f.key] ?? ''}".`)
     if (p.payment_term_id && !d.payment_term) differences.push('Odoo has no payment terms on it.')
+    if (p.due_date && d.due_date && d.due_date !== p.due_date) differences.push(`Odoo's due date is ${day(d.due_date)}, ConsolFlora's ${day(p.due_date)}.`)
   }
 
   return (
@@ -191,7 +192,11 @@ function InvoicePage() {
                 <dt className="text-muted-foreground">Payment terms</dt>
                 <dd>
                   {i.customers?.payment_terms}
-                  {p && !p.payment_term_id && <span className="block text-muted-foreground">Not matched to an Odoo payment term yet (Odoo settings).</span>}
+                  {p?.due_date ? (
+                    <span className="block">Due {day(p.due_date)} (the 15th of the month after the order was placed)</span>
+                  ) : (
+                    p && !p.payment_term_id && <span className="block text-muted-foreground">Not matched to an Odoo payment term yet (Odoo settings).</span>
+                  )}
                 </dd>
                 {i.shipment_id && (
                   <>
@@ -216,7 +221,7 @@ function InvoicePage() {
             </CardContent>
           </Card>
         </div>
-        <Preview invoiceId={i.id} loading={inOdoo && odoo.isLoading} detail={d} reason={inOdoo ? (odoo.data?.reason ?? (odoo.error as Error | null)?.message ?? null) : 'Not in Odoo yet: the preview shows once Odoo has it.'} currency={i.currency} credit={credit} />
+        <Preview invoiceId={i.id} loading={inOdoo && odoo.isLoading} detail={d} reason={inOdoo ? (odoo.data?.reason ?? (odoo.error as Error | null)?.message ?? null) : 'Not in Odoo yet: the preview shows once Odoo has it.'} currency={i.currency} credit={credit} fixedDue={!!p?.due_date} />
       </div>
       <Dialog
         open={asking === 'confirm'}
@@ -249,7 +254,7 @@ function InvoicePage() {
 }
 
 /** Odoo's PDF when Odoo has made one, otherwise a live preview built from Odoo's own data. */
-function Preview({ invoiceId, loading, detail, reason, currency, credit }: { invoiceId: string; loading: boolean; detail: OdooMoveDetail | null; reason: string | null; currency: string; credit: boolean }) {
+function Preview({ invoiceId, loading, detail, reason, currency, credit, fixedDue }: { invoiceId: string; loading: boolean; detail: OdooMoveDetail | null; reason: string | null; currency: string; credit: boolean; fixedDue: boolean }) {
   const [view, setView] = React.useState<'live' | 'pdf'>('live')
   const [pdf, setPdf] = React.useState<{ url: string; name: string } | 'none' | 'loading' | null>(null)
   React.useEffect(() => () => {
@@ -312,14 +317,14 @@ function Preview({ invoiceId, loading, detail, reason, currency, credit }: { inv
             </div>
           )
         ) : (
-          <LivePreview d={detail} currency={currency} credit={credit} />
+          <LivePreview d={detail} currency={currency} credit={credit} fixedDue={fixedDue} />
         )}
       </CardContent>
     </Card>
   )
 }
 
-function LivePreview({ d, currency, credit }: { d: OdooMoveDetail; currency: string; credit: boolean }) {
+function LivePreview({ d, currency, credit, fixedDue }: { d: OdooMoveDetail; currency: string; credit: boolean; fixedDue: boolean }) {
   const draft = d.state === 'draft'
   return (
     <article aria-label="Invoice preview" className="relative grid gap-5 overflow-hidden rounded-md border bg-white p-4 text-sm text-neutral-900 sm:p-6">
@@ -343,7 +348,7 @@ function LivePreview({ d, currency, credit }: { d: OdooMoveDetail; currency: str
           <dt className="text-neutral-500">Invoice date</dt>
           <dd>{draft ? 'When confirmed' : day(d.invoice_date)}</dd>
           <dt className="text-neutral-500">Due date</dt>
-          <dd>{draft ? 'Worked out when confirmed' : day(d.due_date)}</dd>
+          <dd>{draft && !fixedDue ? 'Worked out when confirmed' : day(d.due_date)}</dd>
           <dt className="text-neutral-500">Payment terms</dt>
           <dd>{d.payment_term ?? '—'}</dd>
           <dt className="text-neutral-500">Reference</dt>

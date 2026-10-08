@@ -157,6 +157,7 @@ const MAPPED: { key: MappedField; label: string; hint: string }[] = [
   { key: 'flight', label: 'Flight number', hint: "The shipment's flight, e.g. KQ 1406." },
 ]
 /** "Net 30", "30 Days", "Prepaid", "Immediate Payment": the number of days, for matching ConsolFlora's terms to Odoo's. */
+const FIXED_BY_CONSOLFLORA = new Set(['15th of following month'])
 const daysOf = (t: string) => (/prepa|immediate|cash|advance/i.test(t) ? 0 : (t.match(/\d+/)?.[0] ? Number(t.match(/\d+/)![0]) : null))
 
 /** Which of Odoo's invoice fields get the MAWB, proforma numbers and flight, and which Odoo payment term each buyer's terms are. */
@@ -174,7 +175,7 @@ function FieldMapping({ settings }: { settings: OdooSettings }) {
     setFields(Object.fromEntries(MAPPED.map((m) => [m.key, settings.field_map[m.key] ?? g[m.key] ?? ''])))
     setTerms(
       Object.fromEntries(
-        o.buyerTerms.map((t) => {
+        o.buyerTerms.filter((t) => !FIXED_BY_CONSOLFLORA.has(t)).map((t) => {
           const saved = settings.payment_term_map[t]
           const guess = o.terms.find((x) => daysOf(x.name) != null && daysOf(x.name) === daysOf(t))
           return [t, saved ?? guess?.id ?? 0]
@@ -233,7 +234,13 @@ function FieldMapping({ settings }: { settings: OdooSettings }) {
             <fieldset className="grid gap-4">
               <legend className="mb-2 font-semibold">Payment terms</legend>
               <p className="text-sm text-muted-foreground">Each buyer's terms in ConsolFlora, as an Odoo payment term. Odoo works out the due date when the invoice is confirmed.</p>
-              {o.buyerTerms.map((t, n) => (
+              {o.buyerTerms.filter((t) => FIXED_BY_CONSOLFLORA.has(t)).map((t) => (
+                <p key={t} className="text-sm">
+                  <strong>{t}</strong>: ConsolFlora sets the due date itself, the 15th of the month after the latest order on the invoice was
+                  placed, so no Odoo payment term is needed.
+                </p>
+              ))}
+              {o.buyerTerms.filter((t) => !FIXED_BY_CONSOLFLORA.has(t)).map((t, n) => (
                 <Field key={t} id={`term-${n}`} label={t}>
                   {(d) => (
                     <Select id={`term-${n}`} value={terms[t] ?? 0} onChange={(e) => setTerms({ ...terms, [t]: Number(e.target.value) })} aria-describedby={d}>

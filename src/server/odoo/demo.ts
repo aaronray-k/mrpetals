@@ -78,6 +78,7 @@ export function demoOdoo(nextNumber: (kind: InvoicePayload['kind']) => Promise<n
   const moveId = (p: InvoicePayload) => parseInt(p.invoice_id.replace(/-/g, '').slice(0, 7), 16)
   const day = (iso: string) => iso.slice(0, 10)
   const due = (p: InvoicePayload, from: string) => {
+    if (p.due_date) return p.due_date
     const d = termDays(p.payment_term_id)
     return d == null ? from : day(new Date(Date.parse(from) + d * 86_400_000).toISOString())
   }

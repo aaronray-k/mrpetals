@@ -130,6 +130,27 @@ set request.jwt.claim.sub = 'c0000000-0000-0000-0000-0000000000b2';
 select pg_temp.check_refused($$select record_odoo_action(pg_temp.id('I2'), 'confirm', true, '{"state": "posted"}')$$, 'Only Admin, Consolidator and Finance');
 set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000d';
 
+-- ---------------------------------------------------------------- 15th of following month
+reset role;
+select pg_temp.check(term_due_date('15th of following month', '2026-10-31') = '2026-11-15' and term_due_date('15th of following month', '2026-12-03') = '2027-01-15'
+  and term_due_date('Net 30', '2026-10-31') is null, 'the 15th of the month after; other terms are left to Odoo');
+update customers set payment_terms = '15th of following month' where customer_code = 'OB1';
+update customer_orders set created_at = '2026-10-31 22:30+03' where id = pg_temp.id('A1');
+update customer_orders set created_at = '2026-09-02 10:00+03' where id = pg_temp.id('A2');
+set role authenticated;
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000d';
+select pg_temp.check((select invoice_payload(pg_temp.id('I1')) ->> 'due_date') = '2026-11-15' and (select invoice_payload(pg_temp.id('I1')) -> 'payment_term_id') = 'null'::jsonb,
+  'a buyer on 15th of following month: due the 15th after the latest order was placed (Nairobi time), no Odoo payment term');
+select pg_temp.check((select invoice_payload(pg_temp.id('I2')) -> 'due_date') = 'null'::jsonb and (select invoice_payload(pg_temp.id('I2')) ->> 'payment_term_id') = '4',
+  'a buyer on Net 30 keeps the Odoo payment term');
+reset role;
+insert into farms (farm_code, farm_name, country, sales_agent_name, sales_agent_email, currency) values ('OF2', 'Odoo Farm 2', 'Kenya', 'B', 'b@of2.ke', 'USD');
+insert into farms (farm_code, farm_name, country, sales_agent_name, sales_agent_email, currency, payment_terms) values ('OF3', 'Odoo Farm 3', 'Kenya', 'B', 'b@of3.ke', 'USD', '');
+update farms set payment_terms = '' where farm_code = 'OF1';
+select pg_temp.check((select string_agg(farm_code || ':' || payment_terms, ',' order by farm_code) from farms where farm_code in ('OF1', 'OF2', 'OF3'))
+  = 'OF1:Net 15,OF2:15th of following month,OF3:15th of following month', 'new suppliers start on 15th of following month; an empty cell keeps existing terms');
+set role authenticated;
+
 -- ---------------------------------------------------------------- Go-live
 select pg_temp.check((select send_from from odoo_settings) is null, 'no go-live until sending is switched on');
 reset role;
