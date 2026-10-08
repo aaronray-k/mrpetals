@@ -201,7 +201,7 @@ export interface OdooAdapter {
   makePdf(moveId: number): Promise<{ made: boolean; message: string }>
   contacts(q: ContactQuery): Promise<{ total: number; contacts: OdooContact[] }>
   /** A buyer's (or grower's) company in Odoo and everyone under it, found by its Odoo id or its code (Odoo's reference). */
-  contactsOf(p: { odoo_partner_id: number | null; code: string }): Promise<OdooContact[]>
+  contactsOf(p: { odoo_partner_id: number | null; code: string; name?: string }): Promise<OdooContact[]>
 }
 
 /** Odoo's PDF of an invoice. Odoo 17+ keeps it as a field attachment, which a plain attachment search leaves out. */
@@ -319,15 +319,18 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
   const link = (moveId: number) => `${cfg.url.replace(/\/$/, '')}/web#id=${moveId}&model=account.move&view_type=form`
 
   /** The buyer's company in Odoo: the id ConsolFlora kept, if it is still that buyer's (its reference is the buyer's code), else found by code. */
-  async function knownPartner(id: number | null, code: string) {
+  async function knownPartner(id: number | null, code: string, name?: string) {
     if (id) {
       const r = (await kw('res.partner', 'search_read', [[['id', '=', id], ['ref', '=', code]]], { fields: ['id'], limit: 1 })) as { id: number }[]
       if (r[0]) return r[0].id
     }
-    return ((await kw('res.partner', 'search', [[['ref', '=', code], ['parent_id', '=', false]]], { limit: 1 })) as number[])[0] ?? null
+    const byRef = ((await kw('res.partner', 'search', [[['ref', '=', code], ['parent_id', '=', false]]], { limit: 1 })) as number[])[0]
+    if (byRef || !name) return byRef ?? null
+    // A company already in Odoo under the same name (without ConsolFlora's code as its reference): use it, never a duplicate.
+    return ((await kw('res.partner', 'search', [[['name', '=ilike', name], ['parent_id', '=', false]]], { limit: 1 })) as number[])[0] ?? null
   }
   async function partnerId(p: InvoicePayload['partner']) {
-    const known = await knownPartner(p.odoo_partner_id, p.code)
+    const known = await knownPartner(p.odoo_partner_id, p.code, p.name)
     if (known) return known
     const country = p.country ? ((await kw('res.country', 'search', [[['name', '=ilike', p.country]]], { limit: 1 })) as number[])[0] : undefined
     return (await kw('res.partner', 'create', [
@@ -502,7 +505,7 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
       return { total, contacts: rows.map(contactOf) }
     },
     async contactsOf(p) {
-      const company = await knownPartner(p.odoo_partner_id, p.code)
+      const company = await knownPartner(p.odoo_partner_id, p.code, p.name)
       if (!company) return []
       const rows = (await kw('res.partner', 'search_read', [[['id', 'child_of', company]]], { fields: CONTACT_FIELDS, order: 'is_company desc, name asc' })) as Record<string, unknown>[]
       return rows.map(contactOf)

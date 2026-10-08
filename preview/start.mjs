@@ -76,6 +76,20 @@ async function setUpDatabase() {
       await client.query('update public.security_settings set demo_show_email_codes = true')
       await client.query("insert into preview.applied (name) values ('two-factor-demo')")
     }
+    // A fresh test order for Pacific Floral on a new shipment (made after Odoo go-live), once.
+    if (!done.has('test-order-pfj-1')) {
+      console.log('test data: Pacific Floral test order')
+      try {
+        await client.query('begin')
+        await client.query(fs.readFileSync(path.join(here, 'seed-test-order.sql'), 'utf8'))
+        await client.query("insert into preview.applied (name) values ('test-order-pfj-1')")
+        await client.query('commit')
+      } catch (e) {
+        // Test data only: never stop the preview over it.
+        await client.query('rollback')
+        console.error(`test data not added: ${e.message}`)
+      }
+    }
     // PostgREST picks up new functions and tables.
     await client.query("notify pgrst, 'reload schema'")
   } catch (e) {

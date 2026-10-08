@@ -40,3 +40,8 @@ what is missing and the attachments can still be downloaded.
 Shipment documents work on the preview with its demo data. With the real Odoo connected, the preview's demo
 invoices are not sent there (go-live), so they show as "Before Odoo go-live: not sent"; Contacts (Odoo) shows the
 real Odoo's contacts.
+
+**Test order (once):** the preview adds a fresh Pacific Floral order on shipment `SHP-TEST-0001` (MAWB
+176-99990011), placed in full, boxed, checked, paid and closed after Odoo go-live, so its invoice can go to the
+real Odoo with **Send to Odoo** (Invoices, or Shipment documents). Odoo customers are matched by reference, then by
+exact company name, so an existing customer is used rather than duplicated.

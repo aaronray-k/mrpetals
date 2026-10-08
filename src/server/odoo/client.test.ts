@@ -32,7 +32,9 @@ function fakeOdoo(opts: { existingMove?: number; currencyActive?: boolean; canIn
       const id = (d.find((x) => Array.isArray(x) && x[0] === 'id') as unknown[] | undefined)?.[2]
       const ref = (d.find((x) => Array.isArray(x) && x[0] === 'ref') as unknown[] | undefined)?.[2]
       result = id === 55 && ref === 'PFJ' ? [{ id: 55 }] : []
-    } else if (model === 'res.partner' && method === 'search') result = []
+    } else if (model === 'res.partner' && method === 'search')
+      // A company already in Odoo under the buyer's name (no reference): id 77.
+      result = (args as unknown[][])[0]!.some((d) => Array.isArray(d) && d[0] === 'name' && String(d[2]).toLowerCase() === 'existing buyer ltd') ? [77] : []
     else if (model === 'res.country' && method === 'search') result = [113]
     else if (model === 'res.partner' && method === 'create') result = 55
     else if (model === 'res.currency') result = [{ id: 1, active: opts.currencyActive ?? true }]
@@ -319,5 +321,12 @@ describe('Odoo client', () => {
       '|', ['supplier_rank', '>', 0], ['parent_id.supplier_rank', '>', 0],
       '|', '|', ['name', 'ilike', 'fontana'], ['email', 'ilike', 'fontana'], ['parent_id.name', 'ilike', 'fontana'],
     ])
+  })
+
+  it('an existing Odoo company with the same name is used, never duplicated', async () => {
+    const calls = fakeOdoo({ state: 'draft' })
+    await client().push({ ...payload, partner: { ...payload.partner, name: 'EXISTING BUYER LTD', code: 'EXB' } })
+    expect((calls.find((c) => c.args[3] === 'account.move' && c.args[4] === 'create')!.args[5] as Record<string, unknown>[])[0]!.partner_id).toBe(77)
+    expect(calls.some((c) => c.args[3] === 'res.partner' && c.args[4] === 'create')).toBe(false)
   })
 })

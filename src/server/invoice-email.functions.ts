@@ -139,7 +139,7 @@ export const getInvoiceEmailDraft = createServerFn({ method: 'GET' })
       const r = await readOdoo(context)
       if (r.odoo) {
         try {
-          contacts = (await r.odoo.contactsOf({ odoo_partner_id: f.customer.odoo_partner_id, code: f.customer.customer_code })).filter((c) => c.email)
+          contacts = (await r.odoo.contactsOf({ odoo_partner_id: f.customer.odoo_partner_id, code: f.customer.customer_code, name: f.customer.company_name })).filter((c) => c.email)
         } catch (e) {
           contactsError = (e as Error).message
         }
