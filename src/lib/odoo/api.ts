@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSupabase } from '~/lib/supabase'
-import { createManualInvoice, listOdooContacts, makeOdooPdf, fetchInvoices, getInvoiceDetail, getInvoicePdf, getOdooMappingOptions, getOdooMove, getOdooMovePdf, getOdooStatus, invoiceAction, listOdooMoves, odooMoveAction, pushInvoices, testOdoo } from '~/server/odoo.functions'
+import { createManualInvoice, listOdooContacts, makeOdooPdf, setUpOdooLineProduct, fetchInvoices, getInvoiceDetail, getInvoicePdf, getOdooMappingOptions, getOdooMove, getOdooMovePdf, getOdooStatus, invoiceAction, listOdooMoves, odooMoveAction, pushInvoices, testOdoo } from '~/server/odoo.functions'
 import type { MappedField, MoveQuery } from '~/server/odoo/client'
 
 export interface Invoice {
@@ -81,12 +81,14 @@ export interface OdooSettings {
   send_from: string | null
   field_map: Partial<Record<MappedField, string>>
   payment_term_map: Record<string, number>
+  line_product_id: number | null
+  line_product_name: string | null
 }
 export function useOdooSettings() {
   return useQuery({
     queryKey: ['odoo-settings'],
     queryFn: async () => {
-      const { data, error } = await getSupabase().from('odoo_settings').select('url, database, login, enabled, line_label, last_fetch_at, send_from, field_map, payment_term_map').maybeSingle()
+      const { data, error } = await getSupabase().from('odoo_settings').select('url, database, login, enabled, line_label, last_fetch_at, send_from, field_map, payment_term_map, line_product_id, line_product_name').maybeSingle()
       if (error) throw new Error(error.message)
       return data as OdooSettings | null
     },
@@ -170,3 +172,5 @@ export const makePdfInOdoo = (target: { invoiceId: string } | { moveId: number }
 export function useOdooContacts(q: { kind: 'all' | 'buyers' | 'growers'; search: string | null; offset: number }) {
   return useQuery({ queryKey: ['odoo-contacts', q], queryFn: () => listOdooContacts({ data: q }), staleTime: 60_000 })
 }
+
+export const setUpLineProduct = () => setUpOdooLineProduct()

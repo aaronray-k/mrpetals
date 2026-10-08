@@ -283,7 +283,11 @@ Odoo makes the invoices; ConsolFlora keeps the detail and sends only the total.
   ConsolFlora** rewrites a draft (and a warning shows when Odoo's copy differs). Confirming also has Odoo make its
   **PDF** (Odoo's own Send & Print, with every way of sending switched off, so Odoo emails nobody); it shows on
   the **Odoo's PDF** tab with a download link. A confirmed invoice without one (from before, or if Odoo didn't
-  make it) has a **Make Odoo's PDF** button. Test connection says whether your Odoo allows this. The buyer is told, with the due
+  make it) has a **Make Odoo's PDF** button. The PDF is made **without** submitting to KRA eTIMS
+  (or any other e-invoicing step) and without emailing; submit to eTIMS from Odoo. Every invoice and credit note
+  line carries an Odoo product, **Cut Flowers** (reference CONSOLFLORA-FLOWERS), which ConsolFlora makes in Odoo
+  the first time it sends an invoice (or with **Make it in Odoo now** on Odoo settings); give it its eTIMS item
+  code and taxes in Odoo. Test connection says whether your Odoo allows this. The buyer is told, with the due
   date, only once an invoice is confirmed, and buyers see only confirmed invoices. Finance is told of each new
   draft; the Finance dashboard lists the drafts to confirm.
 - **Invoices** (Admin, Consolidator, Finance) lists them with the Odoo number (a link into Odoo), what is still

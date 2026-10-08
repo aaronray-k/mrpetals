@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { MAPPED_FIELDS, contactDomain, defaultRecipients, moveDomain, odooClient, pdfDomain, type InvoicePayload, type OdooContact } from './client'
+import { MAPPED_FIELDS, contactDomain, defaultRecipients, invoiceLines, moveDomain, odooClient, pdfDomain, type InvoicePayload, type OdooContact } from './client'
 
 type Call = { service: string; method: string; args: unknown[] }
 
@@ -256,7 +256,7 @@ describe('Odoo client', () => {
     const calls = fakePdfOdoo({ version: 18 })
     await expect(client().makePdf(89)).resolves.toEqual({ made: true, message: 'Odoo made its PDF.' })
     expect(wizardCalls(calls)).toEqual([
-      ['account.move.send.wizard', 'create', [{ move_id: 89, sending_methods: [] }]],
+      ['account.move.send.wizard', 'create', [{ move_id: 89, sending_methods: [], extra_edis: [] }]],
       ['account.move.send.wizard', 'action_send_and_print', [[5]]],
     ])
     expect(calls.find((c) => c.args[4] === 'create')!.args[6]).toEqual({ context: { active_model: 'account.move', active_ids: [89], active_id: 89 } })
@@ -328,5 +328,32 @@ describe('Odoo client', () => {
     await client().push({ ...payload, partner: { ...payload.partner, name: 'EXISTING BUYER LTD', code: 'EXB' } })
     expect((calls.find((c) => c.args[3] === 'account.move' && c.args[4] === 'create')!.args[5] as Record<string, unknown>[])[0]!.partner_id).toBe(77)
     expect(calls.some((c) => c.args[3] === 'res.partner' && c.args[4] === 'create')).toBe(false)
+  })
+
+  it('every line carries the invoice product when there is one (eTIMS needs it)', () => {
+    expect(invoiceLines({ ...payload, line_product_id: 12 })).toEqual([[0, 0, { product_id: 12, name: 'Cut Flowers', quantity: 1, price_unit: 176 }]])
+    expect(invoiceLines({ ...payload, line_product_id: 12, lines: [{ name: 'Sleeves', quantity: 2, price_unit: 1 }] })).toEqual([[0, 0, { product_id: 12, name: 'Sleeves', quantity: 2, price_unit: 1 }]])
+    expect(invoiceLines(payload)).toEqual([[0, 0, { name: 'Cut Flowers', quantity: 1, price_unit: 176 }]])
+  })
+
+  it('finds the Cut Flowers product by its reference, or makes it once', async () => {
+    const calls: Call[] = []
+    let exists = false
+    vi.stubGlobal('fetch', async (_url: string, init: { body: string }) => {
+      const { params } = JSON.parse(init.body) as { params: Call }
+      calls.push(params)
+      const [, , , model, method] = params.args as [string, number, string, string, string]
+      let result: unknown = null
+      if (params.method === 'authenticate') result = 2
+      else if (model === 'product.product' && method === 'search_read') result = exists ? [{ id: 31, name: 'Cut Flowers' }] : []
+      else if (model === 'product.product' && method === 'create') result = 31
+      return { ok: true, json: async () => ({ jsonrpc: '2.0', id: 1, result }) }
+    })
+    await expect(client().lineProduct('Cut Flowers')).resolves.toEqual({ id: 31, name: 'Cut Flowers', created: true })
+    expect(calls.find((c) => c.args[4] === 'create')!.args[5]).toEqual([{ name: 'Cut Flowers', default_code: 'CONSOLFLORA-FLOWERS', type: 'consu', sale_ok: true, purchase_ok: false, list_price: 0 }])
+    exists = true
+    calls.length = 0
+    await expect(client().lineProduct('Cut Flowers')).resolves.toEqual({ id: 31, name: 'Cut Flowers', created: false })
+    expect(calls.some((c) => c.args[4] === 'create')).toBe(false)
   })
 })

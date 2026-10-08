@@ -98,7 +98,25 @@ export const pushInvoices = createServerFn({ method: 'POST' })
   })
 
 /** Sends invoices to Odoo one by one and records each result; failures are recorded, not thrown. */
+/**
+ * The real Odoo's "Cut Flowers" product for invoice lines (eTIMS needs a product on each line): found or made
+ * once, then kept. Never for the demo Odoo, whose ids mean nothing in the real one. A failure leaves lines without
+ * a product, as before.
+ */
+async function ensureLineProduct(ctx: AuthContext, odoo: OdooAdapter, source: OdooSource) {
+  if (source !== 'api') return
+  const { data } = await ctx.supabase.from('odoo_settings').select('line_product_id, line_label').maybeSingle()
+  if (data?.line_product_id) return
+  try {
+    const p = await odoo.lineProduct((data?.line_label as string | undefined) || 'Cut Flowers')
+    await ctx.supabase.rpc('set_odoo_line_product', { p_id: p.id, p_name: p.name })
+  } catch {
+    // lines go without a product; Odoo settings shows that none is set
+  }
+}
+
 async function pushRows(ctx: AuthContext, odoo: OdooAdapter, source: OdooSource, ids: string[]) {
+  if (ids.length) await ensureLineProduct(ctx, odoo, source)
   let pushed = 0
   let failed = 0
   let lastError: string | null = null
@@ -193,8 +211,10 @@ export const invoiceAction = createServerFn({ method: 'POST' })
   .validator(z.object({ id: z.string().uuid(), action: z.enum(['confirm', 'reset', 'update']) }))
   .handler(async ({ data, context }) => {
     requireRoles(context, [...ROLES])
-    const { odoo, reason } = await inOdoo(context, data.id)
+    const { a, odoo, reason } = await inOdoo(context, data.id)
     if (!odoo) throw new Error(reason ?? 'Odoo is not connected.')
+    // Filling a draft in again also gives its lines the product (for drafts made before there was one).
+    if (data.action === 'update') await ensureLineProduct(context, odoo, a.source)
     const p = await payload(context, data.id)
     try {
       const move = data.action === 'confirm' ? await odoo.confirm(p) : data.action === 'reset' ? await odoo.resetToDraft(p) : await odoo.updateDraft(p)
@@ -432,5 +452,24 @@ export const listOdooContacts = createServerFn({ method: 'GET' })
       return { source: r.source, error: null, ...list }
     } catch (e) {
       return { source: r.source, error: (e as Error).message, total: 0, contacts: [] as OdooContact[] }
+    }
+  })
+
+/** Odoo settings: find or make the "Cut Flowers" product in the real Odoo now (Admin). */
+export const setUpOdooLineProduct = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    requireRoles(context, ['admin'])
+    const r = await readOdoo(context)
+    if (!r.odoo) return { ok: false, message: r.reason ?? 'Odoo is not connected.' }
+    if (r.source !== 'api') return { ok: false, message: 'Only with the real Odoo: the demo Odoo has no products.' }
+    try {
+      const { data } = await context.supabase.from('odoo_settings').select('line_label').maybeSingle()
+      const p = await r.odoo.lineProduct((data?.line_label as string | undefined) || 'Cut Flowers')
+      const { error } = await context.supabase.rpc('set_odoo_line_product', { p_id: p.id, p_name: p.name })
+      if (error) throw new Error(error.message)
+      return { ok: true, message: p.created ? `Made "${p.name}" in Odoo. Add its KRA eTIMS item code and taxes there.` : `Using "${p.name}" from Odoo.` }
+    } catch (e) {
+      return { ok: false, message: (e as Error).message }
     }
   })

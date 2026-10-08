@@ -2,7 +2,7 @@ import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { PlugZap } from 'lucide-react'
-import { saveOdooSettings, testOdooConnection, useOdooLog, useOdooMappingOptions, useOdooSettings, useOdooStatus, type OdooSettings } from '~/lib/odoo/api'
+import { saveOdooSettings, setUpLineProduct, testOdooConnection, useOdooLog, useOdooMappingOptions, useOdooSettings, useOdooStatus, type OdooSettings } from '~/lib/odoo/api'
 import type { MappedField } from '~/server/odoo/client'
 import { formatDateTime } from '~/lib/utils'
 import { PageHeader } from '~/components/layout/app-shell'
@@ -124,6 +124,7 @@ function SettingsForm({ settings }: { settings: OdooSettings }) {
           </form>
         </CardContent>
       </Card>
+      <LineProduct settings={settings} />
       <FieldMapping settings={settings} />
       <Card>
         <CardHeader>
@@ -260,6 +261,52 @@ function FieldMapping({ settings }: { settings: OdooSettings }) {
             </Button>
           </div>
         ) : null}
+      </CardContent>
+    </Card>
+  )
+}
+
+/** The Odoo product on every invoice line: Kenya's eTIMS needs one. ConsolFlora makes "Cut Flowers" in Odoo once. */
+function LineProduct({ settings }: { settings: OdooSettings }) {
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const [busy, setBusy] = React.useState(false)
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Product on invoice lines</CardTitle>
+        <CardDescription>
+          Each invoice and credit note line carries this Odoo product (KRA eTIMS needs a product on every line), with ConsolFlora's description
+          and amount. In Odoo, give the product its eTIMS item code and classification, and its taxes.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3">
+        <p>
+          {settings.line_product_id ? (
+            <>
+              <strong>{settings.line_product_name}</strong> (Odoo product #{settings.line_product_id}, reference CONSOLFLORA-FLOWERS)
+            </>
+          ) : (
+            <span className="text-muted-foreground">Not set yet: made in Odoo the first time an invoice is sent, or now.</span>
+          )}
+        </p>
+        <Button
+          variant="outline"
+          className="w-fit"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true)
+            try {
+              const r = await setUpLineProduct()
+              toast({ kind: r.ok ? 'success' : 'error', title: r.ok ? 'Product ready' : 'Not done', description: r.message })
+              void queryClient.invalidateQueries({ queryKey: ['odoo-settings'] })
+            } finally {
+              setBusy(false)
+            }
+          }}
+        >
+          {busy ? 'Working…' : settings.line_product_id ? 'Check it in Odoo' : 'Make it in Odoo now'}
+        </Button>
       </CardContent>
     </Card>
   )

@@ -285,6 +285,11 @@ found by `ref` = customer code; a kept `odoo_partner_id` is used only if its `re
 come from `shipments`, `customer_orders` and `invoices`. `…025_odoo_partner_source.sql` clears Odoo customer ids
 that only came from the demo Odoo and stops keeping them.
 
+`odoo_settings.line_product_id` (`…026_odoo_line_product.sql`): the real Odoo's "Cut Flowers" product, found by
+reference CONSOLFLORA-FLOWERS or made once by the app server (never for the demo Odoo) and kept with
+`set_odoo_line_product()`; `invoice_payload()` sends it, and every line carries it. The PDF step passes
+`extra_edis: []` so Odoo makes the PDF without an e-invoicing submission (e.g. eTIMS).
+
 Statements of account need no tables: `getLedger` (Admin and Finance, `src/server/odoo.functions.ts`) reads
 Odoo's `account.move.line` on payable (suppliers) or receivable (buyers) accounts, posted (and optionally draft),
 plus the sum of earlier lines per partner and currency for the balance brought forward. The statement, overdue

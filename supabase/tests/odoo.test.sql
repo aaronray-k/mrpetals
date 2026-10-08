@@ -167,6 +167,14 @@ insert into t select 'MD', create_manual_invoice((select id from customers where
 select record_odoo_push(pg_temp.id('MD'), true, '{"move_id": 99, "name": "/", "state": "draft", "partner_id": 1234, "source": "demo"}');
 select pg_temp.check((select odoo_partner_id from customers where customer_code = 'OB2') is distinct from 1234, 'a demo Odoo customer id is not kept for the real Odoo');
 
+-- ---------------------------------------------------------------- The product on invoice lines
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000d';
+select set_odoo_line_product(31, 'Cut Flowers');
+select pg_temp.check((select invoice_payload(pg_temp.id('I1')) ->> 'line_product_id') = '31', 'invoices carry the Odoo product for their lines');
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-0000000000b1';
+select pg_temp.check_refused($$select set_odoo_line_product(1, 'x')$$, 'Only Admin, Consolidator and Finance');
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000d';
+
 -- ---------------------------------------------------------------- Manual invoices
 set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000c';
 insert into t select 'M1', create_manual_invoice((select id from customers where customer_code = 'OB1'), 'invoice', 'USD', 'Boxes and sleeves, October',

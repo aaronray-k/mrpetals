@@ -312,6 +312,9 @@ export function demoOdoo(nextNumber: (kind: InvoicePayload['kind']) => Promise<n
       const b = demoPdfs.get(id)
       return b ? { name: `${(seen.get(id)?.name ?? 'invoice').replace(/\//g, '_')}.pdf`, base64: b } : null
     },
+    async lineProduct(name) {
+      return { id: 7001, name, created: false }
+    },
     async makePdf(id) {
       if (demoPdfs.has(id)) return { made: false, message: 'Odoo already has its PDF.' }
       // A demo ledger document is worked out afresh (its state may have changed); a ConsolFlora invoice comes from its last preview.

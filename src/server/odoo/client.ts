@@ -27,6 +27,8 @@ export interface InvoicePayload {
   due_date?: string | null
   /** A manual invoice's own lines; otherwise one line with the total. */
   lines?: { name: string; quantity: number; price_unit: number }[] | null
+  /** The Odoo product on every line (eTIMS needs one); null: lines without a product. */
+  line_product_id?: number | null
   partner: { odoo_partner_id: number | null; name: string; code: string; email: string | null; country: string | null; city: string | null; street: string | null; vat: string | null }
 }
 export type MappedField = 'mawb' | 'proforma' | 'flight'
@@ -199,6 +201,8 @@ export interface OdooAdapter {
   moveAction(moveId: number, action: 'confirm' | 'reset'): Promise<OdooMove>
   /** Has Odoo make its PDF of a confirmed invoice (Odoo's Send & Print, with email off). Never emails anyone. */
   makePdf(moveId: number): Promise<{ made: boolean; message: string }>
+  /** Finds (by its reference) or makes the "Cut Flowers" product for invoice lines. */
+  lineProduct(name: string): Promise<{ id: number; name: string; created: boolean }>
   contacts(q: ContactQuery): Promise<{ total: number; contacts: OdooContact[] }>
   /** A buyer's (or grower's) company in Odoo and everyone under it, found by its Odoo id or its code (Odoo's reference). */
   contactsOf(p: { odoo_partner_id: number | null; code: string; name?: string }): Promise<OdooContact[]>
@@ -219,15 +223,20 @@ export const pdfDomain = (id: number): unknown[] => [
  * with its defaults (which could email the buyer).
  */
 export const PDF_WIZARDS: { model: string; values: (moveId: number) => Record<string, unknown>; field: string }[] = [
-  { model: 'account.move.send.wizard', values: (moveId) => ({ move_id: moveId, sending_methods: [] }), field: 'sending_methods' }, // Odoo 18 and later
+  // Odoo 18 and later: no sending, and no extra e-invoicing step (e.g. Kenya's eTIMS): the PDF only.
+  { model: 'account.move.send.wizard', values: (moveId) => ({ move_id: moveId, sending_methods: [], extra_edis: [] }), field: 'sending_methods' },
   { model: 'account.move.send', values: () => ({ checkbox_send_mail: false, checkbox_download: false }), field: 'checkbox_send_mail' }, // Odoo 17
 ]
 
 /** The invoice lines Odoo gets: a manual invoice's own lines, otherwise one line with the total. */
 export function invoiceLines(p: InvoicePayload): unknown[] {
-  if (p.lines?.length) return p.lines.map((l) => [0, 0, { name: l.name, quantity: l.quantity, price_unit: l.price_unit }])
-  return [[0, 0, { name: lineLabel(p), quantity: 1, price_unit: p.amount }]]
+  // The product goes first so Odoo's own defaults from it (taxes, account) apply, then ConsolFlora's description and price.
+  const product = p.line_product_id ? { product_id: p.line_product_id } : {}
+  if (p.lines?.length) return p.lines.map((l) => [0, 0, { ...product, name: l.name, quantity: l.quantity, price_unit: l.price_unit }])
+  return [[0, 0, { ...product, name: lineLabel(p), quantity: 1, price_unit: p.amount }]]
 }
+/** The product ConsolFlora makes in Odoo for its invoice lines, found again by this reference. */
+export const LINE_PRODUCT_CODE = 'CONSOLFLORA-FLOWERS'
 export const MOVE_TYPES: Record<MoveSide, string[]> = { out: ['out_invoice', 'out_refund'], in: ['in_invoice', 'in_refund'] }
 export function moveDomain(q: MoveQuery): unknown[] {
   const d: unknown[] = [['move_type', 'in', MOVE_TYPES[q.side]]]
@@ -479,6 +488,12 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
       })) as { name: string; datas: string }[]
       return r[0] ? { name: r[0].name, base64: r[0].datas } : null
     },
+    async lineProduct(name) {
+      const found = (await kw('product.product', 'search_read', [[['default_code', '=', LINE_PRODUCT_CODE]]], { fields: ['name'], limit: 1, context: { active_test: false } })) as { id: number; name: string }[]
+      if (found[0]) return { id: found[0].id, name: found[0].name, created: false }
+      const id = (await kw('product.product', 'create', [{ name, default_code: LINE_PRODUCT_CODE, type: 'consu', sale_ok: true, purchase_ok: false, list_price: 0 }])) as number
+      return { id, name, created: true }
+    },
     async makePdf(id) {
       const has = async () => ((await kw('ir.attachment', 'search_count', [pdfDomain(id)])) as number) > 0
       if (await has()) return { made: false, message: 'Odoo already has its PDF.' }
@@ -578,7 +593,10 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
       const id = moveOf(p)
       if ((await state(id)) !== 'draft') throw new Error('Only a draft can be changed. Reset it to draft first.')
       const lines = (await kw('account.move.line', 'search', [[['move_id', '=', id], ['display_type', '=', 'product']]])) as number[]
-      const line = lines.length === 1 && !p.lines?.length ? [[1, lines[0], { name: lineLabel(p), quantity: 1, price_unit: p.amount }]] : [...lines.map((l) => [2, l]), ...invoiceLines(p)]
+      const line =
+        lines.length === 1 && !p.lines?.length
+          ? [[1, lines[0], { ...(p.line_product_id ? { product_id: p.line_product_id } : {}), name: lineLabel(p), quantity: 1, price_unit: p.amount }]]
+          : [...lines.map((l) => [2, l]), ...invoiceLines(p)]
       await kw('account.move', 'write', [[id], { ref: p.reference, invoice_line_ids: line, ...filledFields(p) }])
       return read(id)
     },
