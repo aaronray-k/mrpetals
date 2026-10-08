@@ -296,7 +296,7 @@ Odoo makes the invoices; ConsolFlora keeps the detail and sends only the total.
   by its number of days; confirm and save once. The API key is only in the server environment (`ODOO_API_KEY`). Odoo Online needs the **Custom plan**
   for this. **Test connection** works while sending is off and checks the login, invoicing rights and that every
   buyer currency is active in Odoo. Switching sending on sets the **go-live** moment: invoices made before it are
-  never sent. Without `ODOO_API_KEY` (or on the preview until one is set) a demo Odoo is used; demo invoices are
+  never sent; Send says so ("Made before Odoo go-live") rather than just "Not sent". Without `ODOO_API_KEY` (or on the preview until one is set) a demo Odoo is used; demo invoices are
   never sent to, or fetched from, the real Odoo.
 
 ## All invoices in Odoo, and new invoices
@@ -318,8 +318,8 @@ On a confirmed invoice, **Send by email** (Admin, Consolidator, Finance) opens t
 check or edit: a warm note greeting the buyer's contact by first name, the invoice number and amount, the
 proforma(s), the flight and MAWB, the due date, the invoice number as payment reference and the bank account for
 the invoice's currency, signed by the person sending ("Sales · Consolflora Limited"). Attached: **Odoo's invoice
-PDF** (made first if missing) and the **Proforma & Packing List** PDF of each order on it (the same layout and
-columns as the Excel proforma and packing list; each can also be downloaded from the dialog). It goes from the sales mailbox on **Email settings**,
+PDF** (made first if missing) and the **proforma invoice** PDF of each order on it (the same layout and columns
+as the Excel proforma; each can also be downloaded from the dialog). It goes from the sales mailbox on **Email settings**,
 replies come back there, and each send is listed on the invoice (who, when, to whom, what was attached).
 
 Email settings (Admin): the Zoho mailbox (sender name and address, smtp.zoho.com, port 465, user), **Send email**
@@ -333,7 +333,7 @@ number for the invoice's currency. The mailbox password is
 **Shipment documents** (Admin, Consolidator, Finance; also **All documents** on a shipment): pick a shipment, or
 find it by its **MAWB** (with or without the dash), a **Proforma Invoice No.** (the order number, e.g.
 CFLPFJ0089), the shipment ref or an Odoo invoice number. Every document under it is listed buyer by buyer: each
-order's **Proforma & Packing List** (one PDF: the proforma, then the packing list) and the buyer's **Odoo
+order's **proforma invoice** (PDF) and the buyer's **Odoo
 invoice** (draft or confirmed) and credit notes; choosing one shows it on the side. The Odoo invoice carries the
 same MAWB, Proforma Invoice No. and flight in Odoo's own fields, so it can be found by them in Odoo too.
 

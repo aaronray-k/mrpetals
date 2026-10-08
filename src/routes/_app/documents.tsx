@@ -150,10 +150,10 @@ function DocumentsPage() {
                         <DocRow
                           key={o.id}
                           icon={<FileText className="size-4" aria-hidden="true" />}
-                          title={`Proforma & Packing List ${o.order_number}`}
+                          title={`Proforma invoice ${o.order_number}`}
                           detail={o.status === 'cancelled' ? 'Order cancelled' : 'Proforma Invoice No. ' + o.order_number}
                           active={selected?.kind === 'proforma' && selected.orderId === o.id}
-                          onOpen={() => setSelected({ kind: 'proforma', orderId: o.id, label: `Proforma & Packing List ${o.order_number}` })}
+                          onOpen={() => setSelected({ kind: 'proforma', orderId: o.id, label: `Proforma invoice ${o.order_number}` })}
                         />
                       ))}
                       {b.invoices.map((i) => (

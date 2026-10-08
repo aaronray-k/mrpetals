@@ -44,7 +44,7 @@ export function invoiceEmail(i: InvoiceEmailInput): { subject: string; body: str
   const subject = credit ? `Your credit note ${i.invoiceNumber} from Consolflora` : `Your invoice ${i.invoiceNumber} from Consolflora`
   const shipment = [i.flight && `flight ${i.flight}`, i.mawb && `MAWB ${i.mawb}`].filter(Boolean).join(', ')
   const orders = i.orderNumbers.length
-    ? `, together with the proforma invoice and packing list for your order${i.orderNumbers.length > 1 ? 's' : ''} ${list(i.orderNumbers)}${shipment ? ` (${shipment})` : ''}`
+    ? `, together with the proforma invoice${i.orderNumbers.length > 1 ? 's' : ''} for your order${i.orderNumbers.length > 1 ? 's' : ''} ${list(i.orderNumbers)}${shipment ? ` (${shipment})` : ''}`
     : ''
   const lines = [`Dear ${greetingName(i.contactName, i.companyName)},`, '', 'Warm greetings from Nairobi, and thank you for your continued trust in Consolflora.', '']
   if (credit) {

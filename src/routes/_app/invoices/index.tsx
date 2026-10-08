@@ -101,7 +101,11 @@ function InvoicesPage() {
                 setBusy('push')
                 try {
                   const r = await pushToOdoo()
-                  toast({ kind: r.failed ? 'error' : 'success', title: `${r.pushed} sent to Odoo`, description: r.failed ? `${r.failed} failed; see the reasons below.` : undefined })
+                  toast({
+                    kind: r.failed || (!r.pushed && r.skipped) ? 'error' : 'success',
+                    title: r.pushed || !r.skipped ? `${r.pushed} sent to Odoo` : 'Not sent',
+                    description: [r.failed ? `${r.failed} failed; see the reasons below.` : '', r.skipped ?? (r.heldBack ? `${r.heldBack} made before Odoo go-live were not sent.` : '')].filter(Boolean).join(' ') || undefined,
+                  })
                   refresh()
                 } catch (e) {
                   toast({ kind: 'error', title: 'Not sent', description: (e as Error).message })

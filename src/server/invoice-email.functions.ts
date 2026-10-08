@@ -164,7 +164,7 @@ export const downloadProformaPdf = createServerFn({ method: 'GET' })
   .handler(async ({ data, context }) => {
     requireRoles(context, [...ROLES])
     const input = await proformaInput(context, data.orderId)
-    return { name: proformaPdfName(input, true), base64: Buffer.from(await proformaPdf(input, logo(), { packingList: true })).toString('base64') }
+    return { name: proformaPdfName(input), base64: Buffer.from(await proformaPdf(input, logo())).toString('base64') }
   })
 
 const email = z.string().trim().email().max(200)
@@ -207,7 +207,7 @@ export const sendInvoiceEmail = createServerFn({ method: 'POST' })
       for (const id of data.orderIds) {
         if (!allowed.has(id)) throw new Error('A proforma chosen is not for an order on this invoice.')
         const input = await proformaInput(context, id)
-        attachments.push({ filename: proformaPdfName(input, true), content: Buffer.from(await proformaPdf(input, logo(), { packingList: true })), contentType: 'application/pdf' })
+        attachments.push({ filename: proformaPdfName(input), content: Buffer.from(await proformaPdf(input, logo())), contentType: 'application/pdf' })
       }
     } catch (e) {
       await record(false, attachments.map((a) => a.filename), (e as Error).message)

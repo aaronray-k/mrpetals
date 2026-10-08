@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, CheckCircle2, ExternalLink, RefreshCw, RotateCcw, Upload } from 'lucide-react'
-import { invoiceNumber, makePdfInOdoo, odooInvoiceAction, odooInvoicePdf, pushToOdoo, useInvoice, useOdooInvoice, useOdooStatus } from '~/lib/odoo/api'
+import { invoiceNumber, makePdfInOdoo, odooInvoiceAction, odooInvoicePdf, pushToOdoo, useInvoice, useOdooInvoice, useOdooSettings, useOdooStatus } from '~/lib/odoo/api'
 import { cn, formatDateTime } from '~/lib/utils'
 import { PageHeader } from '~/components/layout/app-shell'
 import { RequireRole } from '~/components/layout/require-role'
@@ -33,6 +33,7 @@ function InvoicePage() {
   const { invoiceId } = Route.useParams()
   const invoice = useInvoice(invoiceId)
   const status = useOdooStatus()
+  const settings = useOdooSettings()
   const inOdoo = invoice.data?.status === 'pushed'
   const odoo = useOdooInvoice(invoiceId, inOdoo)
   const toast = useToast()
@@ -72,6 +73,8 @@ function InvoicePage() {
   if (!i) return <Alert variant="destructive" title="This invoice doesn't exist, or you may not see it." />
 
   const d = odoo.data?.detail ?? null
+  const sendFrom = settings.data?.send_from ? Date.parse(settings.data.send_from) : null
+  const beforeGoLive = status.data?.source === 'api' && i.status !== 'pushed' && sendFrom != null && Date.parse(i.created_at) < sendFrom
   const p = odoo.data?.payload
   const state = d?.state ?? i.odoo_state
   const credit = i.kind === 'credit_note'
@@ -119,7 +122,13 @@ function InvoicePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
-              {i.status !== 'pushed' && (
+              {beforeGoLive && (
+                <Alert variant="warning" title="Made before Odoo go-live: not sent">
+                  This invoice was made before sending to your real Odoo was switched on ({formatDateTime(settings.data!.send_from!)}), so it is kept out of
+                  your books (on the preview: demo data). Invoices made from now on, when a shipment closes or with New invoice, go to Odoo.
+                </Alert>
+              )}
+              {i.status !== 'pushed' && !beforeGoLive && (
                 <Button
                   disabled={!!busy || status.data?.source === 'none'}
                   onClick={async () => {

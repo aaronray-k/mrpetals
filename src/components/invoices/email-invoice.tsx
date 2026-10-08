@@ -146,7 +146,7 @@ function Form({ invoiceId, d, onDone }: { invoiceId: string; d: Draft; onDone: (
                 checked={orders.includes(p.orderId)}
                 onChange={(e) => setOrders((o) => (e.target.checked ? [...o, p.orderId] : o.filter((x) => x !== p.orderId)))}
               />
-              Proforma & packing list {p.orderNumber} (PDF)
+              Proforma invoice {p.orderNumber} (PDF)
             </label>
             <Button
               variant="ghost"

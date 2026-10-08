@@ -77,15 +77,24 @@ export const pushInvoices = createServerFn({ method: 'POST' })
   .handler(async ({ data, context }) => {
     requireRoles(context, [...ROLES])
     const a = await adapter(context)
-    if (!a.odoo) return { pushed: 0, failed: 0, skipped: a.reason }
-    let q = context.supabase.from('invoices').select('id').in('status', ['pending', 'failed']).order('created_at')
+    if (!a.odoo) return { pushed: 0, failed: 0, heldBack: 0, skipped: a.reason ?? null }
+    let q = context.supabase.from('invoices').select('id, created_at').in('status', ['pending', 'failed']).order('created_at')
     if (data.shipmentId) q = q.eq('shipment_id', data.shipmentId)
     if (data.invoiceIds?.length) q = q.in('id', data.invoiceIds)
-    // Nothing from before go-live goes to the real Odoo.
-    if (a.source === 'api' && a.sendFrom) q = q.gte('created_at', a.sendFrom)
-    const { data: rows, error } = await q
+    const { data: all, error } = await q
     if (error) throw new Error(error.message)
-    return { ...(await pushRows(context, a.odoo, a.source, (rows ?? []).map((r) => r.id))), skipped: null }
+    // Nothing from before go-live goes to the real Odoo (on the preview: its demo data).
+    const held = a.source === 'api' && a.sendFrom ? (all ?? []).filter((r) => r.created_at < a.sendFrom!) : []
+    const rows = (all ?? []).filter((r) => !held.includes(r))
+    const r = await pushRows(context, a.odoo, a.source, rows.map((x) => x.id))
+    const goLive = a.sendFrom ? new Date(a.sendFrom).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Nairobi' }) : ''
+    return {
+      ...r,
+      heldBack: held.length,
+      skipped: held.length && !rows.length
+        ? `Made before Odoo go-live (${goLive}), so not sent to your real Odoo: this keeps demo and old invoices out of your books. Invoices made from now on (shipments closed, or New invoice) go to Odoo.`
+        : null,
+    }
   })
 
 /** Sends invoices to Odoo one by one and records each result; failures are recorded, not thrown. */

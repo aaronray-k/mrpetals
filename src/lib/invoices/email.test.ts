@@ -22,7 +22,7 @@ describe('invoice email', () => {
     const { subject, body } = invoiceEmail(base)
     expect(subject).toBe('Your invoice INV/2026/00089 from Consolflora')
     expect(body).toContain('Dear Aiko,')
-    expect(body).toContain('Please find attached our invoice INV/2026/00089 for US$11,029.40, together with the proforma invoice and packing list for your order CFLPFJ0089 (flight EK 720, MAWB 176-61541003).')
+    expect(body).toContain('Please find attached our invoice INV/2026/00089 for US$11,029.40, together with the proforma invoice for your order CFLPFJ0089 (flight EK 720, MAWB 176-61541003).')
     expect(body).toContain('Payment is due by 15 November 2026. When you make the transfer, kindly quote INV/2026/00089 as the payment reference, to our USD account:')
     expect(body).toContain(
       ['  Account name: CONSOLFLORA LIMITED', '  Bank: NCBA Bank Kenya PLC', '  Bank code: 07000', '  Branch: EMBAKASI', '  SWIFT code: CBAFKENX', '  Account number (USD): 1006587104'].join('\n'),
@@ -33,7 +33,7 @@ describe('invoice email', () => {
   it('several orders, no bank account yet, no contact name', () => {
     const { body } = invoiceEmail({ ...base, contactName: null, orderNumbers: ['CFLPFJ0089', 'CFLPFJ0090', 'CFLPFJ0091'], bank: null, flight: null, mawb: null })
     expect(body).toContain('Dear Pacific Floral Japan GK,')
-    expect(body).toContain('the proforma invoice and packing list for your orders CFLPFJ0089, CFLPFJ0090 and CFLPFJ0091.')
+    expect(body).toContain('the proforma invoices for your orders CFLPFJ0089, CFLPFJ0090 and CFLPFJ0091.')
     expect(body).toContain('kindly quote INV/2026/00089 as the payment reference.')
     expect(body).not.toContain('Account number')
   })
