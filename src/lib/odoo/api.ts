@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSupabase } from '~/lib/supabase'
-import { createManualInvoice, listOdooContacts, makeOdooPdf, setUpOdooLineProduct, fetchInvoices, getInvoiceDetail, getInvoicePdf, getOdooMappingOptions, getOdooMove, getOdooMovePdf, getOdooStatus, invoiceAction, listOdooMoves, odooMoveAction, pushInvoices, testOdoo } from '~/server/odoo.functions'
+import { createManualInvoice, listOdooContacts, listOdooPaymentTerms, makeOdooPdf, setUpOdooLineProduct, fetchInvoices, getInvoiceDetail, getInvoicePdf, getOdooMappingOptions, getOdooMove, getOdooMovePdf, getOdooStatus, invoiceAction, listOdooMoves, odooMoveAction, pushInvoices, testOdoo } from '~/server/odoo.functions'
 import type { MappedField, MoveQuery } from '~/server/odoo/client'
 
 export interface Invoice {
@@ -174,3 +174,12 @@ export function useOdooContacts(q: { kind: 'all' | 'buyers' | 'growers'; search:
 }
 
 export const setUpLineProduct = () => setUpOdooLineProduct()
+
+/** Odoo's payment terms (for a buyer's term on Customers). */
+export function useOdooPaymentTerms(enabled = true) {
+  return useQuery({ queryKey: ['odoo-payment-terms'], enabled, queryFn: () => listOdooPaymentTerms(), staleTime: 5 * 60_000 })
+}
+export async function setBuyerOdooTerm(customerId: string, term: { id: number; name: string } | null) {
+  const { error } = await getSupabase().rpc('set_customer_odoo_term', { p_customer_id: customerId, p_term_id: term?.id ?? null, p_term_name: term?.name ?? null })
+  if (error) throw new Error(error.message)
+}

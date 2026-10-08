@@ -23,6 +23,8 @@ export interface InvoicePayload {
   field_map?: Partial<Record<MappedField, string>>
   payment_terms?: string | null
   payment_term_id?: number | null
+  /** The buyer's Odoo payment term's name, when one is chosen on Customers. */
+  payment_term_name?: string | null
   /** Set by ConsolFlora for terms like "15th of following month"; replaces any Odoo payment term on the invoice. */
   due_date?: string | null
   /** A manual invoice's own lines; otherwise one line with the total. */

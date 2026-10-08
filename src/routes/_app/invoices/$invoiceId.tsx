@@ -205,7 +205,9 @@ function InvoicePage() {
                 <dd>
                   {i.customers?.payment_terms}
                   {p?.due_date ? (
-                    <span className="block">Due {day(p.due_date)} (the 15th of the month after the order was placed)</span>
+                    <span className="block">Due {day(p.due_date)}{i.manual ? '' : ' (the 15th of the month after the order was placed)'}</span>
+                  ) : p?.payment_term_name ? (
+                    <span className="block">Odoo payment term: {p.payment_term_name} (Odoo works out the due date when confirmed)</span>
                   ) : (
                     p && !p.payment_term_id && <span className="block text-muted-foreground">Not matched to an Odoo payment term yet (Odoo settings).</span>
                   )}

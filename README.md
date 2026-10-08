@@ -357,6 +357,11 @@ whatever day the invoice is confirmed, with no Odoo payment term. Supplier bills
 dates (and "overdue" on supplier statements) come from Odoo: give those vendors a payment term there of
 "15 days after end of month".
 
+A buyer can also be given one of **Odoo's own payment terms**: Customers → "Odoo payment term" (Admin, Consolidator,
+Finance; the list is read live from Odoo). That term wins over the terms column: their invoices go to Odoo with it and
+no fixed due date, and Odoo works out the due date when the invoice is confirmed. A due date chosen on a manual
+invoice still wins over everything. Drafts already in Odoo pick the term up with "Fill in again from ConsolFlora".
+
 ## Statements of account
 
 **Statements of account** (Admin and Finance; also a shortcut on their dashboards) reads Odoo's ledger live:

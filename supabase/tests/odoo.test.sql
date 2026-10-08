@@ -151,6 +151,19 @@ select pg_temp.check((select string_agg(farm_code || ':' || payment_terms, ',' o
   = 'OF1:Net 15,OF2:15th of following month,OF3:15th of following month', 'new suppliers start on 15th of following month; an empty cell keeps existing terms');
 set role authenticated;
 
+-- ---------------------------------------------------------------- The buyer's Odoo payment term
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000d';
+select set_customer_odoo_term((select id from customers where customer_code = 'OB1'), 9, '15 days after end of month');
+select pg_temp.check((select invoice_payload(pg_temp.id('I1')) ->> 'payment_term_id') = '9' and (select invoice_payload(pg_temp.id('I1')) -> 'due_date') = 'null'::jsonb
+  and (select invoice_payload(pg_temp.id('I1')) ->> 'payment_term_name') = '15 days after end of month',
+  'a buyer''s Odoo payment term goes on the invoice and Odoo works out the due date (it wins over the terms column)');
+select set_customer_odoo_term((select id from customers where customer_code = 'OB1'), null, 'x');
+select pg_temp.check((select invoice_payload(pg_temp.id('I1')) ->> 'due_date') = '2026-11-15' and (select invoice_payload(pg_temp.id('I1')) -> 'payment_term_name') = 'null'::jsonb,
+  'cleared: the terms column rules again');
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-0000000000b1';
+select pg_temp.check_refused($$select set_customer_odoo_term((select customer_id from invoices limit 1), 1, 'x')$$, 'Only Admin, Consolidator and Finance');
+reset role;
+
 -- ---------------------------------------------------------------- Go-live
 select pg_temp.check((select send_from from odoo_settings) is null, 'no go-live until sending is switched on');
 reset role;

@@ -263,6 +263,11 @@ Provided by migration `…018_odoo.sql`; the Odoo calls are in `src/server/odoo/
 `invoice_payload()` sends it as `due_date` for invoices (from the latest order's placed date), and then no
 `payment_term_id`. New farms default to that term (column default and a trigger for empty imports).
 
+`customers.odoo_payment_term_id`, `odoo_payment_term_name` (`…027_customer_odoo_term.sql`), set with
+`set_customer_odoo_term()` (Admin, Consolidator, Finance): the buyer's own Odoo payment term. `invoice_payload()`
+then sends it as `payment_term_id` and no `due_date`. Precedence: the invoice's own `due_date` (manual invoices), the
+buyer's Odoo term, "15th of following month", then `payment_term_map`.
+
 Manual invoices (`…022_manual_invoices.sql`): `invoices.manual`, `lines`, `mawb`, `proforma`, `flight`, `due_date`,
 `created_by`; `create_manual_invoice()` (Admin, Consolidator, Finance) checks the buyer, currency and lines and
 saves the total; `invoice_payload()` sends the lines and these fields. Documents made in Odoo itself are read live

@@ -473,3 +473,17 @@ export const setUpOdooLineProduct = createServerFn({ method: 'POST' })
       return { ok: false, message: (e as Error).message }
     }
   })
+
+/** Odoo's payment terms, to choose a buyer's on Customers (Admin, Consolidator, Finance). */
+export const listOdooPaymentTerms = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    requireRoles(context, [...ROLES])
+    const r = await readOdoo(context)
+    if (!r.odoo) return { error: r.reason ?? 'Odoo is not connected.', terms: [] as { id: number; name: string }[] }
+    try {
+      return { error: null, terms: await r.odoo.paymentTerms() }
+    } catch (e) {
+      return { error: (e as Error).message, terms: [] as { id: number; name: string }[] }
+    }
+  })
