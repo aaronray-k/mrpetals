@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { MAPPED_FIELDS, moveDomain, odooClient, type InvoicePayload } from './client'
+import { MAPPED_FIELDS, moveDomain, odooClient, pdfDomain, type InvoicePayload } from './client'
 
 type Call = { service: string; method: string; args: unknown[] }
 
@@ -33,6 +33,7 @@ function fakeOdoo(opts: { existingMove?: number; currencyActive?: boolean; canIn
     else if (model === 'account.move' && method === 'search') result = opts.existingMove ? [opts.existingMove] : []
     else if (model === 'account.move' && method === 'create') result = 900
     else if (model === 'account.move' && ['action_post', 'button_draft', 'write'].includes(method)) result = true
+    else if (model === 'account.move.send.wizard' && method === 'fields_get') result = { sending_methods: { type: 'json' } }
     else if (model === 'account.move' && method === 'fields_get')
       result = {
         x_studio_mawb: { string: 'MAWB', type: 'char' },
@@ -112,7 +113,7 @@ describe('Odoo client', () => {
 
   it('Test connection checks the login, invoicing rights and the buyer currencies', async () => {
     fakeOdoo()
-    await expect(client().test(['EUR', 'USD'])).resolves.toBe('Connected to Odoo 18.0 as api@consolflora.com: invoices can be created, 42 confirmed vendor bills can be read, and EUR, USD are active.')
+    await expect(client().test(['EUR', 'USD'])).resolves.toBe("Connected to Odoo 18.0 as api@consolflora.com: invoices can be created, 42 confirmed vendor bills can be read, EUR, USD are active, and Odoo's invoice PDFs can be made from ConsolFlora.")
     fakeOdoo({ canInvoice: false })
     await expect(client().test(['USD'])).rejects.toThrow("can't create invoices")
     fakeOdoo({ currencyActive: false })
@@ -213,5 +214,78 @@ describe('Odoo client', () => {
       ['state', '=', 'posted'], ['payment_state', 'in', ['not_paid', 'partial']],
     ])
     expect(moveDomain({ side: 'out', partner: null, from: null, to: null, search: null, state: 'all', payment: 'all', offset: 0, limit: 50 })).toEqual([['move_type', 'in', ['out_invoice', 'out_refund']]])
+  })
+
+  /** A fake Odoo for the PDF step: which Send & Print wizard exists, and whether the PDF appears. */
+  function fakePdfOdoo(opts: { version: 17 | 18; state?: string; hasPdf?: boolean; makes?: boolean }) {
+    const calls: Call[] = []
+    let pdf = opts.hasPdf ?? false
+    vi.stubGlobal('fetch', async (_url: string, init: { body: string }) => {
+      const { params } = JSON.parse(init.body) as { params: Call }
+      calls.push(params)
+      const [, , , model, method] = params.args as [string, number, string, string, string]
+      let result: unknown = null
+      let error: string | null = null
+      if (params.method === 'authenticate') result = 2
+      else if (model === 'ir.attachment' && method === 'search_count') result = pdf ? 1 : 0
+      else if (model === 'account.move' && method === 'read') result = [{ state: opts.state ?? 'posted', name: 'INV/2026/00089', payment_state: 'not_paid', amount_residual: 10, invoice_date_due: false }]
+      else if (model === 'account.move.send.wizard') {
+        if (opts.version !== 18) error = "Object account.move.send.wizard doesn't exist"
+        else if (method === 'create') result = 5
+        else if (method === 'action_send_and_print') pdf = opts.makes ?? true
+      } else if (model === 'account.move.send') {
+        if (opts.version !== 17) error = "Object account.move.send doesn't exist"
+        else if (method === 'create') result = 6
+        else if (method === 'action_send_and_print') pdf = opts.makes ?? true
+      }
+      return { ok: true, json: async () => (error ? { jsonrpc: '2.0', id: 1, error: { message: error } } : { jsonrpc: '2.0', id: 1, result }) }
+    })
+    return calls
+  }
+  const wizardCalls = (calls: Call[]) => calls.filter((c) => String(c.args[3]).startsWith('account.move.send')).map((c) => [c.args[3], c.args[4], c.args[5]])
+
+  it("Odoo 18+: makes the invoice PDF with Send & Print, every way of sending switched off", async () => {
+    const calls = fakePdfOdoo({ version: 18 })
+    await expect(client().makePdf(89)).resolves.toEqual({ made: true, message: 'Odoo made its PDF.' })
+    expect(wizardCalls(calls)).toEqual([
+      ['account.move.send.wizard', 'create', [{ sending_methods: [] }]],
+      ['account.move.send.wizard', 'action_send_and_print', [[5]]],
+    ])
+    expect(calls.find((c) => c.args[4] === 'create')!.args[6]).toEqual({ context: { active_model: 'account.move', active_ids: [89], active_id: 89 } })
+  })
+
+  it('Odoo 17: the older wizard, with email off', async () => {
+    const calls = fakePdfOdoo({ version: 17 })
+    await expect(client().makePdf(89)).resolves.toMatchObject({ made: true })
+    expect(wizardCalls(calls).filter((c) => c[0] === 'account.move.send')).toEqual([
+      ['account.move.send', 'create', [{ checkbox_send_mail: false, checkbox_download: false }]],
+      ['account.move.send', 'action_send_and_print', [[6]]],
+    ])
+  })
+
+  it('never emails: no wizard is ever created without its email-off values', async () => {
+    for (const version of [17, 18] as const) {
+      const calls = fakePdfOdoo({ version })
+      await client().makePdf(89)
+      for (const c of calls.filter((x) => String(x.args[3]).startsWith('account.move.send') && x.args[4] === 'create')) {
+        const values = (c.args[5] as Record<string, unknown>[])[0]!
+        expect(values.sending_methods ?? values.checkbox_send_mail).toEqual(c.args[3] === 'account.move.send.wizard' ? [] : false)
+      }
+    }
+  })
+
+  it('a PDF already there, a draft, or Odoo not making it', async () => {
+    let calls = fakePdfOdoo({ version: 18, hasPdf: true })
+    await expect(client().makePdf(89)).resolves.toEqual({ made: false, message: 'Odoo already has its PDF.' })
+    expect(wizardCalls(calls)).toEqual([])
+    calls = fakePdfOdoo({ version: 18, state: 'draft' })
+    await expect(client().makePdf(89)).rejects.toThrow('once the invoice is confirmed')
+    expect(wizardCalls(calls)).toEqual([])
+    fakePdfOdoo({ version: 18, makes: false })
+    await expect(client().makePdf(89)).rejects.toThrow('Press Print on the invoice in Odoo once')
+  })
+
+  it("finds Odoo 17+'s invoice PDF, which is a field attachment", () => {
+    expect(pdfDomain(89)).toEqual([['res_model', '=', 'account.move'], ['res_id', '=', 89], ['mimetype', '=', 'application/pdf'], '|', ['res_field', '=', false], ['res_field', '!=', false]])
   })
 })

@@ -280,7 +280,10 @@ Odoo makes the invoices; ConsolFlora keeps the detail and sends only the total.
   **payment terms** as an Odoo payment term (Odoo works out the due date). Admin, Consolidator or Finance open an
   invoice to see it as Odoo has it, with a **preview on the side** (live from Odoo, or Odoo's PDF once Odoo has
   made one), and **Confirm** it or **Reset to draft** without signing in to Odoo. **Fill in again from
-  ConsolFlora** rewrites a draft (and a warning shows when Odoo's copy differs). The buyer is told, with the due
+  ConsolFlora** rewrites a draft (and a warning shows when Odoo's copy differs). Confirming also has Odoo make its
+  **PDF** (Odoo's own Send & Print, with every way of sending switched off, so Odoo emails nobody); it shows on
+  the **Odoo's PDF** tab with a download link. A confirmed invoice without one (from before, or if Odoo didn't
+  make it) has a **Make Odoo's PDF** button. Test connection says whether your Odoo allows this. The buyer is told, with the due
   date, only once an invoice is confirmed, and buyers see only confirmed invoices. Finance is told of each new
   draft; the Finance dashboard lists the drafts to confirm.
 - **Invoices** (Admin, Consolidator, Finance) lists them with the Odoo number (a link into Odoo), what is still

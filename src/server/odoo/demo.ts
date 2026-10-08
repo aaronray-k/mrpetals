@@ -1,3 +1,4 @@
+import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { MAPPED_FIELDS, lineLabel, type InvoicePayload, type LedgerLine, type LedgerQuery, type LedgerResult, type MoveQuery, type OdooAdapter, type OdooMove, type OdooMoveDetail, type OdooMoveSummary } from './client'
 
 const TERMS = [
@@ -112,6 +113,46 @@ function demoMoves(today = new Date()): OdooMoveSummary[] {
   }
   return out
 }
+// Demo PDFs ("made by Odoo"), and the last preview of each invoice they are drawn from. In memory, like Odoo's store.
+const demoPdfs = new Map<number, string>()
+const seen = new Map<number, OdooMoveDetail>()
+const remember = (d: OdooMoveDetail) => {
+  seen.set(d.move_id, d)
+  return { ...d, has_pdf: demoPdfs.has(d.move_id) }
+}
+async function demoPdf(d: OdooMoveDetail): Promise<string> {
+  const doc = await PDFDocument.create()
+  const page = doc.addPage([595, 842])
+  const font = await doc.embedFont(StandardFonts.Helvetica)
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold)
+  let y = 790
+  const text = (t: string, x: number, size = 10, f = font) => page.drawText(t.replace(/[^\x20-\x7e\xa0-\xff]/g, '?'), { x, y, size, font: f })
+  text('Demo Odoo: sample PDF (preview only)', 50, 9)
+  y -= 30
+  text(`${d.move_type.endsWith('refund') ? 'Credit note' : d.move_type.startsWith('in') ? 'Bill' : 'Invoice'} ${d.name}`, 50, 18, bold)
+  y -= 26
+  text(d.company ?? '', 50)
+  y -= 14
+  text(`${d.move_type.startsWith('in') ? 'From' : 'Bill to'}: ${d.partner ?? ''}`, 50)
+  y -= 14
+  text(`Date: ${d.invoice_date ?? ''}   Due: ${d.due_date ?? ''}   Reference: ${d.reference ?? ''}`, 50)
+  y -= 30
+  text('Description', 50, 10, bold)
+  text('Qty', 340, 10, bold)
+  text('Price', 400, 10, bold)
+  text('Amount', 480, 10, bold)
+  for (const l of d.lines) {
+    y -= 16
+    text(l.name.slice(0, 50), 50)
+    text(String(l.quantity), 340)
+    text(l.price_unit.toFixed(2), 400)
+    text(l.subtotal.toFixed(2), 480)
+  }
+  y -= 30
+  text(`Total ${d.currency ?? ''} ${d.amount_total.toFixed(2)}`, 400, 12, bold)
+  return Buffer.from(await doc.save()).toString('base64')
+}
+
 function demoMove(id: number): OdooMoveSummary {
   const m = demoMoves().find((x) => x.move_id === id)
   if (!m) throw new Error(`Odoo invoice ${id} no longer exists.`)
@@ -169,7 +210,7 @@ export function demoOdoo(nextNumber: (kind: InvoicePayload['kind']) => Promise<n
     },
     async detail(p): Promise<OdooMoveDetail> {
       const s = state(p, p.odoo_state ?? 'draft', p.odoo_name ?? '')
-      return {
+      return remember({
         ...s,
         move_type: p.kind === 'invoice' ? 'out_invoice' : 'out_refund',
         due_date: s.due_date ?? null,
@@ -187,15 +228,18 @@ export function demoOdoo(nextNumber: (kind: InvoicePayload['kind']) => Promise<n
           : [{ name: lineLabel(p), quantity: 1, price_unit: p.amount, subtotal: p.amount }],
         fields: MAPPED_FIELDS.filter((f) => p.field_map?.[f.key]).map((f) => ({ key: f.key, field: p.field_map![f.key]!, value: p[f.key] ?? null })),
         has_pdf: false,
-      }
+      })
     },
-    async pdf() {
-      return null
+    async pdf(p) {
+      return this.movePdf(moveId(p))
     },
     async confirm(p) {
       // Like Odoo: a number once given is kept through a reset to draft.
       const name = p.odoo_name && p.odoo_name !== '/' ? p.odoo_name : `${p.kind === 'invoice' ? 'INV' : 'RINV'}/${year}/${String(await nextNumber(p.kind)).padStart(5, '0')}`
-      return state({ ...p, posted_at: p.posted_at ?? new Date().toISOString() }, 'posted', name)
+      const r = state({ ...p, posted_at: p.posted_at ?? new Date().toISOString() }, 'posted', name)
+      const d = seen.get(r.move_id)
+      if (d) seen.set(r.move_id, { ...d, state: 'posted', name, invoice_date: day(new Date().toISOString()), due_date: r.due_date ?? d.due_date })
+      return r
     },
     async resetToDraft(p) {
       if (state(p, p.odoo_state ?? 'draft').payment_state === 'paid') throw new Error('This invoice is paid; Odoo can\'t reset it to draft.')
@@ -225,17 +269,27 @@ export function demoOdoo(nextNumber: (kind: InvoicePayload['kind']) => Promise<n
     },
     async moveDetail(id): Promise<OdooMoveDetail> {
       const m = demoMove(id)
-      return {
+      return remember({
         move_id: id, move_type: m.move_type, name: m.state === 'draft' ? '/' : m.name, state: m.state, payment_state: m.payment_state, amount_due: m.amount_due,
         url: `https://demo.odoo.example/web#id=${id}&model=account.move&view_type=form`, due_date: m.due_date, invoice_date: m.date, partner: m.partner,
         company: 'ConsolFlora (demo)', currency: m.currency, reference: m.reference, payment_term: null,
         amount_untaxed: m.amount_total, amount_tax: 0, amount_total: m.amount_total,
         lines: [{ name: m.move_type.startsWith('in') ? 'Cut flowers (grower bill)' : 'Cut Flowers', quantity: 1, price_unit: m.amount_total, subtotal: m.amount_total }],
         fields: [], has_pdf: false, source: 'demo',
-      }
+      })
     },
-    async movePdf() {
-      return null
+    async movePdf(id) {
+      const b = demoPdfs.get(id)
+      return b ? { name: `${(seen.get(id)?.name ?? 'invoice').replace(/\//g, '_')}.pdf`, base64: b } : null
+    },
+    async makePdf(id) {
+      if (demoPdfs.has(id)) return { made: false, message: 'Odoo already has its PDF.' }
+      // A demo ledger document is worked out afresh (its state may have changed); a ConsolFlora invoice comes from its last preview.
+      const d = demoMoves().some((m) => m.move_id === id) ? await this.moveDetail(id) : (seen.get(id) ?? null)
+      if (!d) throw new Error('Open the invoice once first (demo Odoo).')
+      if (d.state !== 'posted') throw new Error('Odoo makes the PDF once the invoice is confirmed.')
+      demoPdfs.set(id, await demoPdf(d))
+      return { made: true, message: 'Odoo made its PDF.' }
     },
     async moveAction(id, action) {
       const m = demoMove(id)

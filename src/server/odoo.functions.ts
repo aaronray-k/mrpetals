@@ -191,7 +191,7 @@ export const invoiceAction = createServerFn({ method: 'POST' })
       const move = data.action === 'confirm' ? await odoo.confirm(p) : data.action === 'reset' ? await odoo.resetToDraft(p) : await odoo.updateDraft(p)
       const { error } = await context.supabase.rpc('record_odoo_action', { p_invoice_id: data.id, p_action: data.action, p_ok: true, p_result: move })
       if (error) throw new Error(error.message)
-      return { ok: true as const, move }
+      return { ok: true as const, move, pdf: data.action === 'confirm' ? await tryPdf(odoo, move.move_id) : null }
     } catch (e) {
       const message = (e as Error).message
       await context.supabase.rpc('record_odoo_action', { p_invoice_id: data.id, p_action: data.action, p_ok: false, p_result: {}, p_error: message })
@@ -326,7 +326,7 @@ export const odooMoveAction = createServerFn({ method: 'POST' })
       const move = await a.odoo.moveAction(data.id, data.action)
       if (invoiceId) await context.supabase.rpc('record_odoo_action', { p_invoice_id: invoiceId, p_action: data.action, p_ok: true, p_result: move })
       else await context.supabase.rpc('record_odoo_move_action', { p_move_id: data.id, p_action: data.action, p_ok: true, p_message: move.name })
-      return { ok: true as const, move }
+      return { ok: true as const, move, pdf: data.action === 'confirm' ? await tryPdf(a.odoo, data.id) : null }
     } catch (e) {
       const message = (e as Error).message
       if (invoiceId) await context.supabase.rpc('record_odoo_action', { p_invoice_id: invoiceId, p_action: data.action, p_ok: false, p_result: {}, p_error: message })
@@ -363,4 +363,36 @@ export const createManualInvoice = createServerFn({ method: 'POST' })
     if (!a.odoo) return { invoiceId, pushed: false, message: `Saved, not sent to Odoo yet: ${a.reason}` }
     const r = await pushRows(context, a.odoo, a.source, [invoiceId])
     return { invoiceId, pushed: r.pushed === 1, message: r.pushed ? null : `Saved, but Odoo didn't take it: ${r.lastError}` }
+  })
+
+/** After confirming: have Odoo make its PDF. A failure doesn't undo the confirmation; it is reported instead. */
+async function tryPdf(odoo: OdooAdapter, moveId: number): Promise<{ ok: boolean; message: string }> {
+  try {
+    const r = await odoo.makePdf(moveId)
+    return { ok: true, message: r.message }
+  } catch (e) {
+    return { ok: false, message: (e as Error).message }
+  }
+}
+
+/** "Make Odoo's PDF" on a confirmed invoice: ConsolFlora's (by its id) or any Odoo document (by Odoo id). */
+export const makeOdooPdf = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ invoiceId: z.string().uuid().optional(), moveId: z.number().int().positive().optional() }).refine((v) => !!v.invoiceId !== !!v.moveId))
+  .handler(async ({ data, context }) => {
+    requireRoles(context, [...ROLES])
+    let odoo: OdooAdapter
+    let moveId: number
+    if (data.invoiceId) {
+      const r = await inOdoo(context, data.invoiceId)
+      if (!r.odoo) return { ok: false, message: r.reason ?? 'Odoo is not connected.' }
+      odoo = r.odoo
+      moveId = (await payload(context, data.invoiceId)).odoo_move_id!
+    } else {
+      const a = await adapter(context, { forTest: true })
+      if (!a.odoo) return { ok: false, message: a.reason ?? 'Odoo is not connected.' }
+      odoo = a.odoo
+      moveId = data.moveId!
+    }
+    return tryPdf(odoo, moveId)
   })

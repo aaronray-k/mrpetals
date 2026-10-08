@@ -268,6 +268,11 @@ Manual invoices (`…022_manual_invoices.sql`): `invoices.manual`, `lines`, `maw
 saves the total; `invoice_payload()` sends the lines and these fields. Documents made in Odoo itself are read live
 (`listOdooMoves`, `getOdooMove`); confirming or resetting one is logged by `record_odoo_move_action()`.
 
+Odoo's invoice PDF: after a confirm, the app server runs Odoo's Send & Print wizard for that invoice with
+sending switched off (`account.move.send.wizard` with `sending_methods: []` on Odoo 18+, `account.move.send` with
+`checkbox_send_mail: false` on Odoo 17); a wizard whose fields don't match is refused by Odoo, never run with its
+defaults. The PDF is found as an attachment, including Odoo 17+'s field attachment (`res_field` set).
+
 Statements of account need no tables: `getLedger` (Admin and Finance, `src/server/odoo.functions.ts`) reads
 Odoo's `account.move.line` on payable (suppliers) or receivable (buyers) accounts, posted (and optionally draft),
 plus the sum of earlier lines per partner and currency for the balance brought forward. The statement, overdue

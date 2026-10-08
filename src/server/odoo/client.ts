@@ -155,7 +155,28 @@ export interface OdooAdapter {
   moveDetail(moveId: number, fieldMap?: InvoicePayload['field_map']): Promise<OdooMoveDetail>
   movePdf(moveId: number): Promise<{ name: string; base64: string } | null>
   moveAction(moveId: number, action: 'confirm' | 'reset'): Promise<OdooMove>
+  /** Has Odoo make its PDF of a confirmed invoice (Odoo's Send & Print, with email off). Never emails anyone. */
+  makePdf(moveId: number): Promise<{ made: boolean; message: string }>
 }
+
+/** Odoo's PDF of an invoice. Odoo 17+ keeps it as a field attachment, which a plain attachment search leaves out. */
+export const pdfDomain = (id: number): unknown[] => [
+  ['res_model', '=', 'account.move'],
+  ['res_id', '=', id],
+  ['mimetype', '=', 'application/pdf'],
+  '|',
+  ['res_field', '=', false],
+  ['res_field', '!=', false],
+]
+/**
+ * How each Odoo version makes an invoice PDF without sending it: its Send & Print wizard with every way of
+ * sending switched off. Values are explicit: a wizard whose fields don't match is refused by Odoo, never run
+ * with its defaults (which could email the buyer).
+ */
+export const PDF_WIZARDS: { model: string; values: Record<string, unknown>; field: string }[] = [
+  { model: 'account.move.send.wizard', values: { sending_methods: [] }, field: 'sending_methods' }, // Odoo 18 and later
+  { model: 'account.move.send', values: { checkbox_send_mail: false, checkbox_download: false }, field: 'checkbox_send_mail' }, // Odoo 17
+]
 
 /** The invoice lines Odoo gets: a manual invoice's own lines, otherwise one line with the total. */
 export function invoiceLines(p: InvoicePayload): unknown[] {
@@ -284,7 +305,18 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
         if (!r[0]?.active) inactive.push(c)
       }
       if (inactive.length) throw new Error(`Connected, but ${inactive.join(' and ')} ${inactive.length === 1 ? 'is' : 'are'} not active in Odoo. Activate under Accounting → Configuration → Currencies.`)
-      return `Connected to Odoo ${v.server_version ?? ''} as ${cfg.login}: invoices can be created, ${bills} confirmed vendor bills can be read${currencies.length ? `, and ${currencies.join(', ')} ${currencies.length === 1 ? 'is' : 'are'} active` : ''}.`
+      // Can ConsolFlora have Odoo make invoice PDFs? (Its Send & Print wizard, with the field that switches email off.)
+      let pdfs = false
+      for (const w of PDF_WIZARDS) {
+        try {
+          const f = (await kw(w.model, 'fields_get', [[w.field]], { attributes: ['type'] })) as Record<string, unknown>
+          if (f[w.field]) pdfs = true
+        } catch {
+          // this Odoo version doesn't have that wizard
+        }
+        if (pdfs) break
+      }
+      return `Connected to Odoo ${v.server_version ?? ''} as ${cfg.login}: invoices can be created, ${bills} confirmed vendor bills can be read${currencies.length ? `, ${currencies.join(', ')} ${currencies.length === 1 ? 'is' : 'are'} active` : ''}, and Odoo's invoice PDFs ${pdfs ? 'can be made from ConsolFlora' : "can't be made from ConsolFlora (press Print in Odoo instead)"}.`
     },
     async push(p) {
       if (p.odoo_move_id) return read(p.odoo_move_id)
@@ -333,7 +365,7 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
       const lines = (await kw('account.move.line', 'search_read', [[['move_id', '=', id], ['display_type', '=', 'product']]], {
         fields: ['name', 'quantity', 'price_unit', 'price_subtotal'],
       })) as { name: string | false; quantity: number; price_unit: number; price_subtotal: number }[]
-      const pdfs = (await kw('ir.attachment', 'search', [[['res_model', '=', 'account.move'], ['res_id', '=', id], ['mimetype', '=', 'application/pdf']]], { limit: 1 })) as number[]
+      const pdfs = (await kw('ir.attachment', 'search', [pdfDomain(id)], { limit: 1 })) as number[]
       return {
         move_id: id, move_type: String(m.move_type), name: String(m.name), state: String(m.state), payment_state: String(m.payment_state), amount_due: Number(m.amount_residual), url: link(id),
         due_date: str(m.invoice_date_due), invoice_date: str(m.invoice_date), partner: many2one(m.partner_id), company: many2one(m.company_id), currency: many2one(m.currency_id),
@@ -369,10 +401,27 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
       }
     },
     async movePdf(id) {
-      const r = (await kw('ir.attachment', 'search_read', [[['res_model', '=', 'account.move'], ['res_id', '=', id], ['mimetype', '=', 'application/pdf']]], {
+      const r = (await kw('ir.attachment', 'search_read', [pdfDomain(id)], {
         fields: ['name', 'datas'], order: 'id desc', limit: 1,
       })) as { name: string; datas: string }[]
       return r[0] ? { name: r[0].name, base64: r[0].datas } : null
+    },
+    async makePdf(id) {
+      const has = async () => ((await kw('ir.attachment', 'search_count', [pdfDomain(id)])) as number) > 0
+      if (await has()) return { made: false, message: 'Odoo already has its PDF.' }
+      if ((await state(id)) !== 'posted') throw new Error('Odoo makes the PDF once the invoice is confirmed.')
+      const context = { active_model: 'account.move', active_ids: [id], active_id: id }
+      let last = ''
+      for (const w of PDF_WIZARDS) {
+        try {
+          const wizard = (await kw(w.model, 'create', [w.values], { context })) as number
+          await kw(w.model, 'action_send_and_print', [[wizard]], { context })
+          if (await has()) return { made: true, message: "Odoo made its PDF." }
+        } catch (e) {
+          last = (e as Error).message
+        }
+      }
+      throw new Error(`Odoo didn't make its PDF from ConsolFlora${last ? ` (${last})` : ''}. Press Print on the invoice in Odoo once; the PDF then shows here.`)
     },
     async moveAction(id, action) {
       const now = await state(id)

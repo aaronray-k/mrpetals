@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, CheckCircle2, ExternalLink, RefreshCw, RotateCcw, Upload } from 'lucide-react'
-import { invoiceNumber, odooInvoiceAction, odooInvoicePdf, pushToOdoo, useInvoice, useOdooInvoice, useOdooStatus } from '~/lib/odoo/api'
+import { invoiceNumber, makePdfInOdoo, odooInvoiceAction, odooInvoicePdf, pushToOdoo, useInvoice, useOdooInvoice, useOdooStatus } from '~/lib/odoo/api'
 import { cn, formatDateTime } from '~/lib/utils'
 import { PageHeader } from '~/components/layout/app-shell'
 import { RequireRole } from '~/components/layout/require-role'
@@ -51,7 +51,10 @@ function InvoicePage() {
         toast({
           kind: 'success',
           title: action === 'confirm' ? `Confirmed as ${r.move.name}` : action === 'reset' ? 'Back to draft in Odoo' : 'Draft filled in again from ConsolFlora',
-          description: action === 'confirm' && invoice.data?.kind === 'invoice' ? 'The buyer has been told.' : undefined,
+          description:
+            action === 'confirm'
+              ? [invoice.data?.kind === 'invoice' && 'The buyer has been told.', r.pdf && (r.pdf.ok ? "Odoo's PDF is ready." : `No PDF yet: ${r.pdf.message}`)].filter(Boolean).join(' ')
+              : undefined,
         })
       else toast({ kind: 'error', title: 'Odoo said no', description: r.message })
     } catch (e) {
@@ -219,7 +222,7 @@ function InvoicePage() {
             </CardContent>
           </Card>
         </div>
-        <InvoicePreview loadPdf={() => odooInvoicePdf(i.id)} loading={inOdoo && odoo.isLoading} detail={d} reason={inOdoo ? (odoo.data?.reason ?? (odoo.error as Error | null)?.message ?? null) : 'Not in Odoo yet: the preview shows once Odoo has it.'} currency={i.currency} credit={credit} fixedDue={!!p?.due_date} />
+        <InvoicePreview loadPdf={() => odooInvoicePdf(i.id)} makePdf={() => makePdfInOdoo({ invoiceId: i.id })} onPdfMade={refresh} loading={inOdoo && odoo.isLoading} detail={d} reason={inOdoo ? (odoo.data?.reason ?? (odoo.error as Error | null)?.message ?? null) : 'Not in Odoo yet: the preview shows once Odoo has it.'} currency={i.currency} credit={credit} fixedDue={!!p?.due_date} />
       </div>
       <Dialog
         open={asking === 'confirm'}

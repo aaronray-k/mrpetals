@@ -5,7 +5,7 @@ import type { MappedField, OdooMoveDetail } from '~/server/odoo/client'
 import { cn } from '~/lib/utils'
 import { money } from '~/components/shop/money'
 import { Alert } from '~/components/ui/alert'
-import { buttonVariants } from '~/components/ui/button'
+import { Button, buttonVariants } from '~/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Spinner } from '~/components/ui/spinner'
 
@@ -15,12 +15,51 @@ export const day = (d: string | null | undefined) => (d ? new Date(`${d.slice(0,
 export const MOVE_LABEL: Record<string, string> = { out_invoice: 'Invoice', out_refund: 'Credit note', in_invoice: 'Bill', in_refund: 'Refund' }
 
 /** Odoo's PDF when Odoo has made one, otherwise a live preview built from Odoo's own data. */
-export function InvoicePreview({ loadPdf, loading, detail, reason, currency, credit, fixedDue = false }: { loadPdf: () => Promise<{ name: string; base64: string } | null>; loading: boolean; detail: OdooMoveDetail | null; reason: string | null; currency: string; credit: boolean; fixedDue?: boolean }) {
+export function InvoicePreview({
+  loadPdf,
+  makePdf,
+  onPdfMade,
+  loading,
+  detail,
+  reason,
+  currency,
+  credit,
+  fixedDue = false,
+}: {
+  loadPdf: () => Promise<{ name: string; base64: string } | null>
+  /** Has Odoo make its PDF (shown on a confirmed invoice without one). */
+  makePdf: () => Promise<{ ok: boolean; message: string }>
+  onPdfMade: () => void
+  loading: boolean
+  detail: OdooMoveDetail | null
+  reason: string | null
+  currency: string
+  credit: boolean
+  fixedDue?: boolean
+}) {
+  const [making, setMaking] = React.useState(false)
+  const [makeError, setMakeError] = React.useState<string | null>(null)
   const [view, setView] = React.useState<'live' | 'pdf'>('live')
   const [pdf, setPdf] = React.useState<{ url: string; name: string } | 'none' | 'loading' | null>(null)
   React.useEffect(() => () => {
     if (pdf && typeof pdf === 'object') URL.revokeObjectURL(pdf.url)
   }, [pdf])
+
+  async function make() {
+    setMaking(true)
+    setMakeError(null)
+    try {
+      const r = await makePdf()
+      if (r.ok) {
+        setPdf(null)
+        onPdfMade()
+      } else setMakeError(r.message)
+    } catch (e) {
+      setMakeError((e as Error).message)
+    } finally {
+      setMaking(false)
+    }
+  }
 
   async function openPdf() {
     setView('pdf')
@@ -54,8 +93,24 @@ export function InvoicePreview({ loadPdf, loading, detail, reason, currency, cre
           )}
         </div>
         <CardDescription>
-          {detail?.has_pdf ? "As Odoo has it now. Odoo's PDF is the one it made when the invoice was printed or sent." : 'As Odoo has it now. Odoo makes its PDF when the invoice is printed or sent from Odoo.'}
+          {detail?.has_pdf
+            ? "As Odoo has it now, and Odoo's own PDF."
+            : detail?.state === 'posted'
+              ? "As Odoo has it now. Odoo hasn't made its PDF of this one yet."
+              : "As Odoo has it now. Odoo makes its PDF once the invoice is confirmed."}
         </CardDescription>
+        {detail?.state === 'posted' && !detail.has_pdf && (
+          <div className="grid gap-2">
+            <Button variant="outline" className="w-fit" disabled={making} onClick={() => void make()}>
+              <FileText aria-hidden="true" /> {making ? 'Odoo is making it…' : "Make Odoo's PDF"}
+            </Button>
+            {makeError && (
+              <Alert variant="warning" title="Odoo didn't make its PDF" role="alert">
+                {makeError}
+              </Alert>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {loading ? (

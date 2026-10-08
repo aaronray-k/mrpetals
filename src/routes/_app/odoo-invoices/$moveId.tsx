@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Link, Navigate, createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, CheckCircle2, ExternalLink, RotateCcw } from 'lucide-react'
-import { odooMovePdf, runOdooMoveAction, useOdooMove } from '~/lib/odoo/api'
+import { makePdfInOdoo, odooMovePdf, runOdooMoveAction, useOdooMove } from '~/lib/odoo/api'
 import { PageHeader } from '~/components/layout/app-shell'
 import { RequireRole } from '~/components/layout/require-role'
 import { rolesFor } from '~/components/layout/nav'
@@ -40,7 +40,12 @@ function OdooMovePage() {
     setBusy(true)
     try {
       const r = await runOdooMoveAction(id, action)
-      if (r.ok) toast({ kind: 'success', title: action === 'confirm' ? `Confirmed as ${r.move.name}` : 'Back to draft in Odoo' })
+      if (r.ok)
+        toast({
+          kind: 'success',
+          title: action === 'confirm' ? `Confirmed as ${r.move.name}` : 'Back to draft in Odoo',
+          description: r.pdf ? (r.pdf.ok ? "Odoo's PDF is ready." : `No PDF yet: ${r.pdf.message}`) : undefined,
+        })
       else toast({ kind: 'error', title: 'Odoo said no', description: r.message })
     } catch (e) {
       toast({ kind: 'error', title: 'Not done', description: (e as Error).message })
@@ -120,7 +125,7 @@ function OdooMovePage() {
             </div>
           </CardContent>
         </Card>
-        <InvoicePreview loadPdf={() => odooMovePdf(id)} loading={move.isFetching && !d} detail={d} reason={move.data?.error ?? null} currency={d?.currency ?? 'USD'} credit={d?.move_type.endsWith('refund') ?? false} />
+        <InvoicePreview loadPdf={() => odooMovePdf(id)} makePdf={() => makePdfInOdoo({ moveId: id })} onPdfMade={() => void queryClient.invalidateQueries({ queryKey: ['odoo-move'] })} loading={move.isFetching && !d} detail={d} reason={move.data?.error ?? null} currency={d?.currency ?? 'USD'} credit={d?.move_type.endsWith('refund') ?? false} />
       </div>
       <Dialog
         open={asking === 'confirm'}
