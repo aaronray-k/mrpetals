@@ -42,6 +42,7 @@ export const NAV: NavGroup[] = [
       { to: '/farm/orders', label: 'My purchase orders', icon: Truck, tip: 'Confirm what ConsolFlora ordered from you', roles: ['farm'] },
       { to: '/farm/claims', label: 'Claims on your flowers', icon: MessageSquareWarning, tip: 'Claim notices: send your credit note', roles: ['farm'] },
       { to: '/invoices', label: 'Invoices', icon: ReceiptText, tip: 'Odoo invoices and credit notes, and their payments', roles: ['admin', 'consolidator', 'finance'] },
+      { to: '/statements', label: 'Statements of account', icon: FileSpreadsheet, tip: 'Supplier and buyer balances from Odoo, as PDF or Excel', roles: ['admin', 'finance'] },
       { to: '/claims', label: 'Claims', icon: MessageSquareWarning, tip: 'Buyer claims: review, credit notes, farm notices', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
     ],
   },

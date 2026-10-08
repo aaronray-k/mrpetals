@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { authMiddleware, requireRoles, type AuthContext } from './auth'
-import { MAPPED_FIELDS, odooClient, type InvoicePayload, type OdooAdapter, type OdooField } from './odoo/client'
+import { MAPPED_FIELDS, odooClient, type InvoicePayload, type LedgerResult, type OdooAdapter, type OdooField } from './odoo/client'
 import { demoOdoo } from './odoo/demo'
 
 /**
@@ -207,5 +207,32 @@ export const getOdooMappingOptions = createServerFn({ method: 'GET' })
       return { error: null, fields, terms, guesses, buyerTerms }
     } catch (e) {
       return { error: (e as Error).message, fields: [] as OdooField[], terms: [] as { id: number; name: string }[], guesses: {}, buyerTerms }
+    }
+  })
+
+/**
+ * Statements of account (Admin and Finance): Odoo's ledger for suppliers (payables) or buyers (receivables),
+ * read live. Works while sending invoices is off, as it only reads.
+ */
+export const getLedger = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .validator(
+    z.object({
+      side: z.enum(['supplier', 'buyer']),
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      partner: z.string().trim().max(100).nullable(),
+      drafts: z.boolean(),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<{ source: OdooSource; error: string | null; ledger: LedgerResult | null }> => {
+    requireRoles(context, ['admin', 'finance'])
+    const a = await adapter(context, { forTest: true })
+    if (!a.odoo) return { source: a.source, error: a.reason ?? 'Odoo is not connected.', ledger: null }
+    try {
+      const ledger = await a.odoo.ledger({ ...data, partner: data.partner || null })
+      return { source: a.source === 'none' ? 'api' : a.source, error: null, ledger }
+    } catch (e) {
+      return { source: a.source, error: (e as Error).message, ledger: null }
     }
   })

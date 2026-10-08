@@ -63,6 +63,37 @@ export interface OdooMove {
   partner_id?: number
   source?: 'demo' | 'api'
 }
+/** Statements of account: Odoo's ledger lines on suppliers' payable or buyers' receivable accounts. */
+export type LedgerSide = 'supplier' | 'buyer'
+export interface LedgerQuery {
+  side: LedgerSide
+  /** Lines from this date; everything before it is the balance brought forward. Null: from the start. */
+  from: string | null
+  to: string
+  /** Part of the supplier's or buyer's name. */
+  partner: string | null
+  drafts: boolean
+}
+export interface LedgerLine {
+  id: number
+  date: string
+  number: string
+  reference: string | null
+  due_date: string | null
+  partner_id: number
+  partner: string
+  currency: string
+  /** In the line's currency, signed as Odoo keeps it (a supplier bill is negative, a payment to them positive). */
+  amount: number
+  kind: 'bill' | 'refund' | 'invoice' | 'credit_note' | 'payment' | 'entry'
+  draft: boolean
+}
+export interface LedgerResult {
+  lines: LedgerLine[]
+  /** Per supplier or buyer and currency: the sum of lines before `from`. */
+  opening: { partner_id: number; partner: string; currency: string; amount: number }[]
+}
+
 export interface OdooAdapter {
   /** Checks the login, API access (Odoo Online: Custom plan), invoicing rights and the currencies given. */
   test(currencies: string[]): Promise<string>
@@ -78,7 +109,10 @@ export interface OdooAdapter {
   resetToDraft(p: InvoicePayload): Promise<OdooMove>
   /** Writes ConsolFlora's details (reference, total, fields, payment terms) into a draft again. */
   updateDraft(p: InvoicePayload): Promise<OdooMove>
+  ledger(q: LedgerQuery): Promise<LedgerResult>
 }
+
+const KIND: Record<string, LedgerLine['kind']> = { in_invoice: 'bill', in_refund: 'refund', out_invoice: 'invoice', out_refund: 'credit_note' }
 
 /** The values ConsolFlora fills into Odoo's fields: the mapped text fields and the payment terms. */
 export function filledFields(p: InvoicePayload): Record<string, unknown> {
@@ -174,13 +208,16 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
         throw new Error(`Signed in, but Odoo refused the API: ${(e as Error).message}. On Odoo Online the external API needs the Custom plan.`)
       }
       if (!canInvoice) throw new Error(`Signed in as ${cfg.login}, but this user can't create invoices. Give it Accounting rights (Invoicing: Billing or more).`)
+      const canRead = (await kw('account.move.line', 'check_access_rights', ['read'], { raise_exception: false })) as boolean
+      if (!canRead) throw new Error(`Signed in as ${cfg.login}, but this user can't read journal items, so statements of account won't work. Give it Accounting rights.`)
+      const bills = (await kw('account.move', 'search_count', [[['move_type', '=', 'in_invoice'], ['state', '=', 'posted']]])) as number
       const inactive: string[] = []
       for (const c of currencies) {
         const r = (await kw('res.currency', 'search_read', [[['name', '=', c]]], { fields: ['active'], context: { active_test: false }, limit: 1 })) as { active: boolean }[]
         if (!r[0]?.active) inactive.push(c)
       }
       if (inactive.length) throw new Error(`Connected, but ${inactive.join(' and ')} ${inactive.length === 1 ? 'is' : 'are'} not active in Odoo. Activate under Accounting → Configuration → Currencies.`)
-      return `Connected to Odoo ${v.server_version ?? ''} as ${cfg.login}: invoices can be created${currencies.length ? `, and ${currencies.join(', ')} ${currencies.length === 1 ? 'is' : 'are'} active` : ''}.`
+      return `Connected to Odoo ${v.server_version ?? ''} as ${cfg.login}: invoices can be created, ${bills} confirmed vendor bills can be read${currencies.length ? `, and ${currencies.join(', ')} ${currencies.length === 1 ? 'is' : 'are'} active` : ''}.`
     },
     async push(p) {
       if (p.odoo_move_id) return read(p.odoo_move_id)
@@ -253,6 +290,53 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
       const id = moveOf(p)
       if ((await state(id)) !== 'draft') await kw('account.move', 'button_draft', [[id]])
       return read(id)
+    },
+    async ledger(q) {
+      const base: unknown[] = [
+        ['account_id.account_type', '=', q.side === 'supplier' ? 'liability_payable' : 'asset_receivable'],
+        ['partner_id', '!=', false],
+        ['parent_state', 'in', q.drafts ? ['posted', 'draft'] : ['posted']],
+      ]
+      if (q.partner) base.push(['partner_id', 'ilike', q.partner])
+      type Raw = { id: number; date: string; move_id: [number, string]; move_name: string | false; ref: string | false; name: string | false; date_maturity: string | false; partner_id: [number, string]; currency_id: [number, string]; amount_currency: number; parent_state: string }
+      const raw = (await kw('account.move.line', 'search_read', [[...base, ['date', '<=', q.to], ...(q.from ? [['date', '>=', q.from]] : [])]], {
+        fields: ['date', 'move_id', 'move_name', 'ref', 'name', 'date_maturity', 'partner_id', 'currency_id', 'amount_currency', 'parent_state'],
+        order: 'date asc, move_name asc, id asc',
+      })) as Raw[]
+      // What each line belongs to: a bill, refund, invoice, credit note, or (bank or cash journal) a payment.
+      const moveIds = [...new Set(raw.map((l) => l.move_id[0]))]
+      const moves = moveIds.length ? ((await kw('account.move', 'read', [moveIds], { fields: ['move_type', 'journal_id'] })) as { id: number; move_type: string; journal_id: [number, string] | false }[]) : []
+      const journalIds = [...new Set(moves.flatMap((m) => (m.journal_id ? [m.journal_id[0]] : [])))]
+      const journals = journalIds.length ? ((await kw('account.journal', 'read', [journalIds], { fields: ['type'] })) as { id: number; type: string }[]) : []
+      const cash = new Set(journals.filter((j) => j.type === 'bank' || j.type === 'cash').map((j) => j.id))
+      const kindOf = new Map(moves.map((m) => [m.id, KIND[m.move_type] ?? (m.journal_id && cash.has(m.journal_id[0]) ? 'payment' : 'entry')] as const))
+      const lines: LedgerLine[] = raw.map((l) => {
+        const kind = kindOf.get(l.move_id[0]) ?? 'entry'
+        return {
+          id: l.id,
+          date: l.date,
+          number: l.move_name || l.move_id[1],
+          reference: str(l.ref) ?? (kind === 'payment' || kind === 'entry' ? str(l.name) : null),
+          due_date: kind === 'bill' || kind === 'invoice' ? str(l.date_maturity) : null,
+          partner_id: l.partner_id[0],
+          partner: l.partner_id[1],
+          currency: l.currency_id[1],
+          amount: l.amount_currency,
+          kind,
+          draft: l.parent_state === 'draft',
+        }
+      })
+      const opening = new Map<string, LedgerResult['opening'][number]>()
+      if (q.from) {
+        const before = (await kw('account.move.line', 'search_read', [[...base, ['date', '<', q.from]]], { fields: ['partner_id', 'currency_id', 'amount_currency'] })) as Pick<Raw, 'partner_id' | 'currency_id' | 'amount_currency'>[]
+        for (const l of before) {
+          const key = `${l.partner_id[0]}|${l.currency_id[1]}`
+          const o = opening.get(key) ?? { partner_id: l.partner_id[0], partner: l.partner_id[1], currency: l.currency_id[1], amount: 0 }
+          o.amount += l.amount_currency
+          opening.set(key, o)
+        }
+      }
+      return { lines, opening: [...opening.values()] }
     },
     async updateDraft(p) {
       const id = moveOf(p)

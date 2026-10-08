@@ -14,6 +14,18 @@ function fakeOdoo(opts: { existingMove?: number; currencyActive?: boolean; canIn
     if (params.service === 'common' && params.method === 'authenticate') result = 2
     else if (params.service === 'common' && params.method === 'version') result = { server_version: '18.0' }
     else if (model === 'account.move' && method === 'check_access_rights') result = opts.canInvoice ?? true
+    else if (model === 'account.move.line' && method === 'check_access_rights') result = true
+    else if (model === 'account.move' && method === 'search_count') result = 42
+    else if (model === 'account.move.line' && method === 'search_read' && (args as unknown[][])[0]!.some((d) => Array.isArray(d) && d[0] === 'account_id.account_type'))
+      result = (args as unknown[][])[0]!.some((d) => Array.isArray(d) && d[1] === '<')
+        ? [{ partner_id: [7, 'Fontana'], currency_id: [2, 'EUR'], amount_currency: -200 }]
+        : [
+            { id: 1, date: '2026-08-01', move_id: [70, 'BILL/2026/0001'], move_name: 'BILL/2026/0001', ref: 'FON-1', name: false, date_maturity: '2026-08-15', partner_id: [7, 'Fontana'], currency_id: [1, 'USD'], amount_currency: -1000, parent_state: 'posted' },
+            { id: 2, date: '2026-08-09', move_id: [71, 'BNK1/2026/0003'], move_name: 'BNK1/2026/0003', ref: false, name: 'Payment to Fontana', date_maturity: false, partner_id: [7, 'Fontana'], currency_id: [1, 'USD'], amount_currency: 600, parent_state: 'posted' },
+          ]
+    else if (model === 'account.move' && method === 'read' && (args as number[][])[0]!.includes(70))
+      result = [{ id: 70, move_type: 'in_invoice', journal_id: [2, 'Vendor Bills'] }, { id: 71, move_type: 'entry', journal_id: [5, 'Bank'] }]
+    else if (model === 'account.journal' && method === 'read') result = [{ id: 2, type: 'purchase' }, { id: 5, type: 'bank' }]
     else if (model === 'res.partner' && method === 'search') result = []
     else if (model === 'res.country' && method === 'search') result = [113]
     else if (model === 'res.partner' && method === 'create') result = 55
@@ -100,7 +112,7 @@ describe('Odoo client', () => {
 
   it('Test connection checks the login, invoicing rights and the buyer currencies', async () => {
     fakeOdoo()
-    await expect(client().test(['EUR', 'USD'])).resolves.toBe('Connected to Odoo 18.0 as api@consolflora.com: invoices can be created, and EUR, USD are active.')
+    await expect(client().test(['EUR', 'USD'])).resolves.toBe('Connected to Odoo 18.0 as api@consolflora.com: invoices can be created, 42 confirmed vendor bills can be read, and EUR, USD are active.')
     fakeOdoo({ canInvoice: false })
     await expect(client().test(['USD'])).rejects.toThrow("can't create invoices")
     fakeOdoo({ currencyActive: false })
@@ -160,5 +172,19 @@ describe('Odoo client', () => {
     expect(d).toMatchObject({ name: 'INV/2026/00007', partner: 'Pacific Floral Japan GK', payment_term: '30 Days', due_date: '2026-11-09', amount_total: 176, has_pdf: false })
     expect(d.lines).toEqual([{ name: 'Cut Flowers', quantity: 1, price_unit: 176, subtotal: 176 }])
     expect(d.fields).toEqual([{ key: 'mawb', field: 'x_studio_mawb', value: '706-12345675' }])
+  })
+
+  it('reads the supplier ledger: bills and payments, and the balance brought forward per currency', async () => {
+    const calls = fakeOdoo()
+    const r = await client().ledger({ side: 'supplier', from: '2026-07-01', to: '2026-09-30', partner: 'fontana', drafts: false })
+    expect(r.lines.map((l) => [l.kind, l.number, l.reference, l.due_date, l.amount, l.currency])).toEqual([
+      ['bill', 'BILL/2026/0001', 'FON-1', '2026-08-15', -1000, 'USD'],
+      ['payment', 'BNK1/2026/0003', 'Payment to Fontana', null, 600, 'USD'],
+    ])
+    expect(r.opening).toEqual([{ partner_id: 7, partner: 'Fontana', currency: 'EUR', amount: -200 }])
+    const domain = calls.find((c) => c.args[3] === 'account.move.line' && c.args[4] === 'search_read')!.args[5] as unknown[][]
+    expect(domain[0]).toEqual(expect.arrayContaining([['account_id.account_type', '=', 'liability_payable'], ['parent_state', 'in', ['posted']], ['partner_id', 'ilike', 'fontana'], ['date', '>=', '2026-07-01']]))
+    // Statements only read: nothing is written to Odoo.
+    expect(calls.some((c) => ['create', 'write', 'action_post', 'button_draft', 'unlink'].includes(c.args[4] as string))).toBe(false)
   })
 })

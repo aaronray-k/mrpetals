@@ -296,6 +296,26 @@ Odoo makes the invoices; ConsolFlora keeps the detail and sends only the total.
   never sent. Without `ODOO_API_KEY` (or on the preview until one is set) a demo Odoo is used; demo invoices are
   never sent to, or fetched from, the real Odoo.
 
+## Statements of account
+
+**Statements of account** (Admin and Finance; also a shortcut on their dashboards) reads Odoo's ledger live:
+suppliers' payable accounts (vendor bills, refunds and payments to them) or buyers' receivable accounts
+(customer invoices, credit notes and payments from them). Nothing is written to Odoo or stored in ConsolFlora.
+
+- One account per supplier (or buyer) and **currency**: a supplier billed in USD and EUR has "Fontana (USD)" and
+  "Fontana (EUR)", each with its own balance. Currencies are never added together.
+- Each account lists date, type, bill (or invoice) number, reference, due date, amount, paid / credited and a
+  **running balance** from the **balance brought forward** (everything before the start date). Payments,
+  refunds and credit notes are their own lines, so money already paid is in the balance. The closing balance
+  shows how much of it is **overdue** (past due and not yet covered by payments, oldest first).
+- Filters: suppliers or buyers, name, date range, **number or reference** (bill, invoice or payment number, or
+  the vendor's reference; matching lines keep their true running balance), and **Include drafts**
+  (confirmed only by default).
+- **PDF** (A4 landscape) and **Excel** download exactly what is on screen: a summary per currency, then each
+  account.
+- Odoo settings' **Test connection** also checks that the Odoo user can read journal items and counts the
+  confirmed vendor bills.
+
 ## Two-factor sign-in and accessibility
 
 **Admin, Consolidator and Finance** sign in with their password and then a 6-digit code:
@@ -352,7 +372,7 @@ docs/backend.md           what the backend must provide
 | 8 | Legal and consent: agreements per role at sign-in, public legal pages, marketing choice | Done (texts pending legal review) |
 | 9 | Accessibility and security: two-factor sign-in (app or email, remembered devices), WCAG 2.2 AA sweep | Done (email codes wait for the mailbox) |
 | 10 | Buyer claims: buyer report with photos, consolidator review, buyer credit notes, farm claim notices and farm credit notes | Done |
-| 11 | Invoices in Odoo: one invoice per buyer per flight (one Cut Flowers line), credit notes, push and fetch | Done: drafts confirmed in ConsolFlora, with preview (demo Odoo until connected) |
+| 11 | Invoices in Odoo: one invoice per buyer per flight (one Cut Flowers line), credit notes, push and fetch | Done: drafts confirmed in ConsolFlora, with preview; statements of account (PDF, Excel) (demo Odoo until connected) |
 | 12 | Messages and email (Zoho: SMTP out, IMAP replies into the app); important notifications emailed; settings page already there | Not started |
 
 A clickable preview with demo data runs on Render; see `preview/README.md`.

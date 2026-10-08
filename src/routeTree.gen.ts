@@ -25,6 +25,7 @@ import { Route as AppNotificationsRouteImport } from './routes/_app/notification
 import { Route as AppPricesRouteImport } from './routes/_app/prices'
 import { Route as AppProductsRouteImport } from './routes/_app/products'
 import { Route as AppStandingOrdersRouteImport } from './routes/_app/standing-orders'
+import { Route as AppStatementsRouteImport } from './routes/_app/statements'
 import { Route as AppUsersRouteImport } from './routes/_app/users'
 import { Route as LegalIndexRouteImport } from './routes/legal/index'
 import { Route as LegalCodeRouteImport } from './routes/legal/$code'
@@ -130,6 +131,11 @@ const AppProductsRoute = AppProductsRouteImport.update({
 const AppStandingOrdersRoute = AppStandingOrdersRouteImport.update({
   id: '/standing-orders',
   path: '/standing-orders',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStatementsRoute = AppStatementsRouteImport.update({
+  id: '/statements',
+  path: '/statements',
   getParentRoute: () => AppRoute,
 } as any)
 const AppUsersRoute = AppUsersRouteImport.update({
@@ -284,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/prices': typeof AppPricesRoute
   '/products': typeof AppProductsRoute
   '/standing-orders': typeof AppStandingOrdersRoute
+  '/statements': typeof AppStatementsRoute
   '/users': typeof AppUsersRoute
   '/legal/$code': typeof LegalCodeRoute
   '/legal/': typeof LegalIndexRoute
@@ -328,6 +335,7 @@ export interface FileRoutesByTo {
   '/prices': typeof AppPricesRoute
   '/products': typeof AppProductsRoute
   '/standing-orders': typeof AppStandingOrdersRoute
+  '/statements': typeof AppStatementsRoute
   '/users': typeof AppUsersRoute
   '/legal/$code': typeof LegalCodeRoute
   '/legal': typeof LegalIndexRoute
@@ -374,6 +382,7 @@ export interface FileRoutesById {
   '/_app/prices': typeof AppPricesRoute
   '/_app/products': typeof AppProductsRoute
   '/_app/standing-orders': typeof AppStandingOrdersRoute
+  '/_app/statements': typeof AppStatementsRoute
   '/_app/users': typeof AppUsersRoute
   '/legal/$code': typeof LegalCodeRoute
   '/legal/': typeof LegalIndexRoute
@@ -420,6 +429,7 @@ export interface FileRouteTypes {
     | '/prices'
     | '/products'
     | '/standing-orders'
+    | '/statements'
     | '/users'
     | '/legal/$code'
     | '/legal/'
@@ -464,6 +474,7 @@ export interface FileRouteTypes {
     | '/prices'
     | '/products'
     | '/standing-orders'
+    | '/statements'
     | '/users'
     | '/legal/$code'
     | '/legal'
@@ -509,6 +520,7 @@ export interface FileRouteTypes {
     | '/_app/prices'
     | '/_app/products'
     | '/_app/standing-orders'
+    | '/_app/statements'
     | '/_app/users'
     | '/legal/$code'
     | '/legal/'
@@ -658,6 +670,13 @@ declare module '@tanstack/react-router' {
       path: '/standing-orders'
       fullPath: '/standing-orders'
       preLoaderRoute: typeof AppStandingOrdersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/statements': {
+      id: '/_app/statements'
+      path: '/statements'
+      fullPath: '/statements'
+      preLoaderRoute: typeof AppStatementsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/users': {
@@ -866,6 +885,7 @@ interface AppRouteChildren {
   AppPricesRoute: typeof AppPricesRoute
   AppProductsRoute: typeof AppProductsRoute
   AppStandingOrdersRoute: typeof AppStandingOrdersRoute
+  AppStatementsRoute: typeof AppStatementsRoute
   AppUsersRoute: typeof AppUsersRoute
   AppClaimsClaimIdRoute: typeof AppClaimsClaimIdRoute
   AppFarmClaimsRoute: typeof AppFarmClaimsRoute
@@ -907,6 +927,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPricesRoute: AppPricesRoute,
   AppProductsRoute: AppProductsRoute,
   AppStandingOrdersRoute: AppStandingOrdersRoute,
+  AppStatementsRoute: AppStatementsRoute,
   AppUsersRoute: AppUsersRoute,
   AppClaimsClaimIdRoute: AppClaimsClaimIdRoute,
   AppFarmClaimsRoute: AppFarmClaimsRoute,

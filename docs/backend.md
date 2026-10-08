@@ -259,6 +259,11 @@ Provided by migration `…018_odoo.sql`; the Odoo calls are in `src/server/odoo/
 | `record_odoo_action()` | Confirm (`action_post`), reset to draft (`button_draft`) or refill a draft, done by the app server for Admin, Consolidator and Finance; logged, refusals included. |
 | `apply_odoo_state()` | Every push, fetch and action: Odoo's number, state, due date. The first confirmation sets `posted_at` and tells the buyer; buyers only read confirmed invoices. A new draft notifies Finance. |
 
+Statements of account need no tables: `getLedger` (Admin and Finance, `src/server/odoo.functions.ts`) reads
+Odoo's `account.move.line` on payable (suppliers) or receivable (buyers) accounts, posted (and optionally draft),
+plus the sum of earlier lines per partner and currency for the balance brought forward. The statement, overdue
+amounts, PDF and Excel are built in the browser (`src/lib/statements/`).
+
 Needed to connect: Odoo **Custom plan** (Odoo Online), an Odoo user with Accounting rights and an **API key**
 (`ODOO_API_KEY` on the app server), the address, database and login on Odoo settings, and each buyer currency
 **active** in Odoo. Payments are fetched when Finance opens Invoices or presses Refresh; a scheduled fetch (for
