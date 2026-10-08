@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { greetingName, invoiceEmail, parseAddresses, type InvoiceEmailInput } from './email'
+import { explainMailError, greetingName, invoiceEmail, parseAddresses, type InvoiceEmailInput } from './email'
 
 const base: InvoiceEmailInput = {
   contactName: 'Aiko Tanaka',
@@ -52,5 +52,14 @@ describe('invoice email', () => {
 
   it('reads addresses separated by commas, semicolons or spaces, and flags bad ones', () => {
     expect(parseAddresses('a@x.jp, b@y.nl; a@x.jp  nope')).toEqual({ ok: ['a@x.jp', 'b@y.nl'], bad: ['nope'] })
+  })
+
+  it("explains the mail server's sign-in refusal; other errors pass through", () => {
+    const m = explainMailError('Invalid login: 535 Authentication Failed', { smtp_host: 'smtp.zoho.com', smtp_user: 'sales@consolflora.com', from_address: 'sales@consolflora.com' })
+    expect(m).toContain("Zoho's free plan doesn't")
+    expect(m).toContain('App Passwords')
+    expect(m).toContain('try smtppro.zoho.com')
+    expect(m).toContain('(now: sales@consolflora.com)')
+    expect(explainMailError('connect ETIMEDOUT', { smtp_host: 'smtp.zoho.com', smtp_user: null, from_address: 'x@y.z' })).toBe('connect ETIMEDOUT')
   })
 })

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
 import { COMPANY } from '~/lib/company'
-import { invoiceEmail, type BankForEmail } from '~/lib/invoices/email'
+import { explainMailError, invoiceEmail, type BankForEmail } from '~/lib/invoices/email'
 import type { BuyerRef, OrderCharge, PackingListRow, Shipment } from '~/lib/orders/api'
 import type { ProformaInput } from '~/lib/orders/excel'
 import { proformaPdf, proformaPdfName } from '~/lib/orders/proforma-pdf'
@@ -30,17 +30,20 @@ async function sender(ctx: AuthContext): Promise<{ ok: true; s: Sender } | { ok:
   const s = data as Sender | null
   if (!s) return { ok: false, reason: 'Email settings are missing.', s: null }
   if (!s.from_address || !s.smtp_host || !s.smtp_port) return { ok: false, reason: 'Fill in the sender address and outgoing server on Email settings.', s }
-  if (!process.env.SMTP_PASSWORD) return { ok: false, reason: 'Add SMTP_PASSWORD (the sales mailbox password, or a Zoho app password) to the server environment.', s }
+  if (!smtpPassword()) return { ok: false, reason: 'Add SMTP_PASSWORD (the sales mailbox password, or a Zoho app password) to the server environment.', s }
   if (!s.enabled) return { ok: false, reason: 'Sending email is switched off on Email settings.', s }
   return { ok: true, s }
 }
+/** The mailbox password from the server environment; spaces copied around it are ignored. */
+const smtpPassword = () => process.env.SMTP_PASSWORD?.trim() || null
+
 async function transport(s: Sender) {
   const nodemailer = await import('nodemailer')
   return nodemailer.createTransport({
     host: s.smtp_host!,
     port: s.smtp_port!,
     secure: s.smtp_port === 465,
-    auth: { user: s.smtp_user || s.from_address!, pass: process.env.SMTP_PASSWORD! },
+    auth: { user: s.smtp_user || s.from_address!, pass: smtpPassword()! },
   })
 }
 const fromHeader = (s: Sender) => ({ name: s.from_name || 'Consolflora', address: s.from_address! })
@@ -220,7 +223,7 @@ export const sendInvoiceEmail = createServerFn({ method: 'POST' })
       await record(true, names)
       return { ok: true as const, message: `Sent to ${data.to.join(', ')}${names.length ? ` with ${names.join(', ')}` : ''}.` }
     } catch (e) {
-      const message = (e as Error).message
+      const message = explainMailError((e as Error).message, mail.s)
       await record(false, names, message)
       return { ok: false as const, message: `Not sent: ${message}` }
     }
@@ -245,6 +248,6 @@ export const sendTestEmail = createServerFn({ method: 'POST' })
       })
       return { ok: true, message: `Sent a test email to ${context.user.email} from ${mail.s.from_address}.` }
     } catch (e) {
-      return { ok: false, message: (e as Error).message }
+      return { ok: false, message: explainMailError((e as Error).message, mail.s) }
     }
   })

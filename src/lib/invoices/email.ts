@@ -74,3 +74,16 @@ export function parseAddresses(s: string): { ok: string[]; bad: string[] } {
   const ok = parts.filter((x) => /^[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]+$/.test(x))
   return { ok: [...new Set(ok)], bad: parts.filter((x) => !ok.includes(x)) }
 }
+
+/** Zoho's sign-in refusal, in words: what to check. */
+export function explainMailError(message: string, s: { smtp_host: string | null; smtp_user: string | null; from_address: string | null }) {
+  if (!/\b535\b|invalid login|authentication failed|EAUTH/i.test(message)) return message
+  const other = s.smtp_host === 'smtppro.zoho.com' ? 'smtp.zoho.com' : s.smtp_host === 'smtp.zoho.com' ? 'smtppro.zoho.com' : null
+  return [
+    `The mail server refused the sign-in (${message.trim()}). Check, in this order:`,
+    "1. The Zoho plan lets outside apps send mail (Zoho's free plan doesn't).",
+    '2. SMTP_PASSWORD on Render is an app-specific password (Zoho: Security → App Passwords) if the mailbox uses two-factor sign-in.',
+    other ? `3. The outgoing server: ${s.smtp_host} is for ${other === 'smtp.zoho.com' ? 'company-domain mailboxes on a paid plan' : 'personal and free accounts'}; try ${other}.` : '3. The outgoing server matches the account.',
+    `4. SMTP user is the mailbox's own main address (now: ${s.smtp_user || s.from_address}), the one the password belongs to.`,
+  ].join('\n')
+}
