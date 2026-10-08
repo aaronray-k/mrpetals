@@ -280,6 +280,11 @@ Consolidators the sender settings (no password) though `mail_settings` is Admin-
 SMTP (`nodemailer`) with `SMTP_PASSWORD` from its environment; the proforma PDF is built on the server
 (`src/lib/orders/proforma-pdf.ts`).
 
+Contacts and shipment documents need no tables: contacts are read from Odoo's `res.partner` (a buyer's company is
+found by `ref` = customer code; a kept `odoo_partner_id` is used only if its `ref` still matches), and documents
+come from `shipments`, `customer_orders` and `invoices`. `…025_odoo_partner_source.sql` clears Odoo customer ids
+that only came from the demo Odoo and stops keeping them.
+
 Statements of account need no tables: `getLedger` (Admin and Finance, `src/server/odoo.functions.ts`) reads
 Odoo's `account.move.line` on payable (suppliers) or receivable (buyers) accounts, posted (and optionally draft),
 plus the sum of earlier lines per partner and currency for the balance brought forward. The statement, overdue

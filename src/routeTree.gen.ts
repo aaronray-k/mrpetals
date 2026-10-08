@@ -14,8 +14,10 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AppAccountRouteImport } from './routes/_app/account'
 import { Route as AppBoxTypesRouteImport } from './routes/_app/box-types'
+import { Route as AppContactsRouteImport } from './routes/_app/contacts'
 import { Route as AppCustomersRouteImport } from './routes/_app/customers'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppDocumentsRouteImport } from './routes/_app/documents'
 import { Route as AppExchangeRatesRouteImport } from './routes/_app/exchange-rates'
 import { Route as AppFarmsRouteImport } from './routes/_app/farms'
 import { Route as AppFloricodeRouteImport } from './routes/_app/floricode'
@@ -81,6 +83,11 @@ const AppBoxTypesRoute = AppBoxTypesRouteImport.update({
   path: '/box-types',
   getParentRoute: () => AppRoute,
 } as any)
+const AppContactsRoute = AppContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCustomersRoute = AppCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
@@ -89,6 +96,11 @@ const AppCustomersRoute = AppCustomersRouteImport.update({
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDocumentsRoute = AppDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
   getParentRoute: () => AppRoute,
 } as any)
 const AppExchangeRatesRoute = AppExchangeRatesRouteImport.update({
@@ -297,8 +309,10 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/account': typeof AppAccountRoute
   '/box-types': typeof AppBoxTypesRoute
+  '/contacts': typeof AppContactsRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
+  '/documents': typeof AppDocumentsRoute
   '/exchange-rates': typeof AppExchangeRatesRoute
   '/farms': typeof AppFarmsRoute
   '/floricode': typeof AppFloricodeRoute
@@ -345,8 +359,10 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/account': typeof AppAccountRoute
   '/box-types': typeof AppBoxTypesRoute
+  '/contacts': typeof AppContactsRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
+  '/documents': typeof AppDocumentsRoute
   '/exchange-rates': typeof AppExchangeRatesRoute
   '/farms': typeof AppFarmsRoute
   '/floricode': typeof AppFloricodeRoute
@@ -395,8 +411,10 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/_app/account': typeof AppAccountRoute
   '/_app/box-types': typeof AppBoxTypesRoute
+  '/_app/contacts': typeof AppContactsRoute
   '/_app/customers': typeof AppCustomersRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/documents': typeof AppDocumentsRoute
   '/_app/exchange-rates': typeof AppExchangeRatesRoute
   '/_app/farms': typeof AppFarmsRoute
   '/_app/floricode': typeof AppFloricodeRoute
@@ -445,8 +463,10 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/account'
     | '/box-types'
+    | '/contacts'
     | '/customers'
     | '/dashboard'
+    | '/documents'
     | '/exchange-rates'
     | '/farms'
     | '/floricode'
@@ -493,8 +513,10 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/account'
     | '/box-types'
+    | '/contacts'
     | '/customers'
     | '/dashboard'
+    | '/documents'
     | '/exchange-rates'
     | '/farms'
     | '/floricode'
@@ -542,8 +564,10 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/_app/account'
     | '/_app/box-types'
+    | '/_app/contacts'
     | '/_app/customers'
     | '/_app/dashboard'
+    | '/_app/documents'
     | '/_app/exchange-rates'
     | '/_app/farms'
     | '/_app/floricode'
@@ -631,6 +655,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBoxTypesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/contacts': {
+      id: '/_app/contacts'
+      path: '/contacts'
+      fullPath: '/contacts'
+      preLoaderRoute: typeof AppContactsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/customers': {
       id: '/_app/customers'
       path: '/customers'
@@ -643,6 +674,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/documents': {
+      id: '/_app/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof AppDocumentsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/exchange-rates': {
@@ -931,8 +969,10 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppAccountRoute: typeof AppAccountRoute
   AppBoxTypesRoute: typeof AppBoxTypesRoute
+  AppContactsRoute: typeof AppContactsRoute
   AppCustomersRoute: typeof AppCustomersRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppDocumentsRoute: typeof AppDocumentsRoute
   AppExchangeRatesRoute: typeof AppExchangeRatesRoute
   AppFarmsRoute: typeof AppFarmsRoute
   AppFloricodeRoute: typeof AppFloricodeRoute
@@ -976,8 +1016,10 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAccountRoute: AppAccountRoute,
   AppBoxTypesRoute: AppBoxTypesRoute,
+  AppContactsRoute: AppContactsRoute,
   AppCustomersRoute: AppCustomersRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppDocumentsRoute: AppDocumentsRoute,
   AppExchangeRatesRoute: AppExchangeRatesRoute,
   AppFarmsRoute: AppFarmsRoute,
   AppFloricodeRoute: AppFloricodeRoute,

@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { FileSpreadsheet, Lock, ScanLine } from 'lucide-react'
+import { FileSpreadsheet, FileText, Lock, ScanLine } from 'lucide-react'
 import {
   productLabel,
   shipmentKeys,
@@ -104,6 +104,11 @@ function ShipmentPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {hasAnyRole(roles, ['admin', 'consolidator', 'finance']) && (
+            <Link to="/documents" search={{ shipment: shipment.id }} className={buttonVariants({ variant: 'outline' })}>
+              <FileText aria-hidden="true" /> All documents
+            </Link>
+          )}
           {can.qc && (
             <Link to="/qc/scan" className={buttonVariants({ variant: 'outline' })} onClick={() => rememberScanShipment(shipment.id)}>
               <ScanLine aria-hidden="true" /> Scan boxes

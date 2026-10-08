@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { authMiddleware, requireRoles, type AuthContext } from './auth'
-import { MAPPED_FIELDS, odooClient, type InvoicePayload, type LedgerResult, type MoveList, type OdooAdapter, type OdooField, type OdooMoveDetail } from './odoo/client'
+import { MAPPED_FIELDS, odooClient, type InvoicePayload, type LedgerResult, type MoveList, type OdooAdapter, type OdooContact, type OdooField, type OdooMoveDetail } from './odoo/client'
 import { demoOdoo } from './odoo/demo'
 
 /**
@@ -403,3 +403,25 @@ export async function invoiceOdoo(ctx: AuthContext, invoiceId: string): Promise<
   if (!odoo) return { odoo: null, moveId: null, reason }
   return { odoo, moveId: (await payload(ctx, invoiceId)).odoo_move_id, reason: null }
 }
+
+/** The Odoo to read from (also while sending invoices is off), or null with the reason. */
+export async function readOdoo(ctx: AuthContext): Promise<{ odoo: OdooAdapter | null; source: OdooSource; reason: string | null }> {
+  const a = await adapter(ctx, { forTest: true })
+  return { odoo: a.odoo, source: a.source === 'none' && a.odoo ? 'api' : a.source, reason: a.reason ?? null }
+}
+
+/** Contacts in Odoo (Admin, Consolidator, Finance): companies and their people, with emails. Read live. */
+export const listOdooContacts = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .validator(z.object({ kind: z.enum(['all', 'buyers', 'growers']), search: z.string().trim().max(100).nullable(), offset: z.number().int().min(0) }))
+  .handler(async ({ data, context }) => {
+    requireRoles(context, [...ROLES])
+    const r = await readOdoo(context)
+    if (!r.odoo) return { source: r.source, error: r.reason ?? 'Odoo is not connected.', total: 0, contacts: [] as OdooContact[] }
+    try {
+      const list = await r.odoo.contacts({ ...data, search: data.search || null, limit: 50 })
+      return { source: r.source, error: null, ...list }
+    } catch (e) {
+      return { source: r.source, error: (e as Error).message, total: 0, contacts: [] as OdooContact[] }
+    }
+  })

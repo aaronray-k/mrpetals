@@ -103,6 +103,13 @@ function Form({ invoiceId, d, onDone }: { invoiceId: string; d: Draft; onDone: (
         </Alert>
       )}
       {d.mail.from && <p className="text-sm text-muted-foreground">From {d.mail.from}; replies come back there.</p>}
+      <OdooContacts
+        d={d}
+        add={(email, field) => {
+          const [value, set] = field === 'to' ? [to, setTo] : [cc, setCc]
+          if (!parseAddresses(value).ok.includes(email)) set(value.trim() ? `${value.trim().replace(/,\s*$/, '')}, ${email}` : email)
+        }}
+      />
       <Field id="em-to" label="To" hint="Separate several addresses with commas.">
         {(h) => <Input id="em-to" type="text" inputMode="email" autoComplete="off" value={to} onChange={(e) => setTo(e.target.value)} aria-describedby={h} />}
       </Field>
@@ -139,7 +146,7 @@ function Form({ invoiceId, d, onDone }: { invoiceId: string; d: Draft; onDone: (
                 checked={orders.includes(p.orderId)}
                 onChange={(e) => setOrders((o) => (e.target.checked ? [...o, p.orderId] : o.filter((x) => x !== p.orderId)))}
               />
-              Proforma invoice {p.orderNumber} (PDF)
+              Proforma & packing list {p.orderNumber} (PDF)
             </label>
             <Button
               variant="ghost"
@@ -204,5 +211,38 @@ export function InvoiceEmailsCard({ invoiceId }: { invoiceId: string }) {
         </ul>
       </CardContent>
     </Card>
+  )
+}
+
+/** The buyer's contacts in Odoo, to add to To or Cc. */
+function OdooContacts({ d, add }: { d: Draft; add: (email: string, field: 'to' | 'cc') => void }) {
+  if (d.contactsError) return <p className="text-sm text-muted-foreground">Odoo contacts couldn't be read ({d.contactsError}); To has ConsolFlora's contact email.</p>
+  if (!d.contacts.length) return <p className="text-sm text-muted-foreground">This buyer has no contacts with an email in Odoo; To has ConsolFlora's contact email.</p>
+  return (
+    <details className="rounded-md border p-3">
+      <summary className="cursor-pointer text-sm font-semibold">
+        Contacts in Odoo ({d.contacts.length}). To starts with the {d.contacts.some((c) => c.type === 'invoice') ? 'invoice address' : 'company email'}.
+      </summary>
+      <ul className="mt-2 grid gap-2">
+        {d.contacts.map((c) => (
+          <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span>
+              <span className="font-semibold">{c.name}</span>
+              {c.type === 'invoice' && <Badge variant="success" className="ml-1">Invoice address</Badge>}
+              {c.job && <span className="text-muted-foreground"> · {c.job}</span>}
+              <span className="block break-all text-muted-foreground">{c.email}</span>
+            </span>
+            <span className="flex gap-1">
+              <Button size="sm" variant="outline" onClick={() => add(c.email!, 'to')}>
+                Add to To<span className="sr-only">: {c.email}</span>
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => add(c.email!, 'cc')}>
+                Add to Cc<span className="sr-only">: {c.email}</span>
+              </Button>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </details>
   )
 }

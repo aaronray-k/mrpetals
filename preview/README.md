@@ -36,3 +36,7 @@ Invoices go to a demo Odoo on the preview (`ODOO_SOURCE=demo`, set by `start.mjs
 Invoice emails on the preview need the sales mailbox: fill in Email settings, add `SMTP_PASSWORD` to the Render
 service's environment, switch sending on and use **Send a test email to me**. Without it, Send by email explains
 what is missing and the attachments can still be downloaded.
+
+Shipment documents work on the preview with its demo data. With the real Odoo connected, the preview's demo
+invoices are not sent there (go-live), so they show as "Before Odoo go-live: not sent"; Contacts (Odoo) shows the
+real Odoo's contacts.

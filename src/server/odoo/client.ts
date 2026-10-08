@@ -135,6 +135,48 @@ export interface MoveList {
   due: { currency: string; amount: number }[]
 }
 
+/** Contacts in Odoo: companies and the people (or invoice addresses) under them. */
+export interface OdooContact {
+  id: number
+  name: string
+  /** The company a person belongs to; null for a company itself. */
+  company: string | null
+  is_company: boolean
+  /** contact, invoice (invoice address), delivery, other */
+  type: string
+  email: string | null
+  phone: string | null
+  job: string | null
+  ref: string | null
+  buyer: boolean
+  grower: boolean
+}
+export interface ContactQuery {
+  kind: 'all' | 'buyers' | 'growers'
+  search: string | null
+  offset: number
+  limit: number
+}
+export function contactDomain(q: Pick<ContactQuery, 'kind' | 'search'>): unknown[] {
+  const d: unknown[] = []
+  if (q.kind === 'buyers') d.push('|', ['customer_rank', '>', 0], ['parent_id.customer_rank', '>', 0])
+  if (q.kind === 'growers') d.push('|', ['supplier_rank', '>', 0], ['parent_id.supplier_rank', '>', 0])
+  if (q.search) d.push('|', '|', ['name', 'ilike', q.search], ['email', 'ilike', q.search], ['parent_id.name', 'ilike', q.search])
+  return d
+}
+/**
+ * Who an invoice email goes to by default: the buyer's invoice addresses in Odoo, otherwise the company's own
+ * email, otherwise (nothing in Odoo) the contact email in ConsolFlora.
+ */
+export function defaultRecipients(contacts: OdooContact[], fallback: string | null): string[] {
+  const withEmail = contacts.filter((c) => c.email)
+  const invoice = withEmail.filter((c) => c.type === 'invoice').map((c) => c.email!)
+  if (invoice.length) return [...new Set(invoice)]
+  const company = withEmail.filter((c) => c.is_company).map((c) => c.email!)
+  if (company.length) return [...new Set(company)]
+  return fallback ? [fallback] : []
+}
+
 export interface OdooAdapter {
   /** Checks the login, API access (Odoo Online: Custom plan), invoicing rights and the currencies given. */
   test(currencies: string[]): Promise<string>
@@ -157,6 +199,9 @@ export interface OdooAdapter {
   moveAction(moveId: number, action: 'confirm' | 'reset'): Promise<OdooMove>
   /** Has Odoo make its PDF of a confirmed invoice (Odoo's Send & Print, with email off). Never emails anyone. */
   makePdf(moveId: number): Promise<{ made: boolean; message: string }>
+  contacts(q: ContactQuery): Promise<{ total: number; contacts: OdooContact[] }>
+  /** A buyer's (or grower's) company in Odoo and everyone under it, found by its Odoo id or its code (Odoo's reference). */
+  contactsOf(p: { odoo_partner_id: number | null; code: string }): Promise<OdooContact[]>
 }
 
 /** Odoo's PDF of an invoice. Odoo 17+ keeps it as a field attachment, which a plain attachment search leaves out. */
@@ -194,6 +239,24 @@ export function moveDomain(q: MoveQuery): unknown[] {
   if (q.payment === 'unpaid') d.push(['state', '=', 'posted'], ['payment_state', 'in', ['not_paid', 'partial']])
   if (q.payment === 'paid') d.push(['payment_state', 'in', ['paid', 'in_payment', 'reversed']])
   return d
+}
+
+const CONTACT_FIELDS = ['name', 'parent_id', 'is_company', 'type', 'email', 'phone', 'function', 'ref', 'customer_rank', 'supplier_rank']
+function contactOf(c: Record<string, unknown>): OdooContact {
+  const s = (v: unknown) => (v === false || v == null || v === '' ? null : String(v))
+  return {
+    id: Number(c.id),
+    name: String(c.name || ''),
+    company: Array.isArray(c.parent_id) ? String(c.parent_id[1]) : null,
+    is_company: !!c.is_company,
+    type: String(c.type || 'contact'),
+    email: s(c.email),
+    phone: s(c.phone),
+    job: s(c.function),
+    ref: s(c.ref),
+    buyer: Number(c.customer_rank) > 0,
+    grower: Number(c.supplier_rank) > 0,
+  }
 }
 
 const KIND: Record<string, LedgerLine['kind']> = { in_invoice: 'bill', in_refund: 'refund', out_invoice: 'invoice', out_refund: 'credit_note' }
@@ -255,10 +318,17 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
   }
   const link = (moveId: number) => `${cfg.url.replace(/\/$/, '')}/web#id=${moveId}&model=account.move&view_type=form`
 
+  /** The buyer's company in Odoo: the id ConsolFlora kept, if it is still that buyer's (its reference is the buyer's code), else found by code. */
+  async function knownPartner(id: number | null, code: string) {
+    if (id) {
+      const r = (await kw('res.partner', 'search_read', [[['id', '=', id], ['ref', '=', code]]], { fields: ['id'], limit: 1 })) as { id: number }[]
+      if (r[0]) return r[0].id
+    }
+    return ((await kw('res.partner', 'search', [[['ref', '=', code], ['parent_id', '=', false]]], { limit: 1 })) as number[])[0] ?? null
+  }
   async function partnerId(p: InvoicePayload['partner']) {
-    if (p.odoo_partner_id) return p.odoo_partner_id
-    const found = (await kw('res.partner', 'search', [[['ref', '=', p.code]]], { limit: 1 })) as number[]
-    if (found[0]) return found[0]
+    const known = await knownPartner(p.odoo_partner_id, p.code)
+    if (known) return known
     const country = p.country ? ((await kw('res.country', 'search', [[['name', '=ilike', p.country]]], { limit: 1 })) as number[])[0] : undefined
     return (await kw('res.partner', 'create', [
       { name: p.name, ref: p.code, is_company: true, customer_rank: 1, email: p.email || false, city: p.city || false, street: p.street || false, vat: p.vat || false, country_id: country ?? false },
@@ -422,6 +492,20 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
         }
       }
       throw new Error(`Odoo didn't make its PDF from ConsolFlora${last ? ` (${last})` : ''}. Press Print on the invoice in Odoo once; the PDF then shows here.`)
+    },
+    async contacts(q) {
+      const domain = contactDomain(q)
+      const [total, rows] = await Promise.all([
+        kw('res.partner', 'search_count', [domain]) as Promise<number>,
+        kw('res.partner', 'search_read', [domain], { fields: CONTACT_FIELDS, order: 'name asc', offset: q.offset, limit: q.limit }) as Promise<Record<string, unknown>[]>,
+      ])
+      return { total, contacts: rows.map(contactOf) }
+    },
+    async contactsOf(p) {
+      const company = await knownPartner(p.odoo_partner_id, p.code)
+      if (!company) return []
+      const rows = (await kw('res.partner', 'search_read', [[['id', 'child_of', company]]], { fields: CONTACT_FIELDS, order: 'is_company desc, name asc' })) as Record<string, unknown>[]
+      return rows.map(contactOf)
     },
     async moveAction(id, action) {
       const now = await state(id)

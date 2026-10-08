@@ -27,5 +27,13 @@ describe('proforma PDF', () => {
   })
   it('named like the Excel proforma', () => {
     expect(proformaPdfName(input([]))).toBe('Proforma_CFLPFJ0089_ON_EK_10.10.2026.pdf')
+    expect(proformaPdfName(input([]), true)).toBe('Proforma_PL_CFLPFJ0089_ON_EK_10.10.2026.pdf')
+  })
+  it('proforma and packing list in one document: the packing list starts on its own page', async () => {
+    const rows = [row(1, 'Kibo Roses Ltd'), row(2, 'Naku Flowers')]
+    const one = await PDFDocument.load(await proformaPdf(input(rows)))
+    const both = await PDFDocument.load(await proformaPdf(input(rows), null, { packingList: true }))
+    expect(both.getPageCount()).toBe(one.getPageCount() + 1)
+    expect(both.getTitle()).toBe('Proforma & Packing List CFLPFJ0089')
   })
 })

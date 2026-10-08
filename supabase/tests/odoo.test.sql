@@ -161,6 +161,12 @@ update odoo_settings set enabled = true;
 select pg_temp.check((select send_from from odoo_settings) between now() - interval '1 minute' and now(), 'and switching off and on again keeps it');
 set role authenticated;
 
+-- ---------------------------------------------------------------- Demo Odoo customer ids are never kept
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000c';
+insert into t select 'MD', create_manual_invoice((select id from customers where customer_code = 'OB2'), 'invoice', 'EUR', 'Demo push', '[{"name": "x", "quantity": 1, "price_unit": 5}]');
+select record_odoo_push(pg_temp.id('MD'), true, '{"move_id": 99, "name": "/", "state": "draft", "partner_id": 1234, "source": "demo"}');
+select pg_temp.check((select odoo_partner_id from customers where customer_code = 'OB2') is distinct from 1234, 'a demo Odoo customer id is not kept for the real Odoo');
+
 -- ---------------------------------------------------------------- Manual invoices
 set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000c';
 insert into t select 'M1', create_manual_invoice((select id from customers where customer_code = 'OB1'), 'invoice', 'USD', 'Boxes and sleeves, October',

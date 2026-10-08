@@ -8,7 +8,8 @@ import type { BuyerRef, OrderCharge, PackingListRow, Shipment } from '~/lib/orde
 import type { ProformaInput } from '~/lib/orders/excel'
 import { proformaPdf, proformaPdfName } from '~/lib/orders/proforma-pdf'
 import { authMiddleware, requireRoles, type AuthContext } from './auth'
-import { invoiceOdoo } from './odoo.functions'
+import { invoiceOdoo, readOdoo } from './odoo.functions'
+import { defaultRecipients, type OdooContact } from './odoo/client'
 
 /**
  * Invoice emails to buyers, from the sales mailbox (Email settings; the password is SMTP_PASSWORD in the
@@ -83,7 +84,7 @@ async function invoiceFacts(ctx: AuthContext, invoiceId: string) {
   const sb = ctx.supabase
   const { data: i, error } = await sb
     .from('invoices')
-    .select('id, kind, status, odoo_state, odoo_name, amount, currency, odoo_due_date, order_ids, shipment_id, mawb, flight, customers(company_name, contact_name, contact_email)')
+    .select('id, kind, status, odoo_state, odoo_name, amount, currency, odoo_due_date, order_ids, shipment_id, mawb, flight, customers(company_name, customer_code, odoo_partner_id, contact_name, contact_email)')
     .eq('id', invoiceId)
     .maybeSingle()
   if (error) throw new Error(error.message)
@@ -95,7 +96,7 @@ async function invoiceFacts(ctx: AuthContext, invoiceId: string) {
     sb.from('bank_accounts').select('account_number').eq('currency', i.currency).maybeSingle(),
     sb.from('profiles').select('full_name').eq('id', ctx.user.id).maybeSingle(),
   ])
-  const customer = (Array.isArray(i.customers) ? i.customers[0] : i.customers) as { company_name: string; contact_name: string | null; contact_email: string } | null
+  const customer = (Array.isArray(i.customers) ? i.customers[0] : i.customers) as { company_name: string; customer_code: string; odoo_partner_id: number | null; contact_name: string | null; contact_email: string } | null
   return {
     i,
     customer,
@@ -131,9 +132,24 @@ export const getInvoiceEmailDraft = createServerFn({ method: 'GET' })
       companyLegalName: COMPANY.name,
     })
     const mail = await sender(context)
+    // The buyer's contacts in Odoo: who it goes to by default, and everyone else to pick from.
+    let contacts: OdooContact[] = []
+    let contactsError: string | null = null
+    if (f.customer) {
+      const r = await readOdoo(context)
+      if (r.odoo) {
+        try {
+          contacts = (await r.odoo.contactsOf({ odoo_partner_id: f.customer.odoo_partner_id, code: f.customer.customer_code })).filter((c) => c.email)
+        } catch (e) {
+          contactsError = (e as Error).message
+        }
+      } else contactsError = r.reason
+    }
     return {
       confirmed: f.i.status === 'pushed' && f.i.odoo_state === 'posted',
-      to: f.customer?.contact_email ?? '',
+      to: defaultRecipients(contacts, f.customer?.contact_email ?? null).join(', '),
+      contacts,
+      contactsError,
       ...draft,
       invoiceFile: `${number.replace(/\//g, '_') || 'Invoice'}.pdf`,
       proformas: f.orders.map((o) => ({ orderId: o.id, orderNumber: o.order_number })),
@@ -148,7 +164,7 @@ export const downloadProformaPdf = createServerFn({ method: 'GET' })
   .handler(async ({ data, context }) => {
     requireRoles(context, [...ROLES])
     const input = await proformaInput(context, data.orderId)
-    return { name: proformaPdfName(input), base64: Buffer.from(await proformaPdf(input, logo())).toString('base64') }
+    return { name: proformaPdfName(input, true), base64: Buffer.from(await proformaPdf(input, logo(), { packingList: true })).toString('base64') }
   })
 
 const email = z.string().trim().email().max(200)
@@ -191,7 +207,7 @@ export const sendInvoiceEmail = createServerFn({ method: 'POST' })
       for (const id of data.orderIds) {
         if (!allowed.has(id)) throw new Error('A proforma chosen is not for an order on this invoice.')
         const input = await proformaInput(context, id)
-        attachments.push({ filename: proformaPdfName(input), content: Buffer.from(await proformaPdf(input, logo())), contentType: 'application/pdf' })
+        attachments.push({ filename: proformaPdfName(input, true), content: Buffer.from(await proformaPdf(input, logo(), { packingList: true })), contentType: 'application/pdf' })
       }
     } catch (e) {
       await record(false, attachments.map((a) => a.filename), (e as Error).message)

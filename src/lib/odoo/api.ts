@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSupabase } from '~/lib/supabase'
-import { createManualInvoice, makeOdooPdf, fetchInvoices, getInvoiceDetail, getInvoicePdf, getOdooMappingOptions, getOdooMove, getOdooMovePdf, getOdooStatus, invoiceAction, listOdooMoves, odooMoveAction, pushInvoices, testOdoo } from '~/server/odoo.functions'
+import { createManualInvoice, listOdooContacts, makeOdooPdf, fetchInvoices, getInvoiceDetail, getInvoicePdf, getOdooMappingOptions, getOdooMove, getOdooMovePdf, getOdooStatus, invoiceAction, listOdooMoves, odooMoveAction, pushInvoices, testOdoo } from '~/server/odoo.functions'
 import type { MappedField, MoveQuery } from '~/server/odoo/client'
 
 export interface Invoice {
@@ -165,3 +165,8 @@ export function useInvoiceFormData() {
 
 /** Has Odoo make its PDF of a confirmed invoice: ConsolFlora's (invoiceId) or any Odoo document (moveId). */
 export const makePdfInOdoo = (target: { invoiceId: string } | { moveId: number }) => makeOdooPdf({ data: target })
+
+/** Contacts in Odoo, 50 at a time. */
+export function useOdooContacts(q: { kind: 'all' | 'buyers' | 'growers'; search: string | null; offset: number }) {
+  return useQuery({ queryKey: ['odoo-contacts', q], queryFn: () => listOdooContacts({ data: q }), staleTime: 60_000 })
+}

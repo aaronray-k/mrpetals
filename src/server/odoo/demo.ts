@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib'
-import { MAPPED_FIELDS, lineLabel, type InvoicePayload, type LedgerLine, type LedgerQuery, type LedgerResult, type MoveQuery, type OdooAdapter, type OdooMove, type OdooMoveDetail, type OdooMoveSummary } from './client'
+import { MAPPED_FIELDS, lineLabel, type InvoicePayload, type LedgerLine, type LedgerQuery, type LedgerResult, type ContactQuery, type MoveQuery, type OdooAdapter, type OdooContact, type OdooMove, type OdooMoveDetail, type OdooMoveSummary } from './client'
 
 const TERMS = [
   { id: 1, name: 'Immediate Payment' },
@@ -153,6 +153,25 @@ async function demoPdf(d: OdooMoveDetail): Promise<string> {
   return Buffer.from(await doc.save()).toString('base64')
 }
 
+// Demo contacts: the demo buyers and growers, with their people and invoice addresses.
+const contact = (id: number, name: string, o: Partial<OdooContact> = {}): OdooContact => ({
+  id, name, company: null, is_company: false, type: 'contact', email: null, phone: null, job: null, ref: null, buyer: false, grower: false, ...o,
+})
+const DEMO_CONTACTS: OdooContact[] = [
+  contact(5001, 'Pacific Floral Japan GK', { is_company: true, ref: 'PFJ', email: 'orders@pfj.example', phone: '+81 3 5555 0101', buyer: true }),
+  contact(5002, 'Aiko Tanaka', { company: 'Pacific Floral Japan GK', email: 'aiko.tanaka@pfj.example', job: 'Buyer', buyer: true }),
+  contact(5003, 'PFJ Accounts Payable', { company: 'Pacific Floral Japan GK', type: 'invoice', email: 'accounts@pfj.example', buyer: true }),
+  contact(5011, 'Bloem Handel BV', { is_company: true, ref: 'BLM', email: 'inkoop@bloem.example', phone: '+31 297 555 010', buyer: true }),
+  contact(5012, 'Jan de Vries', { company: 'Bloem Handel BV', email: 'jan@bloem.example', job: 'Inkoper', buyer: true }),
+  contact(5013, 'Bloem Crediteuren', { company: 'Bloem Handel BV', type: 'invoice', email: 'facturen@bloem.example', buyer: true }),
+  contact(5021, 'Fontana', { is_company: true, ref: 'FONT', email: 'sales@fontana.example', grower: true }),
+  contact(5022, 'Fontana Accounts', { company: 'Fontana', type: 'invoice', email: 'accounts@fontana.example', grower: true }),
+  contact(5031, 'Kibo Roses Ltd', { is_company: true, ref: 'KIBO', email: 'sales@kibo.example', grower: true }),
+  contact(5032, 'Grace Wanjiku', { company: 'Kibo Roses Ltd', email: 'grace@kibo.example', job: 'Sales agent', grower: true }),
+  contact(5041, 'Naku Flowers', { is_company: true, ref: 'NAKU', email: 'sales@naku.example', grower: true }),
+  contact(5051, 'Oleria Growers', { is_company: true, ref: 'OLER', email: 'sales@oleria.example', grower: true }),
+]
+
 function demoMove(id: number): OdooMoveSummary {
   const m = demoMoves().find((x) => x.move_id === id)
   if (!m) throw new Error(`Odoo invoice ${id} no longer exists.`)
@@ -247,6 +266,17 @@ export function demoOdoo(nextNumber: (kind: InvoicePayload['kind']) => Promise<n
     },
     async ledger(q) {
       return demoLedger(q)
+    },
+    async contacts(q: ContactQuery) {
+      const needle = q.search?.toLowerCase()
+      const all = DEMO_CONTACTS.filter((c) => (q.kind === 'buyers' ? c.buyer : q.kind === 'growers' ? c.grower : true)).filter(
+        (c) => !needle || [c.name, c.email ?? '', c.company ?? ''].some((x) => x.toLowerCase().includes(needle)),
+      )
+      return { total: all.length, contacts: [...all].sort((a, b) => a.name.localeCompare(b.name)).slice(q.offset, q.offset + q.limit) }
+    },
+    async contactsOf(p) {
+      const company = DEMO_CONTACTS.find((c) => c.is_company && c.ref === p.code)
+      return company ? DEMO_CONTACTS.filter((c) => c === company || c.company === company.name) : []
     },
     async moves(q: MoveQuery) {
       const types = q.side === 'out' ? ['out_invoice', 'out_refund'] : ['in_invoice', 'in_refund']

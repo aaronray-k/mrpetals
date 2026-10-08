@@ -318,8 +318,8 @@ On a confirmed invoice, **Send by email** (Admin, Consolidator, Finance) opens t
 check or edit: a warm note greeting the buyer's contact by first name, the invoice number and amount, the
 proforma(s), the flight and MAWB, the due date, the invoice number as payment reference and the bank account for
 the invoice's currency, signed by the person sending ("Sales · Consolflora Limited"). Attached: **Odoo's invoice
-PDF** (made first if missing) and the **proforma PDF** of each order on it (the same layout and columns as the
-Excel proforma; each can also be downloaded from the dialog). It goes from the sales mailbox on **Email settings**,
+PDF** (made first if missing) and the **Proforma & Packing List** PDF of each order on it (the same layout and
+columns as the Excel proforma and packing list; each can also be downloaded from the dialog). It goes from the sales mailbox on **Email settings**,
 replies come back there, and each send is listed on the invoice (who, when, to whom, what was attached).
 
 Email settings (Admin): the Zoho mailbox (sender name and address, smtp.zoho.com, port 465, user), **Send email**
@@ -327,6 +327,21 @@ on or off, **Send a test email to me**, and **bank details**: ConsolFlora's one 
 code, branch, SWIFT) and the account number for each currency (KES, USD, EUR); an invoice email shows the account
 number for the invoice's currency. The mailbox password is
 `SMTP_PASSWORD` in the server environment, never in the app (for Zoho with two-factor sign-in, an app password).
+
+## Shipment documents and contacts
+
+**Shipment documents** (Admin, Consolidator, Finance; also **All documents** on a shipment): pick a shipment, or
+find it by its **MAWB** (with or without the dash), a **Proforma Invoice No.** (the order number, e.g.
+CFLPFJ0089), the shipment ref or an Odoo invoice number. Every document under it is listed buyer by buyer: each
+order's **Proforma & Packing List** (one PDF: the proforma, then the packing list) and the buyer's **Odoo
+invoice** (draft or confirmed) and credit notes; choosing one shows it on the side. The Odoo invoice carries the
+same MAWB, Proforma Invoice No. and flight in Odoo's own fields, so it can be found by them in Odoo too.
+
+**Contacts (Odoo)** lists Odoo's contacts, read live: buyers, growers and the people and invoice addresses under
+them, with emails and phones (edited in Odoo). An invoice email goes by default to the buyer's **invoice
+addresses** in Odoo (otherwise the company's email, otherwise ConsolFlora's contact email); the dialog lists all
+their Odoo contacts to add to To or Cc. Odoo customers are matched by the buyer's code (Odoo's reference); an Odoo
+customer id from the preview's demo Odoo is never used with the real Odoo.
 
 ## Payment terms
 

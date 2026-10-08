@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { MAPPED_FIELDS, moveDomain, odooClient, pdfDomain, type InvoicePayload } from './client'
+import { MAPPED_FIELDS, contactDomain, defaultRecipients, moveDomain, odooClient, pdfDomain, type InvoicePayload, type OdooContact } from './client'
 
 type Call = { service: string; method: string; args: unknown[] }
 
@@ -26,7 +26,13 @@ function fakeOdoo(opts: { existingMove?: number; currencyActive?: boolean; canIn
     else if (model === 'account.move' && method === 'read' && (args as number[][])[0]!.includes(70))
       result = [{ id: 70, move_type: 'in_invoice', journal_id: [2, 'Vendor Bills'] }, { id: 71, move_type: 'entry', journal_id: [5, 'Bank'] }]
     else if (model === 'account.journal' && method === 'read') result = [{ id: 2, type: 'purchase' }, { id: 5, type: 'bank' }]
-    else if (model === 'res.partner' && method === 'search') result = []
+    else if (model === 'res.partner' && method === 'search_read') {
+      // The id ConsolFlora kept is customer 55, whose reference is PFJ.
+      const d = (args as unknown[][])[0]!
+      const id = (d.find((x) => Array.isArray(x) && x[0] === 'id') as unknown[] | undefined)?.[2]
+      const ref = (d.find((x) => Array.isArray(x) && x[0] === 'ref') as unknown[] | undefined)?.[2]
+      result = id === 55 && ref === 'PFJ' ? [{ id: 55 }] : []
+    } else if (model === 'res.partner' && method === 'search') result = []
     else if (model === 'res.country' && method === 'search') result = [113]
     else if (model === 'res.partner' && method === 'create') result = 55
     else if (model === 'res.currency') result = [{ id: 1, active: opts.currencyActive ?? true }]
@@ -287,5 +293,31 @@ describe('Odoo client', () => {
 
   it("finds Odoo 17+'s invoice PDF, which is a field attachment", () => {
     expect(pdfDomain(89)).toEqual([['res_model', '=', 'account.move'], ['res_id', '=', 89], ['mimetype', '=', 'application/pdf'], '|', ['res_field', '=', false], ['res_field', '!=', false]])
+  })
+
+  it("a kept Odoo customer id is used only if it is still that buyer's; otherwise the buyer is found by code", async () => {
+    let calls = fakeOdoo({ state: 'draft' })
+    await client().push({ ...payload, partner: { ...payload.partner, odoo_partner_id: 55 } })
+    expect((calls.find((c) => c.args[3] === 'account.move' && c.args[4] === 'create')!.args[5] as Record<string, unknown>[])[0]!.partner_id).toBe(55)
+    // An id from the preview's demo Odoo (another company in the real Odoo): not used.
+    calls = fakeOdoo({ state: 'draft' })
+    await client().push({ ...payload, partner: { ...payload.partner, odoo_partner_id: 1234 } })
+    expect((calls.find((c) => c.args[3] === 'account.move' && c.args[4] === 'create')!.args[5] as Record<string, unknown>[])[0]!.partner_id).toBe(55)
+    expect(calls.some((c) => c.args[3] === 'res.partner' && c.args[4] === 'create')).toBe(true)
+  })
+
+  it('default recipients: invoice addresses, else the company email, else ConsolFlora\'s contact', () => {
+    const c = (o: Partial<OdooContact>): OdooContact => ({ id: 1, name: 'x', company: null, is_company: false, type: 'contact', email: null, phone: null, job: null, ref: null, buyer: true, grower: false, ...o })
+    const company = c({ is_company: true, email: 'orders@pfj.example' })
+    expect(defaultRecipients([company, c({ email: 'aiko@pfj.example' }), c({ type: 'invoice', email: 'accounts@pfj.example' })], 'x@y.z')).toEqual(['accounts@pfj.example'])
+    expect(defaultRecipients([company, c({ email: 'aiko@pfj.example' })], 'x@y.z')).toEqual(['orders@pfj.example'])
+    expect(defaultRecipients([c({ email: 'aiko@pfj.example' })], 'x@y.z')).toEqual(['x@y.z'])
+  })
+
+  it('contacts: buyers or growers (also people under them), searched by name, email or company', () => {
+    expect(contactDomain({ kind: 'growers', search: 'fontana' })).toEqual([
+      '|', ['supplier_rank', '>', 0], ['parent_id.supplier_rank', '>', 0],
+      '|', '|', ['name', 'ilike', 'fontana'], ['email', 'ilike', 'fontana'], ['parent_id.name', 'ilike', 'fontana'],
+    ])
   })
 })
