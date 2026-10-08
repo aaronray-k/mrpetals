@@ -218,9 +218,9 @@ export const pdfDomain = (id: number): unknown[] => [
  * sending switched off. Values are explicit: a wizard whose fields don't match is refused by Odoo, never run
  * with its defaults (which could email the buyer).
  */
-export const PDF_WIZARDS: { model: string; values: Record<string, unknown>; field: string }[] = [
-  { model: 'account.move.send.wizard', values: { sending_methods: [] }, field: 'sending_methods' }, // Odoo 18 and later
-  { model: 'account.move.send', values: { checkbox_send_mail: false, checkbox_download: false }, field: 'checkbox_send_mail' }, // Odoo 17
+export const PDF_WIZARDS: { model: string; values: (moveId: number) => Record<string, unknown>; field: string }[] = [
+  { model: 'account.move.send.wizard', values: (moveId) => ({ move_id: moveId, sending_methods: [] }), field: 'sending_methods' }, // Odoo 18 and later
+  { model: 'account.move.send', values: () => ({ checkbox_send_mail: false, checkbox_download: false }), field: 'checkbox_send_mail' }, // Odoo 17
 ]
 
 /** The invoice lines Odoo gets: a manual invoice's own lines, otherwise one line with the total. */
@@ -484,17 +484,19 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
       if (await has()) return { made: false, message: 'Odoo already has its PDF.' }
       if ((await state(id)) !== 'posted') throw new Error('Odoo makes the PDF once the invoice is confirmed.')
       const context = { active_model: 'account.move', active_ids: [id], active_id: id }
-      let last = ''
+      // Each way tried, with Odoo's own answer, so a refusal says which step and why.
+      const tried: string[] = []
       for (const w of PDF_WIZARDS) {
         try {
-          const wizard = (await kw(w.model, 'create', [w.values], { context })) as number
+          const wizard = (await kw(w.model, 'create', [w.values(id)], { context })) as number
           await kw(w.model, 'action_send_and_print', [[wizard]], { context })
-          if (await has()) return { made: true, message: "Odoo made its PDF." }
+          if (await has()) return { made: true, message: 'Odoo made its PDF.' }
+          tried.push(`${w.model}: ran, but no PDF was saved`)
         } catch (e) {
-          last = (e as Error).message
+          tried.push(`${w.model}: ${(e as Error).message}`)
         }
       }
-      throw new Error(`Odoo didn't make its PDF from ConsolFlora${last ? ` (${last})` : ''}. Press Print on the invoice in Odoo once; the PDF then shows here.`)
+      throw new Error(`Odoo didn't make its PDF from ConsolFlora (${tried.join(' | ')}). Press Print on the invoice in Odoo once; the PDF then shows here.`)
     },
     async contacts(q) {
       const domain = contactDomain(q)

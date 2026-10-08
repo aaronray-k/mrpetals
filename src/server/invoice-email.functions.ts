@@ -200,7 +200,11 @@ export const sendInvoiceEmail = createServerFn({ method: 'POST' })
         if (!odoo || !moveId) throw new Error(reason ?? 'Odoo is not connected.')
         let pdf = await odoo.movePdf(moveId)
         if (!pdf) {
-          await odoo.makePdf(moveId)
+          try {
+            await odoo.makePdf(moveId)
+          } catch (e) {
+            throw new Error(`${(e as Error).message} Or untick Odoo's invoice PDF to send the email without it.`)
+          }
           pdf = await odoo.movePdf(moveId)
         }
         if (!pdf) throw new Error("Odoo's invoice PDF isn't available. Make it on the invoice page first, or untick it.")

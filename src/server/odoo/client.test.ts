@@ -256,7 +256,7 @@ describe('Odoo client', () => {
     const calls = fakePdfOdoo({ version: 18 })
     await expect(client().makePdf(89)).resolves.toEqual({ made: true, message: 'Odoo made its PDF.' })
     expect(wizardCalls(calls)).toEqual([
-      ['account.move.send.wizard', 'create', [{ sending_methods: [] }]],
+      ['account.move.send.wizard', 'create', [{ move_id: 89, sending_methods: [] }]],
       ['account.move.send.wizard', 'action_send_and_print', [[5]]],
     ])
     expect(calls.find((c) => c.args[4] === 'create')!.args[6]).toEqual({ context: { active_model: 'account.move', active_ids: [89], active_id: 89 } })
