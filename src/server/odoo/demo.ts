@@ -1,4 +1,4 @@
-import { MAPPED_FIELDS, lineLabel, type InvoicePayload, type LedgerLine, type LedgerQuery, type LedgerResult, type OdooAdapter, type OdooMove, type OdooMoveDetail } from './client'
+import { MAPPED_FIELDS, lineLabel, type InvoicePayload, type LedgerLine, type LedgerQuery, type LedgerResult, type MoveQuery, type OdooAdapter, type OdooMove, type OdooMoveDetail, type OdooMoveSummary } from './client'
 
 const TERMS = [
   { id: 1, name: 'Immediate Payment' },
@@ -69,6 +69,55 @@ export function demoLedger(q: LedgerQuery, today = new Date()): LedgerResult {
   return { lines: lines.filter((l) => !q.from || l.date >= q.from), opening: [...opening.values()] }
 }
 
+// The demo's documents (for "All invoices in Odoo"): every bill, refund, invoice and credit note of the demo
+// ledger, with what is still due worked out from the payments (oldest first). Confirm and reset are kept in memory.
+const MOVE_TYPE: Partial<Record<LedgerLine['kind'], string>> = { bill: 'in_invoice', refund: 'in_refund', invoice: 'out_invoice', credit_note: 'out_refund' }
+const demoStates = new Map<number, string>()
+function demoMoves(today = new Date()): OdooMoveSummary[] {
+  const out: OdooMoveSummary[] = []
+  for (const side of ['supplier', 'buyer'] as const) {
+    const { lines } = demoLedger({ side, from: null, to: today.toISOString().slice(0, 10), partner: null, drafts: true }, today)
+    const open = new Map<string, OdooMoveSummary[]>()
+    for (const l of lines) {
+      const sign = side === 'supplier' ? -1 : 1
+      const v = sign * l.amount
+      const key = `${l.partner_id}|${l.currency}`
+      const queue = open.get(key) ?? []
+      open.set(key, queue)
+      const type = MOVE_TYPE[l.kind]
+      const doc: OdooMoveSummary | null = type
+        ? { move_id: 900000 + l.id, move_type: type, name: l.number, partner: l.partner, date: l.date, due_date: l.due_date, reference: l.reference, currency: l.currency, amount_total: Math.abs(l.amount), amount_due: 0, state: l.draft ? 'draft' : 'posted', payment_state: 'not_paid' }
+        : null
+      if (doc) out.push(doc)
+      if (v > 0 && doc && !l.draft) {
+        doc.amount_due = v
+        queue.push(doc)
+      } else if (v < 0) {
+        let c = -v
+        while (c > 0.004 && queue.length) {
+          const take = Math.min(c, queue[0]!.amount_due)
+          queue[0]!.amount_due = Math.round((queue[0]!.amount_due - take) * 100) / 100
+          c -= take
+          if (queue[0]!.amount_due <= 0) queue.shift()
+        }
+        if (doc) doc.payment_state = 'paid'
+      }
+    }
+  }
+  for (const m of out) {
+    m.state = demoStates.get(m.move_id) ?? m.state
+    if (m.state === 'posted' && m.name === '/') m.name = `${m.move_type.startsWith('in') ? 'BILL' : 'INV'}/${(m.date ?? '').slice(0, 4)}/D${m.move_id - 900000}`
+    if (m.move_type.endsWith('invoice')) m.payment_state = m.state !== 'posted' ? 'not_paid' : m.amount_due <= 0 ? 'paid' : m.amount_due < m.amount_total ? 'partial' : 'not_paid'
+    if (m.state === 'draft') m.amount_due = m.amount_total
+  }
+  return out
+}
+function demoMove(id: number): OdooMoveSummary {
+  const m = demoMoves().find((x) => x.move_id === id)
+  if (!m) throw new Error(`Odoo invoice ${id} no longer exists.`)
+  return m
+}
+
 /**
  * PREVIEW ONLY: a stand-in for Odoo, used when ODOO_SOURCE=demo. Invoices arrive as drafts with Odoo-style
  * fields; confirming gives them a number, and the demo buyer "pays" each a few minutes after it is confirmed.
@@ -91,7 +140,7 @@ export function demoOdoo(nextNumber: (kind: InvoicePayload['kind']) => Promise<n
       state: s,
       payment_state: paid ? 'paid' : 'not_paid',
       amount_due: paid ? 0 : p.amount,
-      due_date: s === 'posted' ? due(p, day(p.posted_at ?? new Date().toISOString())) : null,
+      due_date: s === 'posted' ? due(p, day(p.posted_at ?? new Date().toISOString())) : (p.due_date ?? null),
       url: `https://demo.odoo.example/web#id=${moveId(p)}&model=account.move&view_type=form`,
       source: 'demo',
     }
@@ -122,6 +171,7 @@ export function demoOdoo(nextNumber: (kind: InvoicePayload['kind']) => Promise<n
       const s = state(p, p.odoo_state ?? 'draft', p.odoo_name ?? '')
       return {
         ...s,
+        move_type: p.kind === 'invoice' ? 'out_invoice' : 'out_refund',
         due_date: s.due_date ?? null,
         partner: p.partner.name,
         company: 'ConsolFlora (demo)',
@@ -132,7 +182,9 @@ export function demoOdoo(nextNumber: (kind: InvoicePayload['kind']) => Promise<n
         amount_untaxed: p.amount,
         amount_tax: 0,
         amount_total: p.amount,
-        lines: [{ name: lineLabel(p), quantity: 1, price_unit: p.amount, subtotal: p.amount }],
+        lines: p.lines?.length
+          ? p.lines.map((l) => ({ ...l, subtotal: Math.round(l.quantity * l.price_unit * 100) / 100 }))
+          : [{ name: lineLabel(p), quantity: 1, price_unit: p.amount, subtotal: p.amount }],
         fields: MAPPED_FIELDS.filter((f) => p.field_map?.[f.key]).map((f) => ({ key: f.key, field: p.field_map![f.key]!, value: p[f.key] ?? null })),
         has_pdf: false,
       }
@@ -151,6 +203,46 @@ export function demoOdoo(nextNumber: (kind: InvoicePayload['kind']) => Promise<n
     },
     async ledger(q) {
       return demoLedger(q)
+    },
+    async moves(q: MoveQuery) {
+      const types = q.side === 'out' ? ['out_invoice', 'out_refund'] : ['in_invoice', 'in_refund']
+      const needle = q.search?.toLowerCase()
+      const all = demoMoves()
+        .filter((m) => types.includes(m.move_type))
+        .filter((m) => !q.partner || (m.partner ?? '').toLowerCase().includes(q.partner.toLowerCase()))
+        .filter((m) => (!q.from || (m.date ?? '') >= q.from) && (!q.to || (m.date ?? '') <= q.to))
+        .filter((m) => !needle || m.name.toLowerCase().includes(needle) || (m.reference ?? '').toLowerCase().includes(needle))
+        .filter((m) => q.state === 'all' || m.state === q.state)
+        .filter((m) => q.payment === 'all' || (q.payment === 'paid' ? m.payment_state === 'paid' : m.state === 'posted' && ['not_paid', 'partial'].includes(m.payment_state)))
+        .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || b.move_id - a.move_id)
+      const due = new Map<string, number>()
+      for (const m of all) if (m.state === 'posted' && m.amount_due > 0) due.set(m.currency, (due.get(m.currency) ?? 0) + m.amount_due)
+      return {
+        total: all.length,
+        moves: all.slice(q.offset, q.offset + q.limit),
+        due: [...due].map(([currency, amount]) => ({ currency, amount: Math.round(amount * 100) / 100 })).sort((a, b) => a.currency.localeCompare(b.currency)),
+      }
+    },
+    async moveDetail(id): Promise<OdooMoveDetail> {
+      const m = demoMove(id)
+      return {
+        move_id: id, move_type: m.move_type, name: m.state === 'draft' ? '/' : m.name, state: m.state, payment_state: m.payment_state, amount_due: m.amount_due,
+        url: `https://demo.odoo.example/web#id=${id}&model=account.move&view_type=form`, due_date: m.due_date, invoice_date: m.date, partner: m.partner,
+        company: 'ConsolFlora (demo)', currency: m.currency, reference: m.reference, payment_term: null,
+        amount_untaxed: m.amount_total, amount_tax: 0, amount_total: m.amount_total,
+        lines: [{ name: m.move_type.startsWith('in') ? 'Cut flowers (grower bill)' : 'Cut Flowers', quantity: 1, price_unit: m.amount_total, subtotal: m.amount_total }],
+        fields: [], has_pdf: false, source: 'demo',
+      }
+    },
+    async movePdf() {
+      return null
+    },
+    async moveAction(id, action) {
+      const m = demoMove(id)
+      if (action === 'reset' && m.payment_state === 'paid') throw new Error('This invoice is paid; Odoo can\'t reset it to draft.')
+      demoStates.set(id, action === 'confirm' ? 'posted' : 'draft')
+      const after = demoMove(id)
+      return { move_id: id, name: after.name, state: after.state, payment_state: after.payment_state, amount_due: after.amount_due, due_date: after.due_date, url: '', source: 'demo' }
     },
     async updateDraft(p) {
       if ((p.odoo_state ?? 'draft') !== 'draft') throw new Error('Only a draft can be changed. Reset it to draft first.')

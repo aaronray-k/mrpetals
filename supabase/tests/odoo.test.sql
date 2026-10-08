@@ -161,6 +161,29 @@ update odoo_settings set enabled = true;
 select pg_temp.check((select send_from from odoo_settings) between now() - interval '1 minute' and now(), 'and switching off and on again keeps it');
 set role authenticated;
 
+-- ---------------------------------------------------------------- Manual invoices
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000c';
+insert into t select 'M1', create_manual_invoice((select id from customers where customer_code = 'OB1'), 'invoice', 'USD', 'Boxes and sleeves, October',
+  '[{"name": "Sleeves", "quantity": 200, "price_unit": 0.15}, {"name": "Boxes", "quantity": 3, "price_unit": 12.5}]', 'MAN-123', 'CFLOB10009', 'KQ 100', '2026-11-20');
+select pg_temp.check((select amount || ':' || manual || ':' || status || ':' || (shipment_id is null) from invoices where id = pg_temp.id('M1')) = '67.50:true:pending:true',
+  'a manual invoice: total of its lines, waiting to go to Odoo, no shipment');
+select pg_temp.check((select invoice_payload(pg_temp.id('M1')) -> 'lines' -> 1 ->> 'name') = 'Boxes'
+  and (select invoice_payload(pg_temp.id('M1')) ->> 'mawb') = 'MAN-123' and (select invoice_payload(pg_temp.id('M1')) ->> 'proforma') = 'CFLOB10009'
+  and (select invoice_payload(pg_temp.id('M1')) ->> 'due_date') = '2026-11-20' and (select invoice_payload(pg_temp.id('M1')) -> 'payment_term_id') = 'null'::jsonb,
+  'Odoo gets its lines, MAWB, proforma, flight and chosen due date');
+select pg_temp.check_refused($$select create_manual_invoice((select id from customers where customer_code = 'OB1'), 'invoice', 'USD', 'x', '[{"name": "", "quantity": 1, "price_unit": 5}]')$$, 'Every line needs a description');
+select pg_temp.check_refused($$select create_manual_invoice((select id from customers where customer_code = 'OB1'), 'invoice', 'XYZ', 'x', '[{"name": "a", "quantity": 1, "price_unit": 5}]')$$, 'not on the currency list');
+select pg_temp.check_refused($$select create_manual_invoice((select id from customers where customer_code = 'OB1'), 'invoice', 'USD', 'x', '[{"name": "a", "quantity": 1, "price_unit": 0}]')$$, 'more than 0');
+select record_odoo_move_action(77, 'confirm', true, 'INV/2026/00077');
+reset role;
+select pg_temp.check((select message from odoo_sync_log where action = 'confirm' and invoice_id is null order by id desc limit 1) = 'INV/2026/00077 (Odoo #77)',
+  'confirming a document made in Odoo is logged');
+set role authenticated;
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-0000000000b1';
+select pg_temp.check_refused($$select create_manual_invoice((select customer_id from invoices limit 1), 'invoice', 'USD', 'x', '[{"name": "a", "quantity": 1, "price_unit": 5}]')$$, 'Only Admin, Consolidator and Finance');
+select pg_temp.check_refused($$select record_odoo_move_action(77, 'confirm', true, 'x')$$, 'Only Admin, Consolidator and Finance');
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000d';
+
 -- ---------------------------------------------------------------- Who sees what
 set request.jwt.claim.sub = 'c0000000-0000-0000-0000-0000000000b2';
 select pg_temp.check((select count(*) from invoices) = 1 and (select customer_id from invoices) = (select id from customers where customer_code = 'OB2'), 'a buyer sees only their own invoices');

@@ -1,5 +1,6 @@
 import { AlertTriangle, Ban, CheckCircle2, Clock, FilePen, Upload } from 'lucide-react'
 import { invoiceNumber, paymentLabel, type Invoice } from '~/lib/odoo/api'
+import type { OdooMoveSummary } from '~/server/odoo/client'
 import { Badge } from '~/components/ui/badge'
 
 /** Where an invoice stands, in words with an icon. */
@@ -52,4 +53,12 @@ export function InvoiceLines({ invoices, showBuyer = false }: { invoices: Invoic
       ))}
     </ul>
   )
+}
+
+/** Any Odoo invoice or bill: draft, cancelled, or its payment status. */
+export function MoveStatus({ m }: { m: Pick<OdooMoveSummary, 'state' | 'payment_state' | 'move_type'> }) {
+  if (m.state === 'draft') return <Badge variant="warning">Draft</Badge>
+  if (m.state === 'cancel') return <Badge>Cancelled</Badge>
+  const settled = ['paid', 'reversed', 'in_payment'].includes(m.payment_state)
+  return <Badge variant={settled ? 'success' : 'default'}>{m.move_type.endsWith('refund') && settled ? 'Applied' : paymentLabel(m.payment_state)}</Badge>
 }

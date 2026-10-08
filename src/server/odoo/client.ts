@@ -25,6 +25,8 @@ export interface InvoicePayload {
   payment_term_id?: number | null
   /** Set by ConsolFlora for terms like "15th of following month"; replaces any Odoo payment term on the invoice. */
   due_date?: string | null
+  /** A manual invoice's own lines; otherwise one line with the total. */
+  lines?: { name: string; quantity: number; price_unit: number }[] | null
   partner: { odoo_partner_id: number | null; name: string; code: string; email: string | null; country: string | null; city: string | null; street: string | null; vat: string | null }
 }
 export type MappedField = 'mawb' | 'proforma' | 'flight'
@@ -40,6 +42,8 @@ export interface OdooField {
 }
 /** One invoice as Odoo has it, for the live preview. */
 export interface OdooMoveDetail extends OdooMove {
+  /** out_invoice, out_refund, in_invoice, in_refund */
+  move_type: string
   partner: string | null
   company: string | null
   currency: string | null
@@ -96,6 +100,41 @@ export interface LedgerResult {
   opening: { partner_id: number; partner: string; currency: string; amount: number }[]
 }
 
+/** All invoices in Odoo: sent to buyers (invoices, credit notes) or received from growers (bills, refunds). */
+export type MoveSide = 'out' | 'in'
+export interface MoveQuery {
+  side: MoveSide
+  partner: string | null
+  from: string | null
+  to: string | null
+  /** Number or reference. */
+  search: string | null
+  state: 'all' | 'draft' | 'posted' | 'cancel'
+  payment: 'all' | 'unpaid' | 'paid'
+  offset: number
+  limit: number
+}
+export interface OdooMoveSummary {
+  move_id: number
+  move_type: string
+  name: string
+  partner: string | null
+  date: string | null
+  due_date: string | null
+  reference: string | null
+  currency: string
+  amount_total: number
+  amount_due: number
+  state: string
+  payment_state: string
+}
+export interface MoveList {
+  total: number
+  moves: OdooMoveSummary[]
+  /** What is still due on everything matching, per currency. */
+  due: { currency: string; amount: number }[]
+}
+
 export interface OdooAdapter {
   /** Checks the login, API access (Odoo Online: Custom plan), invoicing rights and the currencies given. */
   test(currencies: string[]): Promise<string>
@@ -112,6 +151,28 @@ export interface OdooAdapter {
   /** Writes ConsolFlora's details (reference, total, fields, payment terms) into a draft again. */
   updateDraft(p: InvoicePayload): Promise<OdooMove>
   ledger(q: LedgerQuery): Promise<LedgerResult>
+  moves(q: MoveQuery): Promise<MoveList>
+  moveDetail(moveId: number, fieldMap?: InvoicePayload['field_map']): Promise<OdooMoveDetail>
+  movePdf(moveId: number): Promise<{ name: string; base64: string } | null>
+  moveAction(moveId: number, action: 'confirm' | 'reset'): Promise<OdooMove>
+}
+
+/** The invoice lines Odoo gets: a manual invoice's own lines, otherwise one line with the total. */
+export function invoiceLines(p: InvoicePayload): unknown[] {
+  if (p.lines?.length) return p.lines.map((l) => [0, 0, { name: l.name, quantity: l.quantity, price_unit: l.price_unit }])
+  return [[0, 0, { name: lineLabel(p), quantity: 1, price_unit: p.amount }]]
+}
+export const MOVE_TYPES: Record<MoveSide, string[]> = { out: ['out_invoice', 'out_refund'], in: ['in_invoice', 'in_refund'] }
+export function moveDomain(q: MoveQuery): unknown[] {
+  const d: unknown[] = [['move_type', 'in', MOVE_TYPES[q.side]]]
+  if (q.partner) d.push(['partner_id', 'ilike', q.partner])
+  if (q.from) d.push(['date', '>=', q.from])
+  if (q.to) d.push(['date', '<=', q.to])
+  if (q.search) d.push('|', ['name', 'ilike', q.search], ['ref', 'ilike', q.search])
+  if (q.state !== 'all') d.push(['state', '=', q.state])
+  if (q.payment === 'unpaid') d.push(['state', '=', 'posted'], ['payment_state', 'in', ['not_paid', 'partial']])
+  if (q.payment === 'paid') d.push(['payment_state', 'in', ['paid', 'in_payment', 'reversed']])
+  return d
 }
 
 const KIND: Record<string, LedgerLine['kind']> = { in_invoice: 'bill', in_refund: 'refund', out_invoice: 'invoice', out_refund: 'credit_note' }
@@ -239,7 +300,7 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
           partner_id: partner,
           currency_id: await currencyId(p.currency),
           ref: p.reference,
-          invoice_line_ids: [[0, 0, { name: lineLabel(p), quantity: 1, price_unit: p.amount }]],
+          invoice_line_ids: invoiceLines(p),
           ...filledFields(p),
         },
       ])) as number
@@ -259,11 +320,13 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
       return (await kw('account.payment.term', 'search_read', [[]], { fields: ['name'], order: 'name' })) as { id: number; name: string }[]
     },
     async detail(p) {
-      const id = moveOf(p)
-      const mapped = MAPPED_FIELDS.filter((f) => p.field_map?.[f.key])
+      return this.moveDetail(moveOf(p), p.field_map)
+    },
+    async moveDetail(id, fieldMap) {
+      const mapped = MAPPED_FIELDS.filter((f) => fieldMap?.[f.key])
       const r = (await kw('account.move', 'read', [[id]], {
-        fields: ['name', 'state', 'payment_state', 'amount_residual', 'amount_untaxed', 'amount_tax', 'amount_total', 'invoice_date', 'invoice_date_due',
-          'partner_id', 'company_id', 'currency_id', 'ref', 'invoice_payment_term_id', ...mapped.map((f) => p.field_map![f.key]!)],
+        fields: ['name', 'move_type', 'state', 'payment_state', 'amount_residual', 'amount_untaxed', 'amount_tax', 'amount_total', 'invoice_date', 'invoice_date_due',
+          'partner_id', 'company_id', 'currency_id', 'ref', 'invoice_payment_term_id', ...mapped.map((f) => fieldMap![f.key]!)],
       })) as Record<string, unknown>[]
       const m = r[0]
       if (!m) throw new Error(`Odoo invoice ${id} no longer exists.`)
@@ -272,30 +335,59 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
       })) as { name: string | false; quantity: number; price_unit: number; price_subtotal: number }[]
       const pdfs = (await kw('ir.attachment', 'search', [[['res_model', '=', 'account.move'], ['res_id', '=', id], ['mimetype', '=', 'application/pdf']]], { limit: 1 })) as number[]
       return {
-        move_id: id, name: String(m.name), state: String(m.state), payment_state: String(m.payment_state), amount_due: Number(m.amount_residual), url: link(id),
+        move_id: id, move_type: String(m.move_type), name: String(m.name), state: String(m.state), payment_state: String(m.payment_state), amount_due: Number(m.amount_residual), url: link(id),
         due_date: str(m.invoice_date_due), invoice_date: str(m.invoice_date), partner: many2one(m.partner_id), company: many2one(m.company_id), currency: many2one(m.currency_id),
         reference: str(m.ref), payment_term: many2one(m.invoice_payment_term_id),
         amount_untaxed: Number(m.amount_untaxed), amount_tax: Number(m.amount_tax), amount_total: Number(m.amount_total),
         lines: lines.map((l) => ({ name: l.name || '', quantity: l.quantity, price_unit: l.price_unit, subtotal: l.price_subtotal })),
-        fields: mapped.map((f) => ({ key: f.key, field: p.field_map![f.key]!, value: str(m[p.field_map![f.key]!]) })),
+        fields: mapped.map((f) => ({ key: f.key, field: fieldMap![f.key]!, value: str(m[fieldMap![f.key]!]) })),
         has_pdf: !!pdfs[0],
       }
     },
-    async pdf(p) {
-      const r = (await kw('ir.attachment', 'search_read', [[['res_model', '=', 'account.move'], ['res_id', '=', moveOf(p)], ['mimetype', '=', 'application/pdf']]], {
+    async moves(q) {
+      const domain = moveDomain(q)
+      const [total, rows, due] = await Promise.all([
+        kw('account.move', 'search_count', [domain]) as Promise<number>,
+        kw('account.move', 'search_read', [domain], {
+          fields: ['name', 'move_type', 'partner_id', 'invoice_date', 'date', 'invoice_date_due', 'ref', 'currency_id', 'amount_total', 'amount_residual', 'state', 'payment_state'],
+          order: 'date desc, id desc',
+          offset: q.offset,
+          limit: q.limit,
+        }) as Promise<Record<string, unknown>[]>,
+        kw('account.move', 'search_read', [[...domain, ['state', '=', 'posted'], ['amount_residual', '>', 0]]], { fields: ['currency_id', 'amount_residual'] }) as Promise<{ currency_id: [number, string]; amount_residual: number }[]>,
+      ])
+      const sums = new Map<string, number>()
+      for (const d of due) sums.set(d.currency_id[1], (sums.get(d.currency_id[1]) ?? 0) + d.amount_residual)
+      return {
+        total,
+        moves: rows.map((m) => ({
+          move_id: Number(m.id), move_type: String(m.move_type), name: String(m.name), partner: many2one(m.partner_id), date: str(m.invoice_date) ?? str(m.date),
+          due_date: str(m.invoice_date_due), reference: str(m.ref), currency: many2one(m.currency_id) ?? '', amount_total: Number(m.amount_total),
+          amount_due: Number(m.amount_residual), state: String(m.state), payment_state: String(m.payment_state),
+        })),
+        due: [...sums].map(([currency, amount]) => ({ currency, amount: Math.round(amount * 100) / 100 })).sort((a, b) => a.currency.localeCompare(b.currency)),
+      }
+    },
+    async movePdf(id) {
+      const r = (await kw('ir.attachment', 'search_read', [[['res_model', '=', 'account.move'], ['res_id', '=', id], ['mimetype', '=', 'application/pdf']]], {
         fields: ['name', 'datas'], order: 'id desc', limit: 1,
       })) as { name: string; datas: string }[]
       return r[0] ? { name: r[0].name, base64: r[0].datas } : null
     },
-    async confirm(p) {
-      const id = moveOf(p)
-      if ((await state(id)) !== 'posted') await kw('account.move', 'action_post', [[id]])
+    async moveAction(id, action) {
+      const now = await state(id)
+      if (action === 'confirm' && now !== 'posted') await kw('account.move', 'action_post', [[id]])
+      if (action === 'reset' && now !== 'draft') await kw('account.move', 'button_draft', [[id]])
       return read(id)
     },
+    async pdf(p) {
+      return this.movePdf(moveOf(p))
+    },
+    async confirm(p) {
+      return this.moveAction(moveOf(p), 'confirm')
+    },
     async resetToDraft(p) {
-      const id = moveOf(p)
-      if ((await state(id)) !== 'draft') await kw('account.move', 'button_draft', [[id]])
-      return read(id)
+      return this.moveAction(moveOf(p), 'reset')
     },
     async ledger(q) {
       const base: unknown[] = [
@@ -348,7 +440,7 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
       const id = moveOf(p)
       if ((await state(id)) !== 'draft') throw new Error('Only a draft can be changed. Reset it to draft first.')
       const lines = (await kw('account.move.line', 'search', [[['move_id', '=', id], ['display_type', '=', 'product']]])) as number[]
-      const line = lines.length === 1 ? [[1, lines[0], { name: lineLabel(p), quantity: 1, price_unit: p.amount }]] : [...lines.map((l) => [2, l]), [0, 0, { name: lineLabel(p), quantity: 1, price_unit: p.amount }]]
+      const line = lines.length === 1 && !p.lines?.length ? [[1, lines[0], { name: lineLabel(p), quantity: 1, price_unit: p.amount }]] : [...lines.map((l) => [2, l]), ...invoiceLines(p)]
       await kw('account.move', 'write', [[id], { ref: p.reference, invoice_line_ids: line, ...filledFields(p) }])
       return read(id)
     },

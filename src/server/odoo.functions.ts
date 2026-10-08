@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { authMiddleware, requireRoles, type AuthContext } from './auth'
-import { MAPPED_FIELDS, odooClient, type InvoicePayload, type LedgerResult, type OdooAdapter, type OdooField } from './odoo/client'
+import { MAPPED_FIELDS, odooClient, type InvoicePayload, type LedgerResult, type MoveList, type OdooAdapter, type OdooField, type OdooMoveDetail } from './odoo/client'
 import { demoOdoo } from './odoo/demo'
 
 /**
@@ -85,21 +85,28 @@ export const pushInvoices = createServerFn({ method: 'POST' })
     if (a.source === 'api' && a.sendFrom) q = q.gte('created_at', a.sendFrom)
     const { data: rows, error } = await q
     if (error) throw new Error(error.message)
-    let pushed = 0
-    let failed = 0
-    for (const r of rows ?? []) {
-      try {
-        const move = await a.odoo.push(await payload(context, r.id))
-        const { error: e } = await context.supabase.rpc('record_odoo_push', { p_invoice_id: r.id, p_ok: true, p_result: { ...move, source: a.source } })
-        if (e) throw new Error(e.message)
-        pushed++
-      } catch (e) {
-        failed++
-        await context.supabase.rpc('record_odoo_push', { p_invoice_id: r.id, p_ok: false, p_result: {}, p_error: (e as Error).message })
-      }
-    }
-    return { pushed, failed, skipped: null }
+    return { ...(await pushRows(context, a.odoo, a.source, (rows ?? []).map((r) => r.id))), skipped: null }
   })
+
+/** Sends invoices to Odoo one by one and records each result; failures are recorded, not thrown. */
+async function pushRows(ctx: AuthContext, odoo: OdooAdapter, source: OdooSource, ids: string[]) {
+  let pushed = 0
+  let failed = 0
+  let lastError: string | null = null
+  for (const id of ids) {
+    try {
+      const move = await odoo.push(await payload(ctx, id))
+      const { error: e } = await ctx.supabase.rpc('record_odoo_push', { p_invoice_id: id, p_ok: true, p_result: { ...move, source } })
+      if (e) throw new Error(e.message)
+      pushed++
+    } catch (e) {
+      failed++
+      lastError = (e as Error).message
+      await ctx.supabase.rpc('record_odoo_push', { p_invoice_id: id, p_ok: false, p_result: {}, p_error: lastError })
+    }
+  }
+  return { pushed, failed, lastError }
+}
 
 /** Fetches Odoo's state for every pushed invoice that isn't settled yet. */
 export const fetchInvoices = createServerFn({ method: 'POST' })
@@ -235,4 +242,125 @@ export const getLedger = createServerFn({ method: 'GET' })
     } catch (e) {
       return { source: a.source, error: (e as Error).message, ledger: null }
     }
+  })
+
+// ---------------------------------------------------------------------------------------------------------
+// All invoices in Odoo (Admin, Consolidator, Finance): everything sent to buyers or received from growers,
+// including documents made in Odoo itself. Reading and confirming work while sending invoices is off.
+// ---------------------------------------------------------------------------------------------------------
+const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+
+/** Odoo documents ConsolFlora made itself, by Odoo id, so they open on ConsolFlora's invoice page. */
+async function ourInvoices(ctx: AuthContext, source: OdooSource, moveIds: number[]) {
+  if (!moveIds.length) return new Map<number, string>()
+  const { data } = await ctx.supabase.from('invoices').select('id, odoo_move_id, odoo_source').in('odoo_move_id', moveIds).eq('status', 'pushed')
+  const real = source !== 'demo'
+  return new Map((data ?? []).filter((i) => (i.odoo_source === 'demo') !== real).map((i) => [i.odoo_move_id as number, i.id as string]))
+}
+
+export const listOdooMoves = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .validator(
+    z.object({
+      side: z.enum(['out', 'in']),
+      partner: z.string().trim().max(100).nullable(),
+      from: date.nullable(),
+      to: date.nullable(),
+      search: z.string().trim().max(100).nullable(),
+      state: z.enum(['all', 'draft', 'posted', 'cancel']),
+      payment: z.enum(['all', 'unpaid', 'paid']),
+      offset: z.number().int().min(0),
+    }),
+  )
+  .handler(async ({ data, context }): Promise<{ source: OdooSource; error: string | null; list: (MoveList & { ours: Record<number, string> }) | null }> => {
+    requireRoles(context, [...ROLES])
+    const a = await adapter(context, { forTest: true })
+    if (!a.odoo) return { source: a.source, error: a.reason ?? 'Odoo is not connected.', list: null }
+    const source: OdooSource = a.source === 'none' ? 'api' : a.source
+    try {
+      const list = await a.odoo.moves({ ...data, partner: data.partner || null, search: data.search || null, limit: 50 })
+      const ours = await ourInvoices(context, source, list.moves.map((m) => m.move_id))
+      return { source, error: null, list: { ...list, ours: Object.fromEntries(ours) } }
+    } catch (e) {
+      return { source, error: (e as Error).message, list: null }
+    }
+  })
+
+export const getOdooMove = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .validator(z.object({ id: z.number().int().positive() }))
+  .handler(async ({ data, context }): Promise<{ source: OdooSource; error: string | null; detail: OdooMoveDetail | null; invoiceId: string | null }> => {
+    requireRoles(context, [...ROLES])
+    const a = await adapter(context, { forTest: true })
+    if (!a.odoo) return { source: a.source, error: a.reason ?? 'Odoo is not connected.', detail: null, invoiceId: null }
+    const source: OdooSource = a.source === 'none' ? 'api' : a.source
+    try {
+      const { data: st } = await context.supabase.from('odoo_settings').select('field_map').maybeSingle()
+      const detail = await a.odoo.moveDetail(data.id, (st?.field_map ?? {}) as InvoicePayload['field_map'])
+      const invoiceId = (await ourInvoices(context, source, [data.id])).get(data.id) ?? null
+      return { source, error: null, detail, invoiceId }
+    } catch (e) {
+      return { source, error: (e as Error).message, detail: null, invoiceId: null }
+    }
+  })
+
+export const getOdooMovePdf = createServerFn({ method: 'GET' })
+  .middleware([authMiddleware])
+  .validator(z.object({ id: z.number().int().positive() }))
+  .handler(async ({ data, context }) => {
+    requireRoles(context, [...ROLES])
+    const a = await adapter(context, { forTest: true })
+    return a.odoo ? a.odoo.movePdf(data.id) : null
+  })
+
+/** Confirm or reset to draft any Odoo invoice or bill. One ConsolFlora made goes through its own record, so the buyer is told. */
+export const odooMoveAction = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(z.object({ id: z.number().int().positive(), action: z.enum(['confirm', 'reset']) }))
+  .handler(async ({ data, context }) => {
+    requireRoles(context, [...ROLES])
+    const a = await adapter(context, { forTest: true })
+    if (!a.odoo) throw new Error(a.reason ?? 'Odoo is not connected.')
+    const invoiceId = (await ourInvoices(context, a.source === 'none' ? 'api' : a.source, [data.id])).get(data.id)
+    try {
+      const move = await a.odoo.moveAction(data.id, data.action)
+      if (invoiceId) await context.supabase.rpc('record_odoo_action', { p_invoice_id: invoiceId, p_action: data.action, p_ok: true, p_result: move })
+      else await context.supabase.rpc('record_odoo_move_action', { p_move_id: data.id, p_action: data.action, p_ok: true, p_message: move.name })
+      return { ok: true as const, move }
+    } catch (e) {
+      const message = (e as Error).message
+      if (invoiceId) await context.supabase.rpc('record_odoo_action', { p_invoice_id: invoiceId, p_action: data.action, p_ok: false, p_result: {}, p_error: message })
+      else await context.supabase.rpc('record_odoo_move_action', { p_move_id: data.id, p_action: data.action, p_ok: false, p_message: message })
+      return { ok: false as const, message }
+    }
+  })
+
+/** A manual invoice or credit note: saved in ConsolFlora, then sent to Odoo as a draft (if sending is on). */
+export const createManualInvoice = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .validator(
+    z.object({
+      customerId: z.string().uuid(),
+      kind: z.enum(['invoice', 'credit_note']),
+      currency: z.string().length(3),
+      reference: z.string().trim().min(1).max(200),
+      lines: z.array(z.object({ name: z.string().trim().min(1).max(500), quantity: z.number().positive(), price_unit: z.number().min(0) })).min(1).max(50),
+      mawb: z.string().trim().max(40).nullable(),
+      proforma: z.string().trim().max(500).nullable(),
+      flight: z.string().trim().max(40).nullable(),
+      dueDate: date.nullable(),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    requireRoles(context, [...ROLES])
+    const { data: id, error } = await context.supabase.rpc('create_manual_invoice', {
+      p_customer_id: data.customerId, p_kind: data.kind, p_currency: data.currency, p_reference: data.reference, p_lines: data.lines,
+      p_mawb: data.mawb, p_proforma: data.proforma, p_flight: data.flight, p_due_date: data.dueDate,
+    })
+    if (error) throw new Error(error.message)
+    const invoiceId = id as string
+    const a = await adapter(context)
+    if (!a.odoo) return { invoiceId, pushed: false, message: `Saved, not sent to Odoo yet: ${a.reason}` }
+    const r = await pushRows(context, a.odoo, a.source, [invoiceId])
+    return { invoiceId, pushed: r.pushed === 1, message: r.pushed ? null : `Saved, but Odoo didn't take it: ${r.lastError}` }
   })

@@ -263,6 +263,11 @@ Provided by migration `…018_odoo.sql`; the Odoo calls are in `src/server/odoo/
 `invoice_payload()` sends it as `due_date` for invoices (from the latest order's placed date), and then no
 `payment_term_id`. New farms default to that term (column default and a trigger for empty imports).
 
+Manual invoices (`…022_manual_invoices.sql`): `invoices.manual`, `lines`, `mawb`, `proforma`, `flight`, `due_date`,
+`created_by`; `create_manual_invoice()` (Admin, Consolidator, Finance) checks the buyer, currency and lines and
+saves the total; `invoice_payload()` sends the lines and these fields. Documents made in Odoo itself are read live
+(`listOdooMoves`, `getOdooMove`); confirming or resetting one is logged by `record_odoo_move_action()`.
+
 Statements of account need no tables: `getLedger` (Admin and Finance, `src/server/odoo.functions.ts`) reads
 Odoo's `account.move.line` on payable (suppliers) or receivable (buyers) accounts, posted (and optionally draft),
 plus the sum of earlier lines per partner and currency for the balance brought forward. The statement, overdue

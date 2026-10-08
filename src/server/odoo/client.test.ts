@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { MAPPED_FIELDS, odooClient, type InvoicePayload } from './client'
+import { MAPPED_FIELDS, moveDomain, odooClient, type InvoicePayload } from './client'
 
 type Call = { service: string; method: string; args: unknown[] }
 
@@ -193,5 +193,25 @@ describe('Odoo client', () => {
     await client().push({ ...mapped, due_date: '2026-11-15' })
     const values = (calls.find((c) => c.args[3] === 'account.move' && c.args[4] === 'create')!.args[5] as Record<string, unknown>[])[0]!
     expect(values).toMatchObject({ invoice_date_due: '2026-11-15', invoice_payment_term_id: false })
+  })
+
+  it('a manual invoice sends its own lines', async () => {
+    const calls = fakeOdoo({ state: 'draft' })
+    await client().push({ ...payload, lines: [{ name: 'Sleeves', quantity: 200, price_unit: 0.15 }, { name: 'Boxes', quantity: 3, price_unit: 12.5 }] })
+    const values = (calls.find((c) => c.args[3] === 'account.move' && c.args[4] === 'create')!.args[5] as Record<string, unknown>[])[0]!
+    expect(values.invoice_line_ids).toEqual([[0, 0, { name: 'Sleeves', quantity: 200, price_unit: 0.15 }], [0, 0, { name: 'Boxes', quantity: 3, price_unit: 12.5 }]])
+  })
+
+  it('lists Odoo documents by side, name, dates, number or reference, status and payment', () => {
+    expect(moveDomain({ side: 'in', partner: 'fontana', from: '2026-01-01', to: '2026-10-08', search: 'FON-12', state: 'posted', payment: 'unpaid', offset: 0, limit: 50 })).toEqual([
+      ['move_type', 'in', ['in_invoice', 'in_refund']],
+      ['partner_id', 'ilike', 'fontana'],
+      ['date', '>=', '2026-01-01'],
+      ['date', '<=', '2026-10-08'],
+      '|', ['name', 'ilike', 'FON-12'], ['ref', 'ilike', 'FON-12'],
+      ['state', '=', 'posted'],
+      ['state', '=', 'posted'], ['payment_state', 'in', ['not_paid', 'partial']],
+    ])
+    expect(moveDomain({ side: 'out', partner: null, from: null, to: null, search: null, state: 'all', payment: 'all', offset: 0, limit: 50 })).toEqual([['move_type', 'in', ['out_invoice', 'out_refund']]])
   })
 })

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSupabase } from '~/lib/supabase'
-import { fetchInvoices, getInvoiceDetail, getInvoicePdf, getOdooMappingOptions, getOdooStatus, invoiceAction, pushInvoices, testOdoo } from '~/server/odoo.functions'
-import type { MappedField } from '~/server/odoo/client'
+import { createManualInvoice, fetchInvoices, getInvoiceDetail, getInvoicePdf, getOdooMappingOptions, getOdooMove, getOdooMovePdf, getOdooStatus, invoiceAction, listOdooMoves, odooMoveAction, pushInvoices, testOdoo } from '~/server/odoo.functions'
+import type { MappedField, MoveQuery } from '~/server/odoo/client'
 
 export interface Invoice {
   id: string
@@ -27,6 +27,7 @@ export interface Invoice {
   odoo_source: 'demo' | 'api' | null
   posted_at: string | null
   odoo_due_date: string | null
+  manual: boolean
   customers: { company_name: string; customer_code: string } | null
 }
 
@@ -117,3 +118,47 @@ export const testOdooConnection = () => testOdoo()
 
 const PAYMENT: Record<string, string> = { not_paid: 'Not paid', in_payment: 'Payment in progress', partial: 'Partly paid', paid: 'Paid', reversed: 'Reversed' }
 export const paymentLabel = (s: string | null) => (s ? (PAYMENT[s] ?? s) : '—')
+
+/** All invoices in Odoo (sent to buyers or received from growers), 50 at a time. */
+export type MovesQuery = Omit<MoveQuery, 'limit'>
+export function useOdooMoves(q: MovesQuery) {
+  return useQuery({ queryKey: ['odoo-moves', q], queryFn: () => listOdooMoves({ data: q }), staleTime: 30_000 })
+}
+export function useOdooMove(id: number) {
+  return useQuery({ queryKey: ['odoo-move', id], queryFn: () => getOdooMove({ data: { id } }), staleTime: 30_000 })
+}
+export const odooMovePdf = (id: number) => getOdooMovePdf({ data: { id } })
+export const runOdooMoveAction = (id: number, action: 'confirm' | 'reset') => odooMoveAction({ data: { id, action } })
+
+export interface ManualInvoiceInput {
+  customerId: string
+  kind: 'invoice' | 'credit_note'
+  currency: string
+  reference: string
+  lines: { name: string; quantity: number; price_unit: number }[]
+  mawb: string | null
+  proforma: string | null
+  flight: string | null
+  dueDate: string | null
+}
+export const createInvoice = (data: ManualInvoiceInput) => createManualInvoice({ data })
+
+/** Active buyers and the currency list, for the manual invoice form. */
+export function useInvoiceFormData() {
+  return useQuery({
+    queryKey: ['invoice-form-data'],
+    queryFn: async () => {
+      const sb = getSupabase()
+      const [c, l] = await Promise.all([
+        sb.from('customers').select('id, customer_code, company_name, currency, payment_terms').eq('active', true).order('company_name'),
+        sb.from('lookup_values').select('value').eq('list_name', 'Currency').eq('active', true).order('sort_order'),
+      ])
+      if (c.error) throw new Error(c.error.message)
+      if (l.error) throw new Error(l.error.message)
+      return {
+        buyers: c.data as { id: string; customer_code: string; company_name: string; currency: string; payment_terms: string }[],
+        currencies: (l.data as { value: string }[]).map((x) => x.value),
+      }
+    },
+  })
+}

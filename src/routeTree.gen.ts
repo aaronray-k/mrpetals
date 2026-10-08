@@ -35,6 +35,7 @@ import { Route as AppFarmClaimsRouteImport } from './routes/_app/farm/claims'
 import { Route as AppFarmOrdersRouteImport } from './routes/_app/farm/orders'
 import { Route as AppInvoicesIndexRouteImport } from './routes/_app/invoices/index'
 import { Route as AppInvoicesInvoiceIdRouteImport } from './routes/_app/invoices/$invoiceId'
+import { Route as AppInvoicesNewRouteImport } from './routes/_app/invoices/new'
 import { Route as AppLabelsIndexRouteImport } from './routes/_app/labels/index'
 import { Route as AppLabelsTemplateIdRouteImport } from './routes/_app/labels/$templateId'
 import { Route as AppMyClaimsIndexRouteImport } from './routes/_app/my-claims/index'
@@ -42,6 +43,8 @@ import { Route as AppMyClaimsClaimIdRouteImport } from './routes/_app/my-claims/
 import { Route as AppMyClaimsNewRouteImport } from './routes/_app/my-claims/new'
 import { Route as AppMyOrdersIndexRouteImport } from './routes/_app/my-orders/index'
 import { Route as AppMyOrdersOrderIdRouteImport } from './routes/_app/my-orders/$orderId'
+import { Route as AppOdooInvoicesIndexRouteImport } from './routes/_app/odoo-invoices/index'
+import { Route as AppOdooInvoicesMoveIdRouteImport } from './routes/_app/odoo-invoices/$moveId'
 import { Route as AppOrdersIndexRouteImport } from './routes/_app/orders/index'
 import { Route as AppOrdersOrderIdRouteImport } from './routes/_app/orders/$orderId'
 import { Route as AppOrdersNewRouteImport } from './routes/_app/orders/new'
@@ -183,6 +186,11 @@ const AppInvoicesInvoiceIdRoute = AppInvoicesInvoiceIdRouteImport.update({
   path: '/invoices/$invoiceId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppInvoicesNewRoute = AppInvoicesNewRouteImport.update({
+  id: '/invoices/new',
+  path: '/invoices/new',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLabelsIndexRoute = AppLabelsIndexRouteImport.update({
   id: '/labels/',
   path: '/labels/',
@@ -216,6 +224,16 @@ const AppMyOrdersIndexRoute = AppMyOrdersIndexRouteImport.update({
 const AppMyOrdersOrderIdRoute = AppMyOrdersOrderIdRouteImport.update({
   id: '/my-orders/$orderId',
   path: '/my-orders/$orderId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOdooInvoicesIndexRoute = AppOdooInvoicesIndexRouteImport.update({
+  id: '/odoo-invoices/',
+  path: '/odoo-invoices/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOdooInvoicesMoveIdRoute = AppOdooInvoicesMoveIdRouteImport.update({
+  id: '/odoo-invoices/$moveId',
+  path: '/odoo-invoices/$moveId',
   getParentRoute: () => AppRoute,
 } as any)
 const AppOrdersIndexRoute = AppOrdersIndexRouteImport.update({
@@ -298,10 +316,12 @@ export interface FileRoutesByFullPath {
   '/farm/claims': typeof AppFarmClaimsRoute
   '/farm/orders': typeof AppFarmOrdersRoute
   '/invoices/$invoiceId': typeof AppInvoicesInvoiceIdRoute
+  '/invoices/new': typeof AppInvoicesNewRoute
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
   '/my-claims/$claimId': typeof AppMyClaimsClaimIdRoute
   '/my-claims/new': typeof AppMyClaimsNewRoute
   '/my-orders/$orderId': typeof AppMyOrdersOrderIdRoute
+  '/odoo-invoices/$moveId': typeof AppOdooInvoicesMoveIdRoute
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/orders/new': typeof AppOrdersNewRoute
   '/qc/scan': typeof AppQcScanRoute
@@ -315,6 +335,7 @@ export interface FileRoutesByFullPath {
   '/labels/': typeof AppLabelsIndexRoute
   '/my-claims/': typeof AppMyClaimsIndexRoute
   '/my-orders/': typeof AppMyOrdersIndexRoute
+  '/odoo-invoices/': typeof AppOdooInvoicesIndexRoute
   '/orders/': typeof AppOrdersIndexRoute
   '/shipments/': typeof AppShipmentsIndexRoute
   '/shop/': typeof AppShopIndexRoute
@@ -343,10 +364,12 @@ export interface FileRoutesByTo {
   '/farm/claims': typeof AppFarmClaimsRoute
   '/farm/orders': typeof AppFarmOrdersRoute
   '/invoices/$invoiceId': typeof AppInvoicesInvoiceIdRoute
+  '/invoices/new': typeof AppInvoicesNewRoute
   '/labels/$templateId': typeof AppLabelsTemplateIdRoute
   '/my-claims/$claimId': typeof AppMyClaimsClaimIdRoute
   '/my-claims/new': typeof AppMyClaimsNewRoute
   '/my-orders/$orderId': typeof AppMyOrdersOrderIdRoute
+  '/odoo-invoices/$moveId': typeof AppOdooInvoicesMoveIdRoute
   '/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/orders/new': typeof AppOrdersNewRoute
   '/qc/scan': typeof AppQcScanRoute
@@ -360,6 +383,7 @@ export interface FileRoutesByTo {
   '/labels': typeof AppLabelsIndexRoute
   '/my-claims': typeof AppMyClaimsIndexRoute
   '/my-orders': typeof AppMyOrdersIndexRoute
+  '/odoo-invoices': typeof AppOdooInvoicesIndexRoute
   '/orders': typeof AppOrdersIndexRoute
   '/shipments': typeof AppShipmentsIndexRoute
   '/shop': typeof AppShopIndexRoute
@@ -390,10 +414,12 @@ export interface FileRoutesById {
   '/_app/farm/claims': typeof AppFarmClaimsRoute
   '/_app/farm/orders': typeof AppFarmOrdersRoute
   '/_app/invoices/$invoiceId': typeof AppInvoicesInvoiceIdRoute
+  '/_app/invoices/new': typeof AppInvoicesNewRoute
   '/_app/labels/$templateId': typeof AppLabelsTemplateIdRoute
   '/_app/my-claims/$claimId': typeof AppMyClaimsClaimIdRoute
   '/_app/my-claims/new': typeof AppMyClaimsNewRoute
   '/_app/my-orders/$orderId': typeof AppMyOrdersOrderIdRoute
+  '/_app/odoo-invoices/$moveId': typeof AppOdooInvoicesMoveIdRoute
   '/_app/orders/$orderId': typeof AppOrdersOrderIdRoute
   '/_app/orders/new': typeof AppOrdersNewRoute
   '/_app/qc/scan': typeof AppQcScanRoute
@@ -407,6 +433,7 @@ export interface FileRoutesById {
   '/_app/labels/': typeof AppLabelsIndexRoute
   '/_app/my-claims/': typeof AppMyClaimsIndexRoute
   '/_app/my-orders/': typeof AppMyOrdersIndexRoute
+  '/_app/odoo-invoices/': typeof AppOdooInvoicesIndexRoute
   '/_app/orders/': typeof AppOrdersIndexRoute
   '/_app/shipments/': typeof AppShipmentsIndexRoute
   '/_app/shop/': typeof AppShopIndexRoute
@@ -437,10 +464,12 @@ export interface FileRouteTypes {
     | '/farm/claims'
     | '/farm/orders'
     | '/invoices/$invoiceId'
+    | '/invoices/new'
     | '/labels/$templateId'
     | '/my-claims/$claimId'
     | '/my-claims/new'
     | '/my-orders/$orderId'
+    | '/odoo-invoices/$moveId'
     | '/orders/$orderId'
     | '/orders/new'
     | '/qc/scan'
@@ -454,6 +483,7 @@ export interface FileRouteTypes {
     | '/labels/'
     | '/my-claims/'
     | '/my-orders/'
+    | '/odoo-invoices/'
     | '/orders/'
     | '/shipments/'
     | '/shop/'
@@ -482,10 +512,12 @@ export interface FileRouteTypes {
     | '/farm/claims'
     | '/farm/orders'
     | '/invoices/$invoiceId'
+    | '/invoices/new'
     | '/labels/$templateId'
     | '/my-claims/$claimId'
     | '/my-claims/new'
     | '/my-orders/$orderId'
+    | '/odoo-invoices/$moveId'
     | '/orders/$orderId'
     | '/orders/new'
     | '/qc/scan'
@@ -499,6 +531,7 @@ export interface FileRouteTypes {
     | '/labels'
     | '/my-claims'
     | '/my-orders'
+    | '/odoo-invoices'
     | '/orders'
     | '/shipments'
     | '/shop'
@@ -528,10 +561,12 @@ export interface FileRouteTypes {
     | '/_app/farm/claims'
     | '/_app/farm/orders'
     | '/_app/invoices/$invoiceId'
+    | '/_app/invoices/new'
     | '/_app/labels/$templateId'
     | '/_app/my-claims/$claimId'
     | '/_app/my-claims/new'
     | '/_app/my-orders/$orderId'
+    | '/_app/odoo-invoices/$moveId'
     | '/_app/orders/$orderId'
     | '/_app/orders/new'
     | '/_app/qc/scan'
@@ -545,6 +580,7 @@ export interface FileRouteTypes {
     | '/_app/labels/'
     | '/_app/my-claims/'
     | '/_app/my-orders/'
+    | '/_app/odoo-invoices/'
     | '/_app/orders/'
     | '/_app/shipments/'
     | '/_app/shop/'
@@ -742,6 +778,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInvoicesInvoiceIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/invoices/new': {
+      id: '/_app/invoices/new'
+      path: '/invoices/new'
+      fullPath: '/invoices/new'
+      preLoaderRoute: typeof AppInvoicesNewRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/labels/': {
       id: '/_app/labels/'
       path: '/labels'
@@ -789,6 +832,20 @@ declare module '@tanstack/react-router' {
       path: '/my-orders/$orderId'
       fullPath: '/my-orders/$orderId'
       preLoaderRoute: typeof AppMyOrdersOrderIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/odoo-invoices/': {
+      id: '/_app/odoo-invoices/'
+      path: '/odoo-invoices'
+      fullPath: '/odoo-invoices/'
+      preLoaderRoute: typeof AppOdooInvoicesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/odoo-invoices/$moveId': {
+      id: '/_app/odoo-invoices/$moveId'
+      path: '/odoo-invoices/$moveId'
+      fullPath: '/odoo-invoices/$moveId'
+      preLoaderRoute: typeof AppOdooInvoicesMoveIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/orders/': {
@@ -891,10 +948,12 @@ interface AppRouteChildren {
   AppFarmClaimsRoute: typeof AppFarmClaimsRoute
   AppFarmOrdersRoute: typeof AppFarmOrdersRoute
   AppInvoicesInvoiceIdRoute: typeof AppInvoicesInvoiceIdRoute
+  AppInvoicesNewRoute: typeof AppInvoicesNewRoute
   AppLabelsTemplateIdRoute: typeof AppLabelsTemplateIdRoute
   AppMyClaimsClaimIdRoute: typeof AppMyClaimsClaimIdRoute
   AppMyClaimsNewRoute: typeof AppMyClaimsNewRoute
   AppMyOrdersOrderIdRoute: typeof AppMyOrdersOrderIdRoute
+  AppOdooInvoicesMoveIdRoute: typeof AppOdooInvoicesMoveIdRoute
   AppOrdersOrderIdRoute: typeof AppOrdersOrderIdRoute
   AppOrdersNewRoute: typeof AppOrdersNewRoute
   AppQcScanRoute: typeof AppQcScanRoute
@@ -908,6 +967,7 @@ interface AppRouteChildren {
   AppLabelsIndexRoute: typeof AppLabelsIndexRoute
   AppMyClaimsIndexRoute: typeof AppMyClaimsIndexRoute
   AppMyOrdersIndexRoute: typeof AppMyOrdersIndexRoute
+  AppOdooInvoicesIndexRoute: typeof AppOdooInvoicesIndexRoute
   AppOrdersIndexRoute: typeof AppOrdersIndexRoute
   AppShipmentsIndexRoute: typeof AppShipmentsIndexRoute
   AppShopIndexRoute: typeof AppShopIndexRoute
@@ -933,10 +993,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppFarmClaimsRoute: AppFarmClaimsRoute,
   AppFarmOrdersRoute: AppFarmOrdersRoute,
   AppInvoicesInvoiceIdRoute: AppInvoicesInvoiceIdRoute,
+  AppInvoicesNewRoute: AppInvoicesNewRoute,
   AppLabelsTemplateIdRoute: AppLabelsTemplateIdRoute,
   AppMyClaimsClaimIdRoute: AppMyClaimsClaimIdRoute,
   AppMyClaimsNewRoute: AppMyClaimsNewRoute,
   AppMyOrdersOrderIdRoute: AppMyOrdersOrderIdRoute,
+  AppOdooInvoicesMoveIdRoute: AppOdooInvoicesMoveIdRoute,
   AppOrdersOrderIdRoute: AppOrdersOrderIdRoute,
   AppOrdersNewRoute: AppOrdersNewRoute,
   AppQcScanRoute: AppQcScanRoute,
@@ -950,6 +1012,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLabelsIndexRoute: AppLabelsIndexRoute,
   AppMyClaimsIndexRoute: AppMyClaimsIndexRoute,
   AppMyOrdersIndexRoute: AppMyOrdersIndexRoute,
+  AppOdooInvoicesIndexRoute: AppOdooInvoicesIndexRoute,
   AppOrdersIndexRoute: AppOrdersIndexRoute,
   AppShipmentsIndexRoute: AppShipmentsIndexRoute,
   AppShopIndexRoute: AppShopIndexRoute,

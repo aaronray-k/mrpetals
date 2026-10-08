@@ -296,6 +296,19 @@ Odoo makes the invoices; ConsolFlora keeps the detail and sends only the total.
   never sent. Without `ODOO_API_KEY` (or on the preview until one is set) a demo Odoo is used; demo invoices are
   never sent to, or fetched from, the real Odoo.
 
+## All invoices in Odoo, and new invoices
+
+**All invoices in Odoo** (Admin, Consolidator, Finance) lists everything in Odoo, also documents made in Odoo
+itself, on two tabs: **Sent to buyers** (invoices and credit notes) and **Received from growers** (bills and
+refunds). Filters: name, number or reference, dates, status (draft, confirmed, cancelled) and payment (paid, not
+paid); 50 at a time, with what is still due per currency. Opening one shows the side preview (live, or Odoo's PDF)
+with **Confirm** and **Reset to draft**; one ConsolFlora made opens on its own invoice page.
+
+**New invoice** (Invoices, or All invoices in Odoo) writes an invoice or credit note by hand: buyer, currency,
+reference, MAWB, proforma no., flight, due date (suggested from the buyer's terms) and one or more lines
+(description, quantity, unit price). It is saved in ConsolFlora and sent to Odoo as a draft, then confirmed like
+the others; the buyer is told once it is confirmed.
+
 ## Payment terms
 
 Terms are Prepaid, Net 7, Net 15, Net 30 and **15th of following month** (everything for a month's orders is due

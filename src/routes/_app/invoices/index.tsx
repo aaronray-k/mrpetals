@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { RefreshCw, Upload } from 'lucide-react'
+import { FilePlus2, RefreshCw, Upload } from 'lucide-react'
 import { fetchFromOdoo, invoiceNumber, pushToOdoo, useInvoices, useOdooSettings, useOdooStatus, type Invoice } from '~/lib/odoo/api'
 import { cn, formatDateTime } from '~/lib/utils'
 import { PageHeader } from '~/components/layout/app-shell'
@@ -12,7 +12,7 @@ import { money } from '~/components/shop/money'
 import { Tip } from '~/components/tips/tips'
 import { Alert } from '~/components/ui/alert'
 import { Badge } from '~/components/ui/badge'
-import { Button } from '~/components/ui/button'
+import { Button, buttonVariants } from '~/components/ui/button'
 import { Card } from '~/components/ui/card'
 import { Spinner } from '~/components/ui/spinner'
 import { TBody, TD, TH, THead, TR, Table } from '~/components/ui/table'
@@ -85,6 +85,9 @@ function InvoicesPage() {
         description="Invoices and credit notes are made in Odoo: one line, Cut Flowers, with the total in the buyer's currency."
         actions={
           <>
+            <Link to="/invoices/new" className={buttonVariants({ variant: 'outline' })}>
+              <FilePlus2 aria-hidden="true" /> New invoice
+            </Link>
             <Button
               variant="outline"
               disabled={!!busy || status.data?.source === 'none'}
@@ -162,6 +165,7 @@ function InvoicesPage() {
                     <TD>{i.customers?.company_name}</TD>
                     <TD>
                       {i.kind === 'credit_note' && <span className="font-semibold">Credit note · </span>}
+                      {i.manual && <span className="font-semibold">Manual · </span>}
                       {i.reference}
                       {i.last_error && i.status === 'failed' && <span className="block text-sm text-destructive">{i.last_error}</span>}
                     </TD>
