@@ -273,6 +273,12 @@ sending switched off (`account.move.send.wizard` with `sending_methods: []` on O
 `checkbox_send_mail: false` on Odoo 17); a wizard whose fields don't match is refused by Odoo, never run with its
 defaults. The PDF is found as an attachment, including Odoo 17+'s field attachment (`res_field` set).
 
+Invoice emails (`…023_invoice_email.sql`): `bank_accounts` (one per currency; Admin writes, invoicing roles read),
+`invoice_emails` (the log, written by `record_invoice_email()`), and `mail_sender()`, which gives Finance and
+Consolidators the sender settings (no password) though `mail_settings` is Admin-only. The app server sends through
+SMTP (`nodemailer`) with `SMTP_PASSWORD` from its environment; the proforma PDF is built on the server
+(`src/lib/orders/proforma-pdf.ts`).
+
 Statements of account need no tables: `getLedger` (Admin and Finance, `src/server/odoo.functions.ts`) reads
 Odoo's `account.move.line` on payable (suppliers) or receivable (buyers) accounts, posted (and optionally draft),
 plus the sum of earlier lines per partner and currency for the balance brought forward. The statement, overdue

@@ -396,3 +396,10 @@ export const makeOdooPdf = createServerFn({ method: 'POST' })
     }
     return tryPdf(odoo, moveId)
   })
+
+/** For emailing an invoice: the Odoo it went to, and its Odoo id. */
+export async function invoiceOdoo(ctx: AuthContext, invoiceId: string): Promise<{ odoo: OdooAdapter | null; moveId: number | null; reason: string | null }> {
+  const { odoo, reason } = await inOdoo(ctx, invoiceId)
+  if (!odoo) return { odoo: null, moveId: null, reason }
+  return { odoo, moveId: (await payload(ctx, invoiceId)).odoo_move_id, reason: null }
+}

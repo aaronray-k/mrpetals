@@ -312,6 +312,20 @@ reference, MAWB, proforma no., flight, due date (suggested from the buyer's term
 (description, quantity, unit price). It is saved in ConsolFlora and sent to Odoo as a draft, then confirmed like
 the others; the buyer is told once it is confirmed.
 
+## Emailing invoices to buyers
+
+On a confirmed invoice, **Send by email** (Admin, Consolidator, Finance) opens the message, filled in and ready to
+check or edit: a warm note greeting the buyer's contact by first name, the invoice number and amount, the
+proforma(s), the flight and MAWB, the due date, the invoice number as payment reference and the bank account for
+the invoice's currency, signed by the person sending ("Sales · Consolflora Limited"). Attached: **Odoo's invoice
+PDF** (made first if missing) and the **proforma PDF** of each order on it (the same layout and columns as the
+Excel proforma; each can also be downloaded from the dialog). It goes from the sales mailbox on **Email settings**,
+replies come back there, and each send is listed on the invoice (who, when, to whom, what was attached).
+
+Email settings (Admin): the Zoho mailbox (sender name and address, smtp.zoho.com, port 465, user), **Send email**
+on or off, **Send a test email to me**, and **bank accounts** (one per currency). The mailbox password is
+`SMTP_PASSWORD` in the server environment, never in the app (for Zoho with two-factor sign-in, an app password).
+
 ## Payment terms
 
 Terms are Prepaid, Net 7, Net 15, Net 30 and **15th of following month** (everything for a month's orders is due
@@ -399,6 +413,6 @@ docs/backend.md           what the backend must provide
 | 9 | Accessibility and security: two-factor sign-in (app or email, remembered devices), WCAG 2.2 AA sweep | Done (email codes wait for the mailbox) |
 | 10 | Buyer claims: buyer report with photos, consolidator review, buyer credit notes, farm claim notices and farm credit notes | Done |
 | 11 | Invoices in Odoo: one invoice per buyer per flight (one Cut Flowers line), credit notes, push and fetch | Done: drafts confirmed in ConsolFlora, with preview; statements of account (PDF, Excel) (demo Odoo until connected) |
-| 12 | Messages and email (Zoho: SMTP out, IMAP replies into the app); important notifications emailed; settings page already there | Not started |
+| 12 | Messages and email (Zoho: SMTP out, IMAP replies into the app); important notifications emailed; settings page already there | Started: invoice emails to buyers (SMTP), test email; notifications by email and IMAP replies not yet |
 
 A clickable preview with demo data runs on Render; see `preview/README.md`.

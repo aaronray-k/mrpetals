@@ -7,6 +7,7 @@ import { cn, formatDateTime } from '~/lib/utils'
 import { PageHeader } from '~/components/layout/app-shell'
 import { RequireRole } from '~/components/layout/require-role'
 import { rolesFor } from '~/components/layout/nav'
+import { EmailInvoiceButton, InvoiceEmailsCard } from '~/components/invoices/email-invoice'
 import { FIELD_LABEL, InvoicePreview, day } from '~/components/odoo/invoice-preview'
 import { InvoiceStatusBadge } from '~/components/odoo/invoice-status'
 import { money } from '~/components/shop/money'
@@ -142,6 +143,7 @@ function InvoicePage() {
                       <CheckCircle2 aria-hidden="true" /> {busy === 'confirm' ? 'Confirming…' : `Confirm ${noun}`}
                     </Button>
                   )}
+                  {state === 'posted' && <EmailInvoiceButton invoiceId={i.id} />}
                   {state === 'posted' && (
                     <Button variant="outline" disabled={!!busy || !d} onClick={() => setAsking('reset')}>
                       <RotateCcw aria-hidden="true" /> {busy === 'reset' ? 'Resetting…' : 'Reset to draft'}
@@ -221,6 +223,7 @@ function InvoicePage() {
               )}
             </CardContent>
           </Card>
+          <InvoiceEmailsCard invoiceId={i.id} />
         </div>
         <InvoicePreview loadPdf={() => odooInvoicePdf(i.id)} makePdf={() => makePdfInOdoo({ invoiceId: i.id })} onPdfMade={refresh} loading={inOdoo && odoo.isLoading} detail={d} reason={inOdoo ? (odoo.data?.reason ?? (odoo.error as Error | null)?.message ?? null) : 'Not in Odoo yet: the preview shows once Odoo has it.'} currency={i.currency} credit={credit} fixedDue={!!p?.due_date} />
       </div>

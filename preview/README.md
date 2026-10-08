@@ -32,3 +32,7 @@ Admin, Consolidator and Finance demo accounts set up two-factor sign-in at their
 Claims demo (`seed-claims.sql`): one claim waiting for review and one decided, with a claim notice to Kibo. On the preview only, the claim window is 30 days so the demo buyer can report on the past weeks' flights; the default is 24 hours.
 
 Invoices go to a demo Odoo on the preview (`ODOO_SOURCE=demo`, set by `start.mjs`): invoices arrive as drafts with sample invoice fields (MAWB, Proforma Invoice No, Flight Number) and payment terms; confirming gives an Odoo-style number, and the demo buyer pays each invoice a few minutes after it is confirmed. Confirming makes a sample PDF in the demo (kept until the preview restarts). Statements of account read a demo ledger: four suppliers (Fontana with a USD and a EUR account) and the two demo buyers, about six months of bills, invoices, refunds and payments. All invoices in Odoo lists those documents (invoices ConsolFlora sends to the demo Odoo don't show there; in the real Odoo they do, marked ConsolFlora). Confirm and reset of demo documents last until the preview restarts.
+
+Invoice emails on the preview need the sales mailbox: fill in Email settings, add `SMTP_PASSWORD` to the Render
+service's environment, switch sending on and use **Send a test email to me**. Without it, Send by email explains
+what is missing and the attachments can still be downloaded.
