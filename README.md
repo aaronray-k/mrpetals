@@ -323,7 +323,9 @@ Excel proforma; each can also be downloaded from the dialog). It goes from the s
 replies come back there, and each send is listed on the invoice (who, when, to whom, what was attached).
 
 Email settings (Admin): the Zoho mailbox (sender name and address, smtp.zoho.com, port 465, user), **Send email**
-on or off, **Send a test email to me**, and **bank accounts** (one per currency). The mailbox password is
+on or off, **Send a test email to me**, and **bank details**: ConsolFlora's one bank (account name, bank, bank
+code, branch, SWIFT) and the account number for each currency (KES, USD, EUR); an invoice email shows the account
+number for the invoice's currency. The mailbox password is
 `SMTP_PASSWORD` in the server environment, never in the app (for Zoho with two-factor sign-in, an app password).
 
 ## Payment terms

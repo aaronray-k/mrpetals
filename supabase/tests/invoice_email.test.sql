@@ -18,17 +18,20 @@ insert into invoices (kind, customer_id, currency, amount, reference) select 'in
 update mail_settings set from_address = 'sales@consolflora.test', enabled = true;
 
 set role authenticated;
--- ---------------------------------------------------------------- Bank accounts
-set request.jwt.claim.sub = 'e0000000-0000-0000-0000-00000000000a';
-insert into bank_accounts (currency, bank_name, account_name, account_number) values ('USD', 'Example Bank', 'Consolflora Limited', '1006587104');
-select pg_temp.check((select account_number from bank_accounts where currency = 'USD') = '1006587104', 'an Admin adds the USD account');
+-- ---------------------------------------------------------------- Bank details
 set request.jwt.claim.sub = 'e0000000-0000-0000-0000-00000000000d';
-select pg_temp.check((select count(*) from bank_accounts) = 1, 'Finance reads it, for the email');
+select pg_temp.check((select bank_name || ' ' || bank_code || ' ' || branch || ' ' || swift_code from bank_details) = 'NCBA Bank Kenya PLC 07000 EMBAKASI CBAFKENX',
+  'one set of bank details, read by Finance for the email');
+select pg_temp.check((select string_agg(currency || ':' || account_number, ' ' order by currency) from bank_accounts) = 'EUR:1006587214 KES:1006586988 USD:1006587104',
+  'and the account number for each currency');
 update bank_accounts set account_number = '999' where currency = 'USD';
-select pg_temp.check((select account_number from bank_accounts where currency = 'USD') = '1006587104', 'but cannot change it');
-select pg_temp.check_refused($$insert into bank_accounts (currency, bank_name, account_name, account_number) values ('EUR', 'x', 'y', 'z')$$, 'row-level security');
+update bank_details set swift_code = 'XXXX';
+select pg_temp.check((select account_number from bank_accounts where currency = 'USD') = '1006587104' and (select swift_code from bank_details) = 'CBAFKENX', 'Finance cannot change them');
+set request.jwt.claim.sub = 'e0000000-0000-0000-0000-00000000000a';
+update bank_accounts set account_number = '1006587105' where currency = 'USD';
+select pg_temp.check((select account_number from bank_accounts where currency = 'USD') = '1006587105', 'an Admin can');
 set request.jwt.claim.sub = 'e0000000-0000-0000-0000-0000000000b1';
-select pg_temp.check((select count(*) from bank_accounts) = 0, 'buyers see no bank accounts here');
+select pg_temp.check((select count(*) from bank_accounts) = 0 and (select count(*) from bank_details) = 0, 'buyers see no bank details here');
 
 -- ---------------------------------------------------------------- Sender settings and the send log
 set request.jwt.claim.sub = 'e0000000-0000-0000-0000-00000000000c';

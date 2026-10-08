@@ -2,7 +2,7 @@ import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MailCheck, MailX, Send } from 'lucide-react'
-import { removeBankAccount, saveBankAccount, testEmail, useBankAccounts, type BankAccount } from '~/lib/invoices/api'
+import { saveBank, testEmail, useBank, type BankDetails } from '~/lib/invoices/api'
 import { getSupabase } from '~/lib/supabase'
 import { PageHeader } from '~/components/layout/app-shell'
 import { RequireRole } from '~/components/layout/require-role'
@@ -156,17 +156,17 @@ function SettingsForm({ settings }: { settings: MailSettings }) {
   )
 }
 
-const BANK_FIELDS: { key: keyof Omit<BankAccount, 'currency'>; label: string; required?: boolean }[] = [
-  { key: 'bank_name', label: 'Bank', required: true },
-  { key: 'branch', label: 'Branch' },
+const BANK_FIELDS: { key: keyof BankDetails; label: string; required?: boolean }[] = [
   { key: 'account_name', label: 'Account name', required: true },
-  { key: 'account_number', label: 'Account number', required: true },
+  { key: 'bank_name', label: 'Bank', required: true },
+  { key: 'bank_code', label: 'Bank code' },
+  { key: 'branch', label: 'Branch' },
   { key: 'swift_code', label: 'SWIFT code' },
 ]
 
-/** One bank account per currency, shown in invoice emails for that currency. */
+/** ConsolFlora's bank details, once, and the account number per currency: an invoice email shows the one for its currency. */
 function BankAccounts() {
-  const accounts = useBankAccounts()
+  const bank = useBank()
   const currencies = useQuery({
     queryKey: ['currency-list'],
     queryFn: async () => {
@@ -178,24 +178,21 @@ function BankAccounts() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Bank accounts for invoice emails</CardTitle>
-        <CardDescription>One per currency: an invoice email shows the account for the invoice's currency, with the invoice number as the payment reference.</CardDescription>
+        <CardTitle className="text-lg">Bank details for invoice emails</CardTitle>
+        <CardDescription>One bank; the account number changes with the invoice's currency. Buyers are asked to quote the invoice number as the payment reference.</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-6">
-        {accounts.isLoading || currencies.isLoading ? (
-          <Spinner />
-        ) : (
-          (currencies.data ?? []).map((c) => <BankForm key={`${c}-${accounts.dataUpdatedAt}`} currency={c} account={accounts.data?.find((a) => a.currency === c) ?? null} />)
-        )}
+      <CardContent>
+        {bank.isLoading || currencies.isLoading ? <Spinner /> : bank.data && <BankForm key={bank.dataUpdatedAt} data={bank.data} currencies={currencies.data ?? []} />}
       </CardContent>
     </Card>
   )
 }
 
-function BankForm({ currency, account }: { currency: string; account: BankAccount | null }) {
+function BankForm({ data, currencies }: { data: { details: BankDetails | null; accounts: { currency: string; account_number: string }[] }; currencies: string[] }) {
   const toast = useToast()
   const queryClient = useQueryClient()
-  const [v, setV] = React.useState<Record<string, string>>(() => Object.fromEntries(BANK_FIELDS.map((f) => [f.key, account?.[f.key] ?? ''])))
+  const [v, setV] = React.useState<Record<string, string>>(() => Object.fromEntries(BANK_FIELDS.map((f) => [f.key, data.details?.[f.key] ?? ''])))
+  const [numbers, setNumbers] = React.useState<Record<string, string>>(() => Object.fromEntries(currencies.map((c) => [c, data.accounts.find((a) => a.currency === c)?.account_number ?? ''])))
   const [error, setError] = React.useState<string | null>(null)
   async function save(e: React.FormEvent) {
     e.preventDefault()
@@ -203,48 +200,38 @@ function BankForm({ currency, account }: { currency: string; account: BankAccoun
     if (missing.length) return setError(`Fill in: ${missing.join(', ')}.`)
     setError(null)
     try {
-      await saveBankAccount({
-        currency,
-        bank_name: v.bank_name!.trim(),
-        account_name: v.account_name!.trim(),
-        account_number: v.account_number!.trim(),
-        branch: v.branch!.trim() || null,
-        swift_code: v.swift_code!.trim() || null,
-      })
-      toast({ kind: 'success', title: `${currency} account saved` })
-      void queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
+      await saveBank(
+        { account_name: v.account_name!.trim(), bank_name: v.bank_name!.trim(), bank_code: v.bank_code!.trim() || null, branch: v.branch!.trim() || null, swift_code: v.swift_code!.trim() || null },
+        numbers,
+      )
+      toast({ kind: 'success', title: 'Bank details saved' })
+      void queryClient.invalidateQueries({ queryKey: ['bank'] })
     } catch (err) {
       setError((err as Error).message)
     }
   }
   return (
-    <form noValidate onSubmit={save} className="grid gap-3 rounded-md border p-4">
-      <h3 className="font-semibold">{currency} account</h3>
+    <form noValidate onSubmit={save} className="grid gap-4">
       {error && <Alert variant="destructive" title={error} role="alert" />}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {BANK_FIELDS.map((f) => (
-          <Field key={f.key} id={`bank-${currency}-${f.key}`} label={`${f.label}${f.required ? '' : ' (optional)'}`}>
-            {(d) => <Input id={`bank-${currency}-${f.key}`} value={v[f.key]} maxLength={120} onChange={(e) => setV((x) => ({ ...x, [f.key]: e.target.value }))} aria-describedby={d} />}
+          <Field key={f.key} id={`bank-${f.key}`} label={`${f.label}${f.required ? '' : ' (optional)'}`}>
+            {(d) => <Input id={`bank-${f.key}`} value={v[f.key]} maxLength={120} onChange={(e) => setV((x) => ({ ...x, [f.key]: e.target.value }))} aria-describedby={d} />}
           </Field>
         ))}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit">Save {currency} account</Button>
-        {account && (
-          <Button
-            variant="outline"
-            onClick={async () => {
-              try {
-                await removeBankAccount(currency)
-                void queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
-              } catch (err) {
-                setError((err as Error).message)
-              }
-            }}
-          >
-            Remove
-          </Button>
-        )}
+      <fieldset className="grid gap-3">
+        <legend className="mb-1 font-semibold">Account number by currency</legend>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {currencies.map((c) => (
+            <Field key={c} id={`bank-no-${c}`} label={`${c} account number`} hint="Empty: no account in this currency.">
+              {(d) => <Input id={`bank-no-${c}`} inputMode="numeric" value={numbers[c] ?? ''} maxLength={40} onChange={(e) => setNumbers((x) => ({ ...x, [c]: e.target.value }))} aria-describedby={d} />}
+            </Field>
+          ))}
+        </div>
+      </fieldset>
+      <div>
+        <Button type="submit">Save bank details</Button>
       </div>
     </form>
   )

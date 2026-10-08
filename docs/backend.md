@@ -273,7 +273,8 @@ sending switched off (`account.move.send.wizard` with `sending_methods: []` on O
 `checkbox_send_mail: false` on Odoo 17); a wizard whose fields don't match is refused by Odoo, never run with its
 defaults. The PDF is found as an attachment, including Odoo 17+'s field attachment (`res_field` set).
 
-Invoice emails (`…023_invoice_email.sql`): `bank_accounts` (one per currency; Admin writes, invoicing roles read),
+Invoice emails (`…023_invoice_email.sql`): `bank_details` (the one bank: account name, bank, code, branch, SWIFT) and `bank_accounts` (the account number
+per currency) (`…024_bank_details.sql`; Admin writes, invoicing roles read),
 `invoice_emails` (the log, written by `record_invoice_email()`), and `mail_sender()`, which gives Finance and
 Consolidators the sender settings (no password) though `mail_settings` is Admin-only. The app server sends through
 SMTP (`nodemailer`) with `SMTP_PASSWORD` from its environment; the proforma PDF is built on the server

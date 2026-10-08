@@ -35,31 +35,45 @@ export function useInvoiceEmails(invoiceId: string) {
   })
 }
 
-export interface BankAccount {
-  currency: string
-  bank_name: string
+/** ConsolFlora's bank details (one bank), and the account number for each currency. */
+export interface BankDetails {
   account_name: string
-  account_number: string
+  bank_name: string
+  bank_code: string | null
   branch: string | null
   swift_code: string | null
 }
-export function useBankAccounts() {
+export function useBank() {
   return useQuery({
-    queryKey: ['bank-accounts'],
+    queryKey: ['bank'],
     queryFn: async () => {
-      const { data, error } = await getSupabase().from('bank_accounts').select('currency, bank_name, account_name, account_number, branch, swift_code').order('currency')
-      if (error) throw new Error(error.message)
-      return data as BankAccount[]
+      const sb = getSupabase()
+      const [d, a] = await Promise.all([
+        sb.from('bank_details').select('account_name, bank_name, bank_code, branch, swift_code').maybeSingle(),
+        sb.from('bank_accounts').select('currency, account_number').order('currency'),
+      ])
+      if (d.error) throw new Error(d.error.message)
+      if (a.error) throw new Error(a.error.message)
+      return { details: d.data as BankDetails | null, accounts: a.data as { currency: string; account_number: string }[] }
     },
   })
 }
-export async function saveBankAccount(b: BankAccount) {
-  const { error } = await getSupabase().from('bank_accounts').upsert(b, { onConflict: 'currency' })
-  if (error) throw new Error(error.message.includes('row-level security') ? 'Only Admin users can change bank accounts.' : error.message)
-}
-export async function removeBankAccount(currency: string) {
-  const { error } = await getSupabase().from('bank_accounts').delete().eq('currency', currency)
-  if (error) throw new Error(error.message)
+const adminOnly = (m: string) => (m.includes('row-level security') ? 'Only Admin users can change the bank details.' : m)
+/** Saves the shared details and the account numbers; an empty number removes that currency's account. */
+export async function saveBank(details: BankDetails, numbers: Record<string, string>) {
+  const sb = getSupabase()
+  const d = await sb.from('bank_details').upsert({ id: true, ...details }, { onConflict: 'id' })
+  if (d.error) throw new Error(adminOnly(d.error.message))
+  const keep = Object.entries(numbers).filter(([, n]) => n.trim())
+  if (keep.length) {
+    const a = await sb.from('bank_accounts').upsert(keep.map(([currency, n]) => ({ currency, account_number: n.trim() })), { onConflict: 'currency' })
+    if (a.error) throw new Error(adminOnly(a.error.message))
+  }
+  const drop = Object.entries(numbers).filter(([, n]) => !n.trim()).map(([c]) => c)
+  if (drop.length) {
+    const r = await sb.from('bank_accounts').delete().in('currency', drop)
+    if (r.error) throw new Error(adminOnly(r.error.message))
+  }
 }
 
 /** Opens a base64 PDF from the server as a download. */

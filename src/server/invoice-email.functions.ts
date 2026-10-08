@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
 import { COMPANY } from '~/lib/company'
-import { invoiceEmail } from '~/lib/invoices/email'
+import { invoiceEmail, type BankForEmail } from '~/lib/invoices/email'
 import type { BuyerRef, OrderCharge, PackingListRow, Shipment } from '~/lib/orders/api'
 import type { ProformaInput } from '~/lib/orders/excel'
 import { proformaPdf, proformaPdfName } from '~/lib/orders/proforma-pdf'
@@ -88,10 +88,11 @@ async function invoiceFacts(ctx: AuthContext, invoiceId: string) {
     .maybeSingle()
   if (error) throw new Error(error.message)
   if (!i) throw new Error('This invoice doesn\'t exist, or you may not see it.')
-  const [orders, shipment, bank, me] = await Promise.all([
+  const [orders, shipment, details, account, me] = await Promise.all([
     (i.order_ids as string[]).length ? sb.from('customer_orders').select('id, order_number').in('id', i.order_ids as string[]).order('order_number') : Promise.resolve({ data: [], error: null }),
     i.shipment_id ? sb.from('shipments').select('flight_no, mawb').eq('id', i.shipment_id).maybeSingle() : Promise.resolve({ data: null, error: null }),
-    sb.from('bank_accounts').select('*').eq('currency', i.currency).maybeSingle(),
+    sb.from('bank_details').select('account_name, bank_name, bank_code, branch, swift_code').maybeSingle(),
+    sb.from('bank_accounts').select('account_number').eq('currency', i.currency).maybeSingle(),
     sb.from('profiles').select('full_name').eq('id', ctx.user.id).maybeSingle(),
   ])
   const customer = (Array.isArray(i.customers) ? i.customers[0] : i.customers) as { company_name: string; contact_name: string | null; contact_email: string } | null
@@ -101,7 +102,8 @@ async function invoiceFacts(ctx: AuthContext, invoiceId: string) {
     orders: (orders.data ?? []) as { id: string; order_number: string }[],
     flight: (i.flight as string | null) ?? (shipment.data as { flight_no: string | null } | null)?.flight_no ?? null,
     mawb: (i.mawb as string | null) ?? (shipment.data as { mawb: string | null } | null)?.mawb ?? null,
-    bank: bank.data as { bank_name: string; account_name: string; account_number: string; branch: string | null; swift_code: string | null } | null,
+    // The shared bank details, with the account number for this invoice's currency.
+    bank: details.data && account.data ? ({ ...details.data, account_number: (account.data as { account_number: string }).account_number } as BankForEmail) : null,
     senderName: (me.data as { full_name: string | null } | null)?.full_name?.trim() || ctx.user.email || 'Consolflora',
   }
 }

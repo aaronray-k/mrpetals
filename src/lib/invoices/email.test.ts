@@ -12,7 +12,7 @@ const base: InvoiceEmailInput = {
   orderNumbers: ['CFLPFJ0089'],
   flight: 'EK 720',
   mawb: '176-61541003',
-  bank: { bank_name: 'Example Bank', account_name: 'Consolflora Limited', account_number: '1006587104', branch: 'Westlands', swift_code: 'EXAMKENA' },
+  bank: { account_name: 'CONSOLFLORA LIMITED', bank_name: 'NCBA Bank Kenya PLC', bank_code: '07000', branch: 'EMBAKASI', swift_code: 'CBAFKENX', account_number: '1006587104' },
   senderName: 'Grace Wanjiku',
   companyLegalName: 'Consolflora Limited',
 }
@@ -24,8 +24,9 @@ describe('invoice email', () => {
     expect(body).toContain('Dear Aiko,')
     expect(body).toContain('Please find attached our invoice INV/2026/00089 for US$11,029.40, together with the proforma invoice for your order CFLPFJ0089 (flight EK 720, MAWB 176-61541003).')
     expect(body).toContain('Payment is due by 15 November 2026. When you make the transfer, kindly quote INV/2026/00089 as the payment reference, to our USD account:')
-    expect(body).toContain('  Account number: 1006587104')
-    expect(body).toContain('  SWIFT: EXAMKENA')
+    expect(body).toContain(
+      ['  Account name: CONSOLFLORA LIMITED', '  Bank: NCBA Bank Kenya PLC', '  Bank code: 07000', '  Branch: EMBAKASI', '  SWIFT code: CBAFKENX', '  Account number (USD): 1006587104'].join('\n'),
+    )
     expect(body.trimEnd().endsWith('Grace Wanjiku\nSales · Consolflora Limited')).toBe(true)
   })
 

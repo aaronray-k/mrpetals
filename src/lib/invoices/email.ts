@@ -2,6 +2,15 @@
  * The invoice email to a buyer: warm and cordial, in ConsolFlora's voice. Filled in from the invoice; the person
  * sending can edit it before it goes.
  */
+/** ConsolFlora's bank details, with the account number for the invoice's currency. */
+export interface BankForEmail {
+  account_name: string
+  bank_name: string
+  bank_code: string | null
+  branch: string | null
+  swift_code: string | null
+  account_number: string
+}
 export interface InvoiceEmailInput {
   /** The buyer's contact person; the company name is used when there is none. */
   contactName: string | null
@@ -14,7 +23,7 @@ export interface InvoiceEmailInput {
   orderNumbers: string[]
   flight: string | null
   mawb: string | null
-  bank: { bank_name: string; account_name: string; account_number: string; branch: string | null; swift_code: string | null } | null
+  bank: BankForEmail | null
   senderName: string
   companyLegalName: string
 }
@@ -45,10 +54,12 @@ export function invoiceEmail(i: InvoiceEmailInput): { subject: string; body: str
     const due = i.dueDate ? `Payment is due by ${day(i.dueDate)}. ` : ''
     if (i.bank) {
       lines.push(`${due}When you make the transfer, kindly quote ${i.invoiceNumber} as the payment reference, to our ${i.currency} account:`, '')
-      lines.push(`  Bank: ${i.bank.bank_name}${i.bank.branch ? `, ${i.bank.branch}` : ''}`)
       lines.push(`  Account name: ${i.bank.account_name}`)
-      lines.push(`  Account number: ${i.bank.account_number}`)
-      if (i.bank.swift_code) lines.push(`  SWIFT: ${i.bank.swift_code}`)
+      lines.push(`  Bank: ${i.bank.bank_name}`)
+      if (i.bank.bank_code) lines.push(`  Bank code: ${i.bank.bank_code}`)
+      if (i.bank.branch) lines.push(`  Branch: ${i.bank.branch}`)
+      if (i.bank.swift_code) lines.push(`  SWIFT code: ${i.bank.swift_code}`)
+      lines.push(`  Account number (${i.currency}): ${i.bank.account_number}`)
     } else {
       lines.push(`${due}When you make the transfer, kindly quote ${i.invoiceNumber} as the payment reference.`)
     }
