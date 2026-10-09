@@ -54,6 +54,7 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/farms', label: 'Farms', icon: Building2, tip: 'Growers, sales agents and payment terms', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
       { to: '/customers', label: 'Customers', icon: Store, tip: 'Buyers, incoterms and credit limits', roles: ['admin', 'consolidator', 'finance'] },
+      { to: '/varieties', label: 'Varieties', icon: Flower2, tip: 'Every flower once, with its photo and growers', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
       { to: '/products', label: 'Products', icon: Flower2, tip: 'Varieties, grades and stem lengths', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc', 'farm'] },
       { to: '/floricode', label: 'Floricode', icon: Barcode, tip: 'VBN, feature and packaging codes; sync with Floricode', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
       { to: '/box-types', label: 'Box types', icon: Boxes, tip: 'Box sizes and volumetric weight', roles: ['admin', 'consolidator', 'qc', 'senior_qc'] },
@@ -66,6 +67,7 @@ export const NAV: NavGroup[] = [
     label: 'Tools',
     items: [
       { to: '/import', label: 'Import', icon: FileSpreadsheet, tip: 'Load data from the Excel template', roles: ['admin', 'consolidator'] },
+      { to: '/load-planner', label: 'Load planner', icon: Boxes, tip: 'How many boxes fit in an AKE or on a PMC, in 3D', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
       { to: '/master-import', label: 'Master price file', icon: FileSpreadsheet, tip: 'Farms, varieties and prices from the master file; freight rate', roles: ['admin', 'consolidator'] },
       { to: '/users', label: 'Users', icon: Users, tip: 'Create accounts and give roles', roles: ['admin'] },
       { to: '/settings/email', label: 'Email settings', icon: Mail, tip: 'Zoho mailbox details (email is off for now)', roles: ['admin'] },

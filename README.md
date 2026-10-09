@@ -383,6 +383,21 @@ old demo orders stay. A buyer brought in from the preview's demo Odoo never keep
   weight × rate; per stem = per box ÷ stems per box; buying CIF = farm price + freight per stem; selling CIF =
   buying CIF + margin. Trucking to Madrid is kept but off for now.
 
+## Varieties and the load planner
+
+**Varieties** (staff, Finance, QC) shows every webshop variety once: its catalogue photo, flower, grade, colour,
+stem lengths and the farms that grow it (grouped by grower). Filter by flower, photo or not, and search by name,
+colour or farm. Click a variety for its farms.
+
+**Tools → Load planner** works out how many boxes of one size fit in an air container, layer by layer, and shows it
+in 3D (drag to turn; a slider hides upper layers). Containers: AKE (LD3, with its wing from 51 cm up, so the bottom
+layers are narrower) and PMC pallets on the lower deck (163 cm) and main deck (244 and 300 cm). Each layer turns the
+boxes, and mixes two directions, to fit the most; boxes stay flat unless "on their side" is ticked. With a box
+weight it checks the container's weight limit; with stems per box it gives freight per stem at the freight rate
+(chargeable weight: the higher of actual and volumetric, L × W × H cm ÷ 6000). It compares your box against every
+box type in ConsolFlora. Sizes: AKE floor 156.2 × 153.4 cm, 200.2 cm wide above the wing, 163 cm high; PMC
+317.5 × 243.8 cm. Change or add containers in `src/lib/freight/packing.ts`.
+
 ## Payment terms
 
 Terms are Prepaid, Net 7, Net 15, Net 30 and **15th of following month** (everything for a month's orders is due

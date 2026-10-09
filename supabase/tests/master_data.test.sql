@@ -54,6 +54,9 @@ select master_import_offers(jsonb_build_array(jsonb_build_object('farm_id', (sel
 select pg_temp.check((select count(*) from price_list pl join products p on p.id = pl.product_id where p.variety_id is not null) = 3 and (select price_per_stem from price_list pl join farms f on f.id = pl.farm_id join products p on p.id = pl.product_id where f.farm_code = 'AFRI' and p.product_code = 'ROS-ATHENA-50') = 0.25,
   'importing again the same day replaces the price');
 
+select pg_temp.check((select array_to_string(lengths, ',') || ' | ' || array_to_string(growers, ',') || ' | ' || array_to_string(grower_groups, ',') from variety_overview() where name = 'Athena')
+  = '50 | Africalla,Eco Roses ltd Utee ( BTG) | Africalla,Eco Roses ltd', 'Varieties: lengths, farms and growers (names only)');
+
 -- The freight rate: one setting, logged.
 select set_costing_settings(4.30, 'USD', false);
 select pg_temp.check((select freight_per_kg from costing_settings) = 4.30 and (select count(*) from costing_settings_log) = 1, 'freight per kg set and logged');

@@ -22,6 +22,7 @@ import { Route as AppExchangeRatesRouteImport } from './routes/_app/exchange-rat
 import { Route as AppFarmsRouteImport } from './routes/_app/farms'
 import { Route as AppFloricodeRouteImport } from './routes/_app/floricode'
 import { Route as AppImportRouteImport } from './routes/_app/import'
+import { Route as AppLoadPlannerRouteImport } from './routes/_app/load-planner'
 import { Route as AppMarginsRouteImport } from './routes/_app/margins'
 import { Route as AppMasterImportRouteImport } from './routes/_app/master-import'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
@@ -30,6 +31,7 @@ import { Route as AppProductsRouteImport } from './routes/_app/products'
 import { Route as AppStandingOrdersRouteImport } from './routes/_app/standing-orders'
 import { Route as AppStatementsRouteImport } from './routes/_app/statements'
 import { Route as AppUsersRouteImport } from './routes/_app/users'
+import { Route as AppVarietiesRouteImport } from './routes/_app/varieties'
 import { Route as LegalIndexRouteImport } from './routes/legal/index'
 import { Route as LegalCodeRouteImport } from './routes/legal/$code'
 import { Route as AppClaimsIndexRouteImport } from './routes/_app/claims/index'
@@ -124,6 +126,11 @@ const AppImportRoute = AppImportRouteImport.update({
   path: '/import',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLoadPlannerRoute = AppLoadPlannerRouteImport.update({
+  id: '/load-planner',
+  path: '/load-planner',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMarginsRoute = AppMarginsRouteImport.update({
   id: '/margins',
   path: '/margins',
@@ -162,6 +169,11 @@ const AppStatementsRoute = AppStatementsRouteImport.update({
 const AppUsersRoute = AppUsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppVarietiesRoute = AppVarietiesRouteImport.update({
+  id: '/varieties',
+  path: '/varieties',
   getParentRoute: () => AppRoute,
 } as any)
 const LegalIndexRoute = LegalIndexRouteImport.update({
@@ -323,6 +335,7 @@ export interface FileRoutesByFullPath {
   '/farms': typeof AppFarmsRoute
   '/floricode': typeof AppFloricodeRoute
   '/import': typeof AppImportRoute
+  '/load-planner': typeof AppLoadPlannerRoute
   '/margins': typeof AppMarginsRoute
   '/master-import': typeof AppMasterImportRoute
   '/notifications': typeof AppNotificationsRoute
@@ -331,6 +344,7 @@ export interface FileRoutesByFullPath {
   '/standing-orders': typeof AppStandingOrdersRoute
   '/statements': typeof AppStatementsRoute
   '/users': typeof AppUsersRoute
+  '/varieties': typeof AppVarietiesRoute
   '/legal/$code': typeof LegalCodeRoute
   '/legal/': typeof LegalIndexRoute
   '/claims/$claimId': typeof AppClaimsClaimIdRoute
@@ -374,6 +388,7 @@ export interface FileRoutesByTo {
   '/farms': typeof AppFarmsRoute
   '/floricode': typeof AppFloricodeRoute
   '/import': typeof AppImportRoute
+  '/load-planner': typeof AppLoadPlannerRoute
   '/margins': typeof AppMarginsRoute
   '/master-import': typeof AppMasterImportRoute
   '/notifications': typeof AppNotificationsRoute
@@ -382,6 +397,7 @@ export interface FileRoutesByTo {
   '/standing-orders': typeof AppStandingOrdersRoute
   '/statements': typeof AppStatementsRoute
   '/users': typeof AppUsersRoute
+  '/varieties': typeof AppVarietiesRoute
   '/legal/$code': typeof LegalCodeRoute
   '/legal': typeof LegalIndexRoute
   '/claims/$claimId': typeof AppClaimsClaimIdRoute
@@ -427,6 +443,7 @@ export interface FileRoutesById {
   '/_app/farms': typeof AppFarmsRoute
   '/_app/floricode': typeof AppFloricodeRoute
   '/_app/import': typeof AppImportRoute
+  '/_app/load-planner': typeof AppLoadPlannerRoute
   '/_app/margins': typeof AppMarginsRoute
   '/_app/master-import': typeof AppMasterImportRoute
   '/_app/notifications': typeof AppNotificationsRoute
@@ -435,6 +452,7 @@ export interface FileRoutesById {
   '/_app/standing-orders': typeof AppStandingOrdersRoute
   '/_app/statements': typeof AppStatementsRoute
   '/_app/users': typeof AppUsersRoute
+  '/_app/varieties': typeof AppVarietiesRoute
   '/legal/$code': typeof LegalCodeRoute
   '/legal/': typeof LegalIndexRoute
   '/_app/claims/$claimId': typeof AppClaimsClaimIdRoute
@@ -480,6 +498,7 @@ export interface FileRouteTypes {
     | '/farms'
     | '/floricode'
     | '/import'
+    | '/load-planner'
     | '/margins'
     | '/master-import'
     | '/notifications'
@@ -488,6 +507,7 @@ export interface FileRouteTypes {
     | '/standing-orders'
     | '/statements'
     | '/users'
+    | '/varieties'
     | '/legal/$code'
     | '/legal/'
     | '/claims/$claimId'
@@ -531,6 +551,7 @@ export interface FileRouteTypes {
     | '/farms'
     | '/floricode'
     | '/import'
+    | '/load-planner'
     | '/margins'
     | '/master-import'
     | '/notifications'
@@ -539,6 +560,7 @@ export interface FileRouteTypes {
     | '/standing-orders'
     | '/statements'
     | '/users'
+    | '/varieties'
     | '/legal/$code'
     | '/legal'
     | '/claims/$claimId'
@@ -583,6 +605,7 @@ export interface FileRouteTypes {
     | '/_app/farms'
     | '/_app/floricode'
     | '/_app/import'
+    | '/_app/load-planner'
     | '/_app/margins'
     | '/_app/master-import'
     | '/_app/notifications'
@@ -591,6 +614,7 @@ export interface FileRouteTypes {
     | '/_app/standing-orders'
     | '/_app/statements'
     | '/_app/users'
+    | '/_app/varieties'
     | '/legal/$code'
     | '/legal/'
     | '/_app/claims/$claimId'
@@ -723,6 +747,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppImportRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/load-planner': {
+      id: '/_app/load-planner'
+      path: '/load-planner'
+      fullPath: '/load-planner'
+      preLoaderRoute: typeof AppLoadPlannerRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/margins': {
       id: '/_app/margins'
       path: '/margins'
@@ -777,6 +808,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/users'
       preLoaderRoute: typeof AppUsersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/varieties': {
+      id: '/_app/varieties'
+      path: '/varieties'
+      fullPath: '/varieties'
+      preLoaderRoute: typeof AppVarietiesRouteImport
       parentRoute: typeof AppRoute
     }
     '/legal/': {
@@ -996,6 +1034,7 @@ interface AppRouteChildren {
   AppFarmsRoute: typeof AppFarmsRoute
   AppFloricodeRoute: typeof AppFloricodeRoute
   AppImportRoute: typeof AppImportRoute
+  AppLoadPlannerRoute: typeof AppLoadPlannerRoute
   AppMarginsRoute: typeof AppMarginsRoute
   AppMasterImportRoute: typeof AppMasterImportRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
@@ -1004,6 +1043,7 @@ interface AppRouteChildren {
   AppStandingOrdersRoute: typeof AppStandingOrdersRoute
   AppStatementsRoute: typeof AppStatementsRoute
   AppUsersRoute: typeof AppUsersRoute
+  AppVarietiesRoute: typeof AppVarietiesRoute
   AppClaimsClaimIdRoute: typeof AppClaimsClaimIdRoute
   AppFarmClaimsRoute: typeof AppFarmClaimsRoute
   AppFarmOrdersRoute: typeof AppFarmOrdersRoute
@@ -1044,6 +1084,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFarmsRoute: AppFarmsRoute,
   AppFloricodeRoute: AppFloricodeRoute,
   AppImportRoute: AppImportRoute,
+  AppLoadPlannerRoute: AppLoadPlannerRoute,
   AppMarginsRoute: AppMarginsRoute,
   AppMasterImportRoute: AppMasterImportRoute,
   AppNotificationsRoute: AppNotificationsRoute,
@@ -1052,6 +1093,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppStandingOrdersRoute: AppStandingOrdersRoute,
   AppStatementsRoute: AppStatementsRoute,
   AppUsersRoute: AppUsersRoute,
+  AppVarietiesRoute: AppVarietiesRoute,
   AppClaimsClaimIdRoute: AppClaimsClaimIdRoute,
   AppFarmClaimsRoute: AppFarmClaimsRoute,
   AppFarmOrdersRoute: AppFarmOrdersRoute,
