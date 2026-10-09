@@ -390,9 +390,9 @@ suppliers' payable accounts (vendor bills, refunds and payments to them) or buye
   **running balance** from the **balance brought forward** (everything before the start date). Payments,
   refunds and credit notes are their own lines, so money already paid is in the balance. The closing balance
   shows how much of it is **overdue** (past due and not yet covered by payments, oldest first).
-- Buyer statements also have a **MAWB** column: the invoice's MAWB field in Odoo (the one chosen in field
-  mapping), or, when that is empty, the MAWB ConsolFlora has for the invoice (its own, else its shipment's).
-  Payments have none. The number search finds MAWBs too. It is in the PDF and Excel as well.
+- Buyer statements also have a **MAWB** column, read only from the invoice's MAWB field in Odoo: the field chosen
+  in field mapping (Odoo settings), else the field Odoo names MAWB / AWB. The page says which field it read, or
+  warns if Odoo has none. Payments have none. The number search finds MAWBs too. It is in the PDF and Excel as well.
 - Filters: suppliers or buyers, name, date range, **number or reference** (bill, invoice or payment number, or
   the vendor's reference; matching lines keep their true running balance), and **Include drafts**
   (confirmed only by default).

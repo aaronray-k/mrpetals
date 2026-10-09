@@ -58,7 +58,10 @@ export function demoLedger(q: LedgerQuery, today = new Date()): LedgerResult {
       }
     }
   }
-  for (const l of all) l.move_id = 900000 + l.id
+  for (const l of all) {
+    l.move_id = 900000 + l.id
+    if (!q.mawbField) l.mawb = null // as in Odoo: the MAWB is read only from its field
+  }
   const todayIso = iso(today)
   const lines = all
     .filter((l) => (q.drafts || !l.draft) && l.date <= q.to && l.date <= todayIso && (!q.partner || l.partner.toLowerCase().includes(q.partner.toLowerCase())))

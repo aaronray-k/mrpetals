@@ -156,6 +156,16 @@ function StatementsPage() {
             {ledger.data.error} <Link to="/settings/odoo" className="font-semibold underline">Odoo settings</Link>
           </Alert>
         )}
+        {asked.side === 'buyer' && ledger.data?.ledger && (ledger.data.mawbField ? (
+          <p className="text-sm text-muted-foreground">
+            MAWB: from Odoo&apos;s invoice field &ldquo;{ledger.data.mawbField.label}&rdquo; ({ledger.data.mawbField.name}).
+          </p>
+        ) : (
+          <Alert variant="warning" title="No MAWB field in Odoo">
+            Odoo&apos;s invoices have no MAWB field ConsolFlora can find, so the MAWB column is empty. Choose it under field mapping in{' '}
+            <Link to="/settings/odoo" className="font-semibold underline">Odoo settings</Link>.
+          </Alert>
+        ))}
         {ledger.data?.source === 'demo' && <p className="text-sm text-muted-foreground">Preview: these are from the demo Odoo, not your books.</p>}
 
         {statement && !ledger.isFetching && (

@@ -129,7 +129,7 @@ describe('statements of account', () => {
   })
 
   it('demo ledger: buyer invoices carry a MAWB, payments none', () => {
-    const { lines } = demoLedger({ side: 'buyer', from: null, to: '2026-10-08', partner: null, drafts: false }, new Date('2026-10-08T12:00:00Z'))
+    const { lines } = demoLedger({ side: 'buyer', from: null, to: '2026-10-08', partner: null, drafts: false, mawbField: 'x_studio_mawb' }, new Date('2026-10-08T12:00:00Z'))
     expect(lines.filter((l) => l.kind === 'invoice').every((l) => /^176-\d{8}$/.test(l.mawb ?? ''))).toBe(true)
     expect(lines.filter((l) => l.kind === 'payment').every((l) => !l.mawb)).toBe(true)
   })
