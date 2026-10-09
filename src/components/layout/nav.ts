@@ -66,6 +66,7 @@ export const NAV: NavGroup[] = [
     label: 'Tools',
     items: [
       { to: '/import', label: 'Import', icon: FileSpreadsheet, tip: 'Load data from the Excel template', roles: ['admin', 'consolidator'] },
+      { to: '/master-import', label: 'Master price file', icon: FileSpreadsheet, tip: 'Farms, varieties and prices from the master file; freight rate', roles: ['admin', 'consolidator'] },
       { to: '/users', label: 'Users', icon: Users, tip: 'Create accounts and give roles', roles: ['admin'] },
       { to: '/settings/email', label: 'Email settings', icon: Mail, tip: 'Zoho mailbox details (email is off for now)', roles: ['admin'] },
       { to: '/settings/odoo', label: 'Odoo settings', icon: ReceiptText, tip: 'Where invoices are made', roles: ['admin'] },

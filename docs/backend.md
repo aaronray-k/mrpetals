@@ -317,3 +317,13 @@ example hourly) can be added on the server once connected.
 
 - Odoo: no calls until the shipment and fulfilment items.
 - Another Storage bucket: needed for item 5 (shipment documents).
+
+## Master data (`…029_master_data.sql`)
+
+`varieties` (webshop entry per flower type and name; `name_key`, `photo`, `spellings` seen in the master file),
+`products.variety_id` (one product per variety and length), `farm_offers` (per farm and product: FOB and CIF
+margins, stems per box, box weight, trucking; staff and Finance read, never farms or buyers), `farms.grower`,
+`location`, `altitude`, `source`. `costing_settings` (one row: freight per kg and currency, trucking on/off) with
+`costing_settings_log`; changed with `set_costing_settings()` (Admin, Consolidator). The import runs in the
+browser and calls `master_import_farms()`, `master_import_varieties()` and `master_import_offers()` in batches
+(Admin, Consolidator); farm prices go into `price_list` from the import day.

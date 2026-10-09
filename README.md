@@ -363,6 +363,26 @@ Buyers come from Odoo's customer list. On **Customers**, Admin and Consolidator 
 The preview's demo buyers are marked **Demo** and hidden (inactive); tick **Show inactive** to see them. Their
 old demo orders stay. A buyer brought in from the preview's demo Odoo never keeps a demo Odoo id.
 
+## Master price file
+
+**Tools → Master price file** (Admin, Consolidator) loads the ConsolFlora master price workbook:
+
+- Every sheet except those with **OFFER** in the name. Farms given only as a code (XFL, SSL, ABL/BVL…) and the
+  placeholder farms (FARM 1, 2, 3) are left out. "CONSOL - Afri" is the farm whose name starts with "Afri"
+  (Africalla); with no such farm, the suffix is the farm's name.
+- Farm spellings are grouped, and the merges decided on 9 Oct 2026 apply (`src/lib/master/decisions.ts`):
+  Panocal / Panocal International / PANACOL, Heritage, Florenza, Sierra Flora(l). Growers farming in several
+  places keep one farm per place under their grower: Eco Roses, Fontana, Big Flowers, PJ Flowers.
+- **Webshop varieties**: one per flower and name, whoever grows it, under the product catalogue's name and photo
+  (`public/catalogue/`, 538 photos from the 2026 catalogue). Spellings sharing a catalogue photo are one variety.
+- Per farm, variety and stem length: the farm price (USD, else EUR; from the import day, so older orders keep
+  theirs), and the costing figures: FOB and CIF margins, stems per box, the box's weight. Products (variety ×
+  length) are shared by the farms that grow them.
+- The page shows what will be imported first; nothing is saved until **Import**. Importing again updates.
+- **Freight rate** per kg (from the freight agent) is one setting, logged when changed. Freight per box = box
+  weight × rate; per stem = per box ÷ stems per box; buying CIF = farm price + freight per stem; selling CIF =
+  buying CIF + margin. Trucking to Madrid is kept but off for now.
+
 ## Payment terms
 
 Terms are Prepaid, Net 7, Net 15, Net 30 and **15th of following month** (everything for a month's orders is due

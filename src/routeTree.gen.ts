@@ -23,6 +23,7 @@ import { Route as AppFarmsRouteImport } from './routes/_app/farms'
 import { Route as AppFloricodeRouteImport } from './routes/_app/floricode'
 import { Route as AppImportRouteImport } from './routes/_app/import'
 import { Route as AppMarginsRouteImport } from './routes/_app/margins'
+import { Route as AppMasterImportRouteImport } from './routes/_app/master-import'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppPricesRouteImport } from './routes/_app/prices'
 import { Route as AppProductsRouteImport } from './routes/_app/products'
@@ -126,6 +127,11 @@ const AppImportRoute = AppImportRouteImport.update({
 const AppMarginsRoute = AppMarginsRouteImport.update({
   id: '/margins',
   path: '/margins',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMasterImportRoute = AppMasterImportRouteImport.update({
+  id: '/master-import',
+  path: '/master-import',
   getParentRoute: () => AppRoute,
 } as any)
 const AppNotificationsRoute = AppNotificationsRouteImport.update({
@@ -318,6 +324,7 @@ export interface FileRoutesByFullPath {
   '/floricode': typeof AppFloricodeRoute
   '/import': typeof AppImportRoute
   '/margins': typeof AppMarginsRoute
+  '/master-import': typeof AppMasterImportRoute
   '/notifications': typeof AppNotificationsRoute
   '/prices': typeof AppPricesRoute
   '/products': typeof AppProductsRoute
@@ -368,6 +375,7 @@ export interface FileRoutesByTo {
   '/floricode': typeof AppFloricodeRoute
   '/import': typeof AppImportRoute
   '/margins': typeof AppMarginsRoute
+  '/master-import': typeof AppMasterImportRoute
   '/notifications': typeof AppNotificationsRoute
   '/prices': typeof AppPricesRoute
   '/products': typeof AppProductsRoute
@@ -420,6 +428,7 @@ export interface FileRoutesById {
   '/_app/floricode': typeof AppFloricodeRoute
   '/_app/import': typeof AppImportRoute
   '/_app/margins': typeof AppMarginsRoute
+  '/_app/master-import': typeof AppMasterImportRoute
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/prices': typeof AppPricesRoute
   '/_app/products': typeof AppProductsRoute
@@ -472,6 +481,7 @@ export interface FileRouteTypes {
     | '/floricode'
     | '/import'
     | '/margins'
+    | '/master-import'
     | '/notifications'
     | '/prices'
     | '/products'
@@ -522,6 +532,7 @@ export interface FileRouteTypes {
     | '/floricode'
     | '/import'
     | '/margins'
+    | '/master-import'
     | '/notifications'
     | '/prices'
     | '/products'
@@ -573,6 +584,7 @@ export interface FileRouteTypes {
     | '/_app/floricode'
     | '/_app/import'
     | '/_app/margins'
+    | '/_app/master-import'
     | '/_app/notifications'
     | '/_app/prices'
     | '/_app/products'
@@ -716,6 +728,13 @@ declare module '@tanstack/react-router' {
       path: '/margins'
       fullPath: '/margins'
       preLoaderRoute: typeof AppMarginsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/master-import': {
+      id: '/_app/master-import'
+      path: '/master-import'
+      fullPath: '/master-import'
+      preLoaderRoute: typeof AppMasterImportRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/notifications': {
@@ -978,6 +997,7 @@ interface AppRouteChildren {
   AppFloricodeRoute: typeof AppFloricodeRoute
   AppImportRoute: typeof AppImportRoute
   AppMarginsRoute: typeof AppMarginsRoute
+  AppMasterImportRoute: typeof AppMasterImportRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppPricesRoute: typeof AppPricesRoute
   AppProductsRoute: typeof AppProductsRoute
@@ -1025,6 +1045,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFloricodeRoute: AppFloricodeRoute,
   AppImportRoute: AppImportRoute,
   AppMarginsRoute: AppMarginsRoute,
+  AppMasterImportRoute: AppMasterImportRoute,
   AppNotificationsRoute: AppNotificationsRoute,
   AppPricesRoute: AppPricesRoute,
   AppProductsRoute: AppProductsRoute,
