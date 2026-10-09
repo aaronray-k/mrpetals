@@ -47,10 +47,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isSupabaseConfigured) return
     const supabase = getSupabase()
     let active = true
+    // Whose data is loaded. Supabase announces SIGNED_IN again whenever the browser tab comes back into view;
+    // for the same user that only refreshes the session, so the page keeps its data and what was typed.
+    let loadedFor: string | null | undefined
 
-    const apply = async (s: Session | null) => {
+    const apply = async (s: Session | null, force = false) => {
       if (!active) return
       setSession(s)
+      const who = s?.user.id ?? null
+      if (who === loadedFor && !force) return
+      loadedFor = who
       // Cached data belongs to the previous user (shared PCs at the packhouse).
       queryClient.clear()
       if (s) {
@@ -70,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Token refreshes don't change who the user is; skip the reload.
       if (event === 'TOKEN_REFRESHED') setSession(s)
       // Deferred: supabase-js can deadlock if Supabase is called inside this callback.
-      else if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') setTimeout(() => void apply(s), 0)
+      else if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') setTimeout(() => void apply(s, event === 'USER_UPDATED'), 0)
     })
     return () => {
       active = false
