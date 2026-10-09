@@ -398,6 +398,16 @@ weight it checks the container's weight limit; with stems per box it gives freig
 box type in ConsolFlora. Sizes: AKE floor 156.2 × 153.4 cm, 200.2 cm wide above the wing, 163 cm high; PMC
 317.5 × 243.8 cm. Change or add containers in `src/lib/freight/packing.ts`.
 
+The **Shipment / mixed boxes** tab (the default) loads boxes of different sizes together: pull a shipment's boxes
+(grouped by box type, with the pack rate's estimated weight) or type sizes and counts. Each box goes as low, then
+as far back as it fits, turned whichever way fits best (and on its side when allowed), standing on at least 70%
+support, clear of the AKE wing and within the weight limit; when a container is full the rest go into the next.
+**Suggest best fit** tries every container the airline flies, flat and on the side, in three loading orders,
+and picks the plan with the fewest containers, then the smaller container, then the tightest; it says what laying
+boxes on their side gains. **Airlines** (EK, QR, ET, TK, KQ to start; table `airlines`, which containers each
+flies) are compared on their best fit and freight at their rate per kg to the destination (entered from the freight
+agent's quotes into `freight_rates`, NBO → airport, from the day it is saved).
+
 ## Payment terms
 
 Terms are Prepaid, Net 7, Net 15, Net 30 and **15th of following month** (everything for a month's orders is due

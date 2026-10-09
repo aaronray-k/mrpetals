@@ -327,3 +327,10 @@ margins, stems per box, box weight, trucking; staff and Finance read, never farm
 `costing_settings_log`; changed with `set_costing_settings()` (Admin, Consolidator). The import runs in the
 browser and calls `master_import_farms()`, `master_import_varieties()` and `master_import_offers()` in batches
 (Admin, Consolidator); farm prices go into `price_list` from the import day.
+
+## Load planner (`…031_airlines.sql`)
+
+`airlines` (code, name, `ulds`: load planner container codes, `via`, notes; staff write; staff, Finance, QC read).
+Rates per kg are `freight_rates` rows with origin NBO, the destination and the airline code. `shipment_load_lines()`
+gives a shipment's active boxes by box type with counts and the estimated full-box weight (pack rate, else the box's
+own weight). The packing itself runs in the browser (`src/lib/freight/packing.ts`, `mixed.ts`).

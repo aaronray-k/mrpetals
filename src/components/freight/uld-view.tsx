@@ -1,11 +1,15 @@
 import * as React from 'react'
-import type { PackResult, Uld } from '~/lib/freight/packing'
+import type { Placed, Uld } from '~/lib/freight/packing'
+
+/** Box type colours, in a fixed order (the legend and tables name each type too). */
+export const BOX_COLOURS = ['#2f7d4f', '#d97706', '#2563eb', '#db2777', '#7c3aed', '#0891b2', '#65a30d', '#b91c1c']
 
 /**
- * The container and its boxes in 3D: drag to turn, scroll or pinch to zoom. Layers alternate two greens; layers
- * above `upTo` are hidden so the ones below can be seen. three.js is loaded only on this page.
+ * The container and its boxes in 3D: drag to turn, scroll or pinch to zoom. Boxes are coloured by box type when they
+ * carry a `line`, else layers alternate two greens; layers above `upTo` are hidden so the ones below can be seen.
+ * three.js is loaded only on this page.
  */
-export function UldView({ uld, plan, upTo, className }: { uld: Uld; plan: PackResult; upTo: number; className?: string }) {
+export function UldView({ uld, plan, upTo, className }: { uld: Uld; plan: { boxes: (Placed & { line?: number })[] }; upTo: number; className?: string }) {
   const host = React.useRef<HTMLDivElement>(null)
   const scene = React.useRef<{ setLayers: (n: number) => void; dispose: () => void } | null>(null)
 
@@ -53,15 +57,16 @@ export function UldView({ uld, plan, upTo, className }: { uld: Uld; plan: PackRe
       sc.add(base)
 
       // Boxes: one mesh per box, edges drawn so neighbours read apart.
-      const colours = [0x2f7d4f, 0x8bc34a]
+      const layerColours = [0x2f7d4f, 0x8bc34a]
       const geo = new THREE.BoxGeometry(1, 1, 1)
       const edges = new THREE.EdgesGeometry(geo)
-      const mats = colours.map((c) => new THREE.MeshStandardMaterial({ color: c }))
+      const mats = layerColours.map((c) => new THREE.MeshStandardMaterial({ color: c }))
+      const typeMats = BOX_COLOURS.map((c) => new THREE.MeshStandardMaterial({ color: c }))
       const line = new THREE.LineBasicMaterial({ color: 0x0f2a1a })
       const byLayer: InstanceType<typeof THREE.Group>[] = []
       for (const b of plan.boxes) {
         const g = (byLayer[b.layer] ??= new THREE.Group())
-        const m = new THREE.Mesh(geo, mats[b.layer % 2])
+        const m = new THREE.Mesh(geo, b.line != null ? typeMats[b.line % typeMats.length] : mats[b.layer % 2])
         const e = new THREE.LineSegments(edges, line)
         for (const o of [m, e]) {
           o.scale.set(b.dx * s * 0.995, b.dz * s * 0.995, b.dy * s * 0.995)

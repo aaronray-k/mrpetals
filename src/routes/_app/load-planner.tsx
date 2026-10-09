@@ -5,6 +5,7 @@ import { getSupabase } from '~/lib/supabase'
 import { ULDS, chargeableKg, packUld, type PackResult } from '~/lib/freight/packing'
 import { useCostingSettings } from '~/lib/master/api'
 import { UldView } from '~/components/freight/uld-view'
+import { MixedPlanner } from '~/components/freight/mixed-planner'
 import { PageHeader } from '~/components/layout/app-shell'
 import { RequireRole } from '~/components/layout/require-role'
 import { rolesFor } from '~/components/layout/nav'
@@ -19,7 +20,7 @@ export const Route = createFileRoute('/_app/load-planner')({
   head: () => ({ meta: [{ title: 'Load planner · ConsolFlora' }] }),
   component: () => (
     <RequireRole roles={rolesFor('/load-planner')}>
-      <LoadPlanner />
+      <LoadPlannerPage />
     </RequireRole>
   ),
 })
@@ -37,6 +38,38 @@ const num = (s: string) => {
 }
 const kg = (n: number) => `${n.toLocaleString('en-GB', { maximumFractionDigits: 1 })} kg`
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`
+
+function LoadPlannerPage() {
+  const [tab, setTab] = React.useState<'mixed' | 'one'>('mixed')
+  return (
+    <>
+      <PageHeader
+        title="Load planner"
+        description="How best to fit boxes in AKEs and on PMCs: pull a shipment or type the boxes, compare airlines, and see it in 3D (drag to turn)."
+      />
+      <div role="tablist" aria-label="Planner" className="mb-4 inline-flex rounded-lg border bg-card p-1">
+        {(
+          [
+            ['mixed', 'Shipment / mixed boxes'],
+            ['one', 'One box size'],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            role="tab"
+            type="button"
+            aria-selected={tab === k}
+            onClick={() => setTab(k)}
+            className={`h-9 rounded px-3 text-sm font-semibold ${tab === k ? 'bg-accent/20' : ''} focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel">{tab === 'mixed' ? <MixedPlanner /> : <LoadPlanner />}</div>
+    </>
+  )
+}
 
 function LoadPlanner() {
   const boxTypes = useQuery({
@@ -72,10 +105,6 @@ function LoadPlanner() {
 
   return (
     <>
-      <PageHeader
-        title="Load planner"
-        description="How many boxes of a size fit in an AKE or on a PMC: per layer, how many layers, and the most that fit. Drag the 3D view to turn it."
-      />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[22rem_1fr]">
         <Card>
           <CardHeader>
