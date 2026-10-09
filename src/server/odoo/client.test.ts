@@ -24,7 +24,9 @@ function fakeOdoo(opts: { existingMove?: number; currencyActive?: boolean; canIn
             { id: 2, date: '2026-08-09', move_id: [71, 'BNK1/2026/0003'], move_name: 'BNK1/2026/0003', ref: false, name: 'Payment to Fontana', date_maturity: false, partner_id: [7, 'Fontana'], currency_id: [1, 'USD'], amount_currency: 600, parent_state: 'posted' },
           ]
     else if (model === 'account.move' && method === 'read' && (args as number[][])[0]!.includes(70))
-      result = [{ id: 70, move_type: 'in_invoice', journal_id: [2, 'Vendor Bills'] }, { id: 71, move_type: 'entry', journal_id: [5, 'Bank'] }]
+      result = [{ id: 70, move_type: 'out_invoice', journal_id: [2, 'Vendor Bills'], x_studio_mawb: ' 176-12345675 ' }, { id: 71, move_type: 'entry', journal_id: [5, 'Bank'] }].map((m) =>
+        ((params.args[6] as { fields?: string[] } | undefined)?.fields ?? []).includes('x_studio_mawb') ? m : { ...m, x_studio_mawb: undefined, move_type: m.id === 70 ? 'in_invoice' : m.move_type },
+      )
     else if (model === 'account.journal' && method === 'read') result = [{ id: 2, type: 'purchase' }, { id: 5, type: 'bank' }]
     else if (model === 'res.partner' && method === 'search_read') {
       // The id ConsolFlora kept is customer 55, whose reference is PFJ.
@@ -195,6 +197,17 @@ describe('Odoo client', () => {
     expect(domain[0]).toEqual(expect.arrayContaining([['account_id.account_type', '=', 'liability_payable'], ['parent_state', 'in', ['posted']], ['partner_id', 'ilike', 'fontana'], ['date', '>=', '2026-07-01']]))
     // Statements only read: nothing is written to Odoo.
     expect(calls.some((c) => ['create', 'write', 'action_post', 'button_draft', 'unlink'].includes(c.args[4] as string))).toBe(false)
+  })
+
+  it('buyer statements read the MAWB from the mapped Odoo field, for invoices only', async () => {
+    const calls = fakeOdoo()
+    const r = await client().ledger({ side: 'buyer', from: null, to: '2026-09-30', partner: null, drafts: false, mawbField: 'x_studio_mawb' })
+    expect(r.lines.map((l) => [l.kind, l.move_id, l.mawb])).toEqual([
+      ['invoice', 70, '176-12345675'],
+      ['payment', 71, null],
+    ])
+    const read = calls.find((c) => c.args[3] === 'account.move' && c.args[4] === 'read')!.args[6] as { fields: string[] }
+    expect(read.fields).toEqual(['move_type', 'journal_id', 'x_studio_mawb'])
   })
 
   it('a due date set by ConsolFlora replaces any Odoo payment term', async () => {

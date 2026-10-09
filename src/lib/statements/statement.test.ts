@@ -9,6 +9,7 @@ import { buildStatement, type StatementFilters } from './statement'
 let id = 0
 const line = (l: Partial<LedgerLine> & Pick<LedgerLine, 'date' | 'amount' | 'kind'>): LedgerLine => ({
   id: ++id,
+  move_id: 1000 + id,
   number: `N${id}`,
   reference: null,
   due_date: null,
@@ -101,6 +102,36 @@ describe('statements of account', () => {
     expect(texts.some((t) => t.startsWith('Fontana (USD)'))).toBe(true)
     expect(texts.filter((t) => t.includes('Balance brought forward'))).toHaveLength(3)
     expect(texts.some((t) => t.startsWith('Closing balance') && t.endsWith('|1300|850|950'))).toBe(true)
+  })
+
+  it('buyer statements: a MAWB column, searchable', async () => {
+    const buyer: LedgerResult = {
+      opening: [],
+      lines: [
+        line({ date: '2026-08-01', amount: 1200, kind: 'invoice', partner: 'Pacific Floral', number: 'INV/2026/0001', mawb: '176-99990011', due_date: '2026-09-15' }),
+        line({ date: '2026-08-08', amount: 900, kind: 'invoice', partner: 'Pacific Floral', number: 'INV/2026/0002', mawb: '176-99990022' }),
+        line({ date: '2026-08-20', amount: -1200, kind: 'payment', partner: 'Pacific Floral', number: 'BNK1/2026/0009' }),
+      ],
+    }
+    const bf = { ...filters, side: 'buyer' as const }
+    const b = buildStatement(buyer, bf, '2026-10-08')
+    expect(b.accounts[0]!.rows.map((r) => r.mawb)).toEqual(['176-99990011', '176-99990022', null])
+    expect(buildStatement(buyer, { ...bf, number: '99990022' }, '2026-10-08').accounts[0]!.rows.map((r) => r.number)).toEqual(['INV/2026/0002'])
+    const { data, columns } = buildStatementSheet(b, new Date('2026-10-08T10:00:00Z'))
+    expect(columns).toHaveLength(9)
+    const texts = data.map((r) => r.map((c) => (c && typeof c === 'object' && 'value' in c ? String(c.value) : '')).join('|'))
+    expect(texts.some((t) => t.includes('Invoice no.|MAWB|Reference'))).toBe(true)
+    expect(texts.some((t) => t.includes('INV/2026/0001|176-99990011|'))).toBe(true)
+    expect(data.every((r) => r.length === 9)).toBe(true)
+    // Supplier statements keep their eight columns.
+    expect(buildStatementSheet(s).columns).toHaveLength(8)
+    expect((await PDFDocument.load(await statementPdf(b))).getPageCount()).toBe(1)
+  })
+
+  it('demo ledger: buyer invoices carry a MAWB, payments none', () => {
+    const { lines } = demoLedger({ side: 'buyer', from: null, to: '2026-10-08', partner: null, drafts: false }, new Date('2026-10-08T12:00:00Z'))
+    expect(lines.filter((l) => l.kind === 'invoice').every((l) => /^176-\d{8}$/.test(l.mawb ?? ''))).toBe(true)
+    expect(lines.filter((l) => l.kind === 'payment').every((l) => !l.mawb)).toBe(true)
   })
 
   it('PDF: pages break with the account heading repeated, and unsupported letters do not fail', async () => {

@@ -250,6 +250,17 @@ export const getOdooMappingOptions = createServerFn({ method: 'GET' })
  * Statements of account (Admin and Finance): Odoo's ledger for suppliers (payables) or buyers (receivables),
  * read live. Works while sending invoices is off, as it only reads.
  */
+/** Buyer statements: an invoice with no MAWB in Odoo gets the one ConsolFlora has (the invoice's own, else its shipment's). */
+async function fillMawbFromConsolFlora(ctx: AuthContext, ledger: LedgerResult) {
+  const missing = [...new Set(ledger.lines.filter((l) => !l.mawb && (l.kind === 'invoice' || l.kind === 'credit_note')).map((l) => l.move_id))]
+  if (!missing.length) return
+  const { data } = await ctx.supabase.from('invoices').select('odoo_move_id, mawb, shipments(mawb)').in('odoo_move_id', missing)
+  const known = new Map(
+    ((data ?? []) as unknown as { odoo_move_id: number; mawb: string | null; shipments: { mawb: string | null } | null }[]).map((i) => [i.odoo_move_id, i.mawb || i.shipments?.mawb || null]),
+  )
+  for (const l of ledger.lines) if (!l.mawb && known.get(l.move_id)) l.mawb = known.get(l.move_id)
+}
+
 export const getLedger = createServerFn({ method: 'GET' })
   .middleware([authMiddleware])
   .validator(
@@ -266,7 +277,10 @@ export const getLedger = createServerFn({ method: 'GET' })
     const a = await adapter(context, { forTest: true })
     if (!a.odoo) return { source: a.source, error: a.reason ?? 'Odoo is not connected.', ledger: null }
     try {
-      const ledger = await a.odoo.ledger({ ...data, partner: data.partner || null })
+      const { data: st } = await context.supabase.from('odoo_settings').select('field_map').maybeSingle()
+      const mawbField = data.side === 'buyer' ? ((st?.field_map as InvoicePayload['field_map'])?.mawb ?? null) : null
+      const ledger = await a.odoo.ledger({ ...data, partner: data.partner || null, mawbField })
+      if (data.side === 'buyer') await fillMawbFromConsolFlora(context, ledger)
       return { source: a.source === 'none' ? 'api' : a.source, error: null, ledger }
     } catch (e) {
       return { source: a.source, error: (e as Error).message, ledger: null }

@@ -11,7 +11,7 @@ export interface StatementFilters {
   from: string | null
   to: string
   partner: string | null
-  /** Bill, invoice or payment number, or reference. Only matching lines are listed; balances stay true. */
+  /** Bill, invoice or payment number, reference or MAWB. Only matching lines are listed; balances stay true. */
   number: string | null
   drafts: boolean
 }
@@ -20,6 +20,8 @@ export interface StatementRow {
   kind: LedgerLine['kind']
   number: string
   reference: string | null
+  /** Buyer invoices and credit notes: the flight's air waybill. */
+  mawb: string | null
   due_date: string | null
   /** Bills (supplier) or invoices (buyer): what increases the balance. */
   charge: number
@@ -79,7 +81,7 @@ export function buildStatement(ledger: LedgerResult, filters: StatementFilters, 
   }
   for (const o of ledger.opening) account(o.partner_id, o.partner, o.currency).opening = r2(sign * o.amount)
   const needle = filters.number?.trim().toLowerCase() || null
-  const matches = (l: LedgerLine) => !needle || l.number.toLowerCase().includes(needle) || (l.reference ?? '').toLowerCase().includes(needle)
+  const matches = (l: LedgerLine) => !needle || l.number.toLowerCase().includes(needle) || (l.reference ?? '').toLowerCase().includes(needle) || (l.mawb ?? '').toLowerCase().includes(needle)
   const lines = [...ledger.lines].sort((x, y) => x.date.localeCompare(y.date) || x.id - y.id)
   const running = new Map<string, number>()
   // For "overdue": amounts charged and not yet covered by payments or credits, oldest first, plus any credit in hand.
@@ -116,7 +118,7 @@ export function buildStatement(ledger: LedgerResult, filters: StatementFilters, 
     }
     q.spare = r2(q.spare + c)
     // With a number search, only matching lines are listed; the balance on each is still the true running balance.
-    if (matches(l)) a.rows.push({ date: l.date, kind: l.kind, number: l.number === '/' ? 'Draft' : l.number, reference: l.reference, due_date: l.due_date, charge, credit, balance, draft: l.draft })
+    if (matches(l)) a.rows.push({ date: l.date, kind: l.kind, number: l.number === '/' ? 'Draft' : l.number, reference: l.reference, mawb: l.mawb ?? null, due_date: l.due_date, charge, credit, balance, draft: l.draft })
   }
   for (const a of accounts.values()) {
     a.closing = r2(running.get(a.key) ?? a.opening)

@@ -83,9 +83,12 @@ export interface LedgerQuery {
   /** Part of the supplier's or buyer's name. */
   partner: string | null
   drafts: boolean
+  /** The Odoo invoice field holding the MAWB (Odoo settings, field mapping); read for invoices and credit notes. */
+  mawbField?: string | null
 }
 export interface LedgerLine {
   id: number
+  move_id: number
   date: string
   number: string
   reference: string | null
@@ -97,6 +100,8 @@ export interface LedgerLine {
   amount: number
   kind: 'bill' | 'refund' | 'invoice' | 'credit_note' | 'payment' | 'entry'
   draft: boolean
+  /** Buyer invoices and credit notes: the MAWB from Odoo (or, filled in by the app server, from ConsolFlora). */
+  mawb?: string | null
 }
 export interface LedgerResult {
   lines: LedgerLine[]
@@ -558,7 +563,11 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
       })) as Raw[]
       // What each line belongs to: a bill, refund, invoice, credit note, or (bank or cash journal) a payment.
       const moveIds = [...new Set(raw.map((l) => l.move_id[0]))]
-      const moves = moveIds.length ? ((await kw('account.move', 'read', [moveIds], { fields: ['move_type', 'journal_id'] })) as { id: number; move_type: string; journal_id: [number, string] | false }[]) : []
+      type Move = { id: number; move_type: string; journal_id: [number, string] | false } & Record<string, unknown>
+      const readMoves = (fields: string[]) => kw('account.move', 'read', [moveIds], { fields }) as Promise<Move[]>
+      // The MAWB field comes from the field mapping; if Odoo no longer has it, the statement goes on without it.
+      const moves = !moveIds.length ? [] : q.mawbField ? await readMoves(['move_type', 'journal_id', q.mawbField]).catch(() => readMoves(['move_type', 'journal_id'])) : await readMoves(['move_type', 'journal_id'])
+      const mawbOf = new Map(moves.map((m) => [m.id, q.mawbField ? str(m[q.mawbField])?.trim() || null : null]))
       const journalIds = [...new Set(moves.flatMap((m) => (m.journal_id ? [m.journal_id[0]] : [])))]
       const journals = journalIds.length ? ((await kw('account.journal', 'read', [journalIds], { fields: ['type'] })) as { id: number; type: string }[]) : []
       const cash = new Set(journals.filter((j) => j.type === 'bank' || j.type === 'cash').map((j) => j.id))
@@ -567,6 +576,7 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
         const kind = kindOf.get(l.move_id[0]) ?? 'entry'
         return {
           id: l.id,
+          move_id: l.move_id[0],
           date: l.date,
           number: l.move_name || l.move_id[1],
           reference: str(l.ref) ?? (kind === 'payment' || kind === 'entry' ? str(l.name) : null),
@@ -577,6 +587,7 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
           amount: l.amount_currency,
           kind,
           draft: l.parent_state === 'draft',
+          mawb: kind === 'invoice' || kind === 'credit_note' ? (mawbOf.get(l.move_id[0]) ?? null) : null,
         }
       })
       const opening = new Map<string, LedgerResult['opening'][number]>()

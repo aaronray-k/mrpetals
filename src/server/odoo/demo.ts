@@ -39,23 +39,26 @@ export function demoLedger(q: LedgerQuery, today = new Date()): LedgerResult {
       const year = date.getUTCFullYear()
       const draft = w === 0 && a.partner_id % 2 === 0
       const number = draft ? '/' : `${prefix}/${year}/${String(a.partner_id).slice(1)}${String(n).padStart(3, '0')}`
-      all.push({ id: id++, date: iso(date), number, reference: a.side === 'supplier' ? `${a.partner.split(' ')[0]!.toUpperCase()}-${a.currency}-${1000 + n}` : `CFL${a.partner.slice(0, 3).toUpperCase()}${String(n).padStart(4, '0')}`, due_date: iso(plus(date, a.terms)), partner_id: a.partner_id, partner: a.partner, currency: a.currency, amount: sign * amount, kind: a.side === 'supplier' ? 'bill' : 'invoice', draft })
+      // Buyers: each week's invoice is one flight's air waybill.
+      const mawb = a.side === 'buyer' ? `176-${String(9000000 + a.partner_id * 100 + n).padStart(8, '0')}` : null
+      all.push({ id: id++, move_id: 0, date: iso(date), number, reference: a.side === 'supplier' ? `${a.partner.split(' ')[0]!.toUpperCase()}-${a.currency}-${1000 + n}` : `CFL${a.partner.slice(0, 3).toUpperCase()}${String(n).padStart(4, '0')}`, due_date: iso(plus(date, a.terms)), partner_id: a.partner_id, partner: a.partner, currency: a.currency, amount: sign * amount, kind: a.side === 'supplier' ? 'bill' : 'invoice', draft, mawb })
       if (!draft) unpaid += amount
       if (n % 9 === 0) {
         const credit = Math.round(amount * 0.08 * 100) / 100
-        all.push({ id: id++, date: iso(plus(date, 3)), number: `${a.side === 'supplier' ? 'RBILL' : 'RINV'}/${year}/${String(a.partner_id).slice(1)}${String(n).padStart(3, '0')}`, reference: `Claim credit on ${number}`, due_date: null, partner_id: a.partner_id, partner: a.partner, currency: a.currency, amount: -sign * credit, kind: a.side === 'supplier' ? 'refund' : 'credit_note', draft: false })
+        all.push({ id: id++, move_id: 0, date: iso(plus(date, 3)), number: `${a.side === 'supplier' ? 'RBILL' : 'RINV'}/${year}/${String(a.partner_id).slice(1)}${String(n).padStart(3, '0')}`, reference: `Claim credit on ${number}`, due_date: null, partner_id: a.partner_id, partner: a.partner, currency: a.currency, amount: -sign * credit, kind: a.side === 'supplier' ? 'refund' : 'credit_note', draft: false, mawb })
         unpaid -= credit
       }
       // Payments: every few weeks, most of what is open (the latest weeks stay unpaid).
       if (n % a.paysEvery === 0 && w > 1) {
         const paid = Math.round(unpaid * (w > 6 ? 1 : 0.6) * 100) / 100
         if (paid > 0) {
-          all.push({ id: id++, date: iso(plus(date, 5)), number: `${a.currency === 'EUR' ? 'BNK2' : 'BNK1'}/${year}/${String(id).padStart(5, '0')}`, reference: a.side === 'supplier' ? `Payment to ${a.partner}` : `Payment from ${a.partner}`, due_date: null, partner_id: a.partner_id, partner: a.partner, currency: a.currency, amount: -sign * paid, kind: 'payment', draft: false })
+          all.push({ id: id++, move_id: 0, date: iso(plus(date, 5)), number: `${a.currency === 'EUR' ? 'BNK2' : 'BNK1'}/${year}/${String(id).padStart(5, '0')}`, reference: a.side === 'supplier' ? `Payment to ${a.partner}` : `Payment from ${a.partner}`, due_date: null, partner_id: a.partner_id, partner: a.partner, currency: a.currency, amount: -sign * paid, kind: 'payment', draft: false })
           unpaid -= paid
         }
       }
     }
   }
+  for (const l of all) l.move_id = 900000 + l.id
   const todayIso = iso(today)
   const lines = all
     .filter((l) => (q.drafts || !l.draft) && l.date <= q.to && l.date <= todayIso && (!q.partner || l.partner.toLowerCase().includes(q.partner.toLowerCase())))

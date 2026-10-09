@@ -135,7 +135,7 @@ function StatementsPage() {
                 <Field id="st-to" label="To">
                   {(d) => <Input id="st-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-describedby={d} />}
                 </Field>
-                <Field id="st-number" label="Number or reference" hint="Bill, invoice or payment number, or reference. Filters as you type.">
+                <Field id="st-number" label={side === 'buyer' ? 'Number, reference or MAWB' : 'Number or reference'} hint={side === 'buyer' ? 'Invoice or payment number, reference or MAWB. Filters as you type.' : 'Bill, invoice or payment number, or reference. Filters as you type.'}>
                   {(d) => <Input id="st-number" type="search" value={number} onChange={(e) => setNumber(e.target.value)} aria-describedby={d} />}
                 </Field>
               </div>
@@ -237,6 +237,7 @@ function AccountCard({ a, side, from, open }: { a: StatementAccount; side: Ledge
                 <TH>Date</TH>
                 <TH>Type</TH>
                 <TH>{side === 'supplier' ? 'Bill no.' : 'Invoice no.'}</TH>
+                {side === 'buyer' && <TH>MAWB</TH>}
                 <TH>Reference</TH>
                 <TH>Due date</TH>
                 <TH className="text-right">Amount</TH>
@@ -247,7 +248,7 @@ function AccountCard({ a, side, from, open }: { a: StatementAccount; side: Ledge
             <TBody>
               <TR>
                 <TD className="whitespace-nowrap">{day(from)}</TD>
-                <TD colSpan={6} className="text-muted-foreground">
+                <TD colSpan={side === 'buyer' ? 7 : 6} className="text-muted-foreground">
                   Balance brought forward
                 </TD>
                 <TD className="text-right tabular-nums">{money(a.opening, a.currency)}</TD>
@@ -259,6 +260,7 @@ function AccountCard({ a, side, from, open }: { a: StatementAccount; side: Ledge
                     {KIND_LABEL[r.kind]} {r.draft && <Badge variant="warning">Draft</Badge>}
                   </TD>
                   <TD className="whitespace-nowrap">{r.number}</TD>
+                  {side === 'buyer' && <TD className="whitespace-nowrap">{r.mawb}</TD>}
                   <TD className="min-w-40">{r.reference}</TD>
                   <TD className="whitespace-nowrap">{day(r.due_date)}</TD>
                   <TD className="text-right tabular-nums">{r.charge ? money(r.charge, a.currency) : ''}</TD>
@@ -267,7 +269,7 @@ function AccountCard({ a, side, from, open }: { a: StatementAccount; side: Ledge
                 </TR>
               ))}
               <TR className="font-semibold">
-                <TD colSpan={5}>Closing balance</TD>
+                <TD colSpan={side === 'buyer' ? 6 : 5}>Closing balance</TD>
                 <TD className="text-right tabular-nums">{money(a.charges, a.currency)}</TD>
                 <TD className="text-right tabular-nums">{money(a.credits, a.currency)}</TD>
                 <TD className="text-right tabular-nums">{money(a.closing, a.currency)}</TD>

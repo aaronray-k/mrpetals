@@ -13,6 +13,8 @@ const MUTED = rgb(0.4, 0.42, 0.4)
 const RULE = rgb(0.75, 0.77, 0.75)
 const HEAD_FILL = rgb(0.918, 0.961, 0.922)
 const COLS: { w: number; right?: boolean }[] = [{ w: 62 }, { w: 74 }, { w: 112 }, { w: 212 }, { w: 62 }, { w: 82, right: true }, { w: 84, right: true }, { w: 82, right: true }]
+// Buyer statements: a MAWB column after the invoice number, taking room from the reference.
+const BUYER_COLS: { w: number; right?: boolean }[] = [{ w: 62 }, { w: 74 }, { w: 112 }, { w: 84 }, { w: 128 }, { w: 62 }, { w: 82, right: true }, { w: 84, right: true }, { w: 82, right: true }]
 
 const amount = (n: number) => n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 /** Amount columns show '-' for nothing; balances always show their figure. */
@@ -54,10 +56,14 @@ export async function statementPdf(s: Statement, generatedAt = new Date()): Prom
     const dx = opts.right && opts.width ? opts.width - font.widthOfTextAtSize(str, size) : 0
     page.drawText(str, { x: x + dx, y, size, font, color: opts.color ?? INK })
   }
-  const cells = (values: string[], opts: { font?: PDFFont; fill?: boolean } = {}) => {
+  const buyer = s.filters.side === 'buyer'
+  const cols = buyer ? BUYER_COLS : COLS
+  /** Eight values (as on a supplier statement); on a buyer statement the MAWB goes in after the invoice number. */
+  const cells = (eight: string[], opts: { font?: PDFFont; fill?: boolean; mawb?: string } = {}) => {
+    const values = buyer ? [...eight.slice(0, 3), opts.mawb ?? '', ...eight.slice(3)] : eight
     if (opts.fill) page.drawRectangle({ x: M, y: y - 4, width: W - 2 * M, height: ROW, color: HEAD_FILL })
     let x = M
-    COLS.forEach((c, i) => {
+    cols.forEach((c, i) => {
       write(values[i] ?? '', x + 3, { font: opts.font, width: c.w - 6, right: c.right })
       x += c.w
     })
@@ -65,7 +71,7 @@ export async function statementPdf(s: Statement, generatedAt = new Date()): Prom
     y -= ROW
   }
   const header = (a: StatementAccount) =>
-    cells(['Date', 'Type', s.filters.side === 'supplier' ? 'Bill no.' : 'Invoice no.', 'Reference', 'Due date', `Amount ${a.currency}`, `Paid/credited ${a.currency}`, `Balance ${a.currency}`], { font: bold, fill: true })
+    cells(['Date', 'Type', s.filters.side === 'supplier' ? 'Bill no.' : 'Invoice no.', 'Reference', 'Due date', `Amount ${a.currency}`, `Paid/credited ${a.currency}`, `Balance ${a.currency}`], { font: bold, fill: true, mawb: 'MAWB' })
   const newPage = () => {
     page = doc.addPage([W, H])
     y = H - M
@@ -107,7 +113,7 @@ export async function statementPdf(s: Statement, generatedAt = new Date()): Prom
     cells([day(s.filters.from), 'Brought forward', '', '', '', '', '', amount(a.opening)])
     for (const r of a.rows) {
       room(1, a)
-      cells([day(r.date), KIND_LABEL[r.kind] + (r.draft ? ' (draft)' : ''), r.number, r.reference ?? '', day(r.due_date), money(r.charge), money(r.credit), amount(r.balance)])
+      cells([day(r.date), KIND_LABEL[r.kind] + (r.draft ? ' (draft)' : ''), r.number, r.reference ?? '', day(r.due_date), money(r.charge), money(r.credit), amount(r.balance)], { mawb: r.mawb ?? '' })
     }
     room(2, a)
     cells(['Closing balance', '', '', a.overdue > 0 ? `Of which overdue: ${money(a.overdue)} ${a.currency}` : '', '', money(a.charges), money(a.credits), amount(a.closing)], { font: bold })
