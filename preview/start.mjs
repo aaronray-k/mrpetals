@@ -90,6 +90,14 @@ async function setUpDatabase() {
         console.error(`test data not added: ${e.message}`)
       }
     }
+    // Buyers come from Odoo ("Import buyers from Odoo" on Customers): the demo buyers are marked as demo and
+    // hidden (inactive) once. Their old demo orders stay; "Show inactive" on Customers shows them again.
+    if (!done.has('demo-buyers-hidden')) {
+      await client.query('begin')
+      await client.query("update public.customers set source = 'demo', active = false where source = 'app'")
+      await client.query("insert into preview.applied (name) values ('demo-buyers-hidden')")
+      await client.query('commit')
+    }
     // PostgREST picks up new functions and tables.
     await client.query("notify pgrst, 'reload schema'")
   } catch (e) {

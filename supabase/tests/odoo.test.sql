@@ -164,6 +164,33 @@ set request.jwt.claim.sub = 'c0000000-0000-0000-0000-0000000000b1';
 select pg_temp.check_refused($$select set_customer_odoo_term((select customer_id from invoices limit 1), 1, 'x')$$, 'Only Admin, Consolidator and Finance');
 reset role;
 
+-- ---------------------------------------------------------------- Buyers from Odoo
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000c';
+select pg_temp.check(import_odoo_customers($$[
+  {"odoo_id": 801, "name": "Odoo Buyer USD", "ref": null, "email": "x@other.jp", "country": "Japan", "currency": "USD", "term_id": 4, "term_name": "30 Days"},
+  {"odoo_id": 802, "name": "Fleur Import SARL", "ref": "OB2", "email": "achat@fleur.fr", "contact_name": "Marie", "country": "France", "currency": "EUR"},
+  {"odoo_id": 803, "name": "Rosa Trade FZE", "ref": null, "email": "b@rosa.ae", "country": "United Arab Emirates", "currency": "AED", "term_id": 7, "term_name": "Immediate"},
+  {"odoo_id": 804, "name": "Rosa Traders", "ref": null, "email": null, "country": null, "currency": null},
+  {"odoo_id": 805, "name": "  ", "ref": null}
+]$$::jsonb, true) = '{"created": 2, "updated": 2}'::jsonb, 'buyers from Odoo: two already here (by name, by code), two new, a nameless one skipped');
+select pg_temp.check((select odoo_partner_id || ':' || contact_email || ':' || source || ':' || odoo_payment_term_id from customers where customer_code = 'OB1') = '801:c@ob1.jp:odoo:4',
+  'a buyer already here is linked to Odoo, keeps its own details and gets Odoo''s payment term');
+select pg_temp.check((select company_name || ':' || odoo_partner_id from customers where customer_code = 'OB2') = 'Odoo Buyer EUR:802',
+  'matched by code: ConsolFlora''s name stays');
+select pg_temp.check((select string_agg(customer_code || ':' || currency || ':' || incoterm || ':' || payment_terms || ':' || coalesce(destination_airport, '-') || ':' || needs_details || ':' || coalesce(odoo_payment_term_name, '-'), ',' order by customer_code)
+  from customers where odoo_partner_id in (803, 804)) = 'ROS:USD:FOB:Prepaid:-:true:Immediate,ROS2:USD:FOB:Prepaid:-:true:-',
+  'new buyers: a free code from the name, USD when Odoo''s currency isn''t used here, FOB and Prepaid, no airport, needs details');
+update customers set destination_airport = 'DXB', contact_name = 'Omar' where odoo_partner_id = 803;
+select pg_temp.check((select needs_details from customers where odoo_partner_id = 803) = false, 'filling in the airport and contact clears Needs details');
+select pg_temp.check(import_odoo_customers('[{"odoo_id": 803, "name": "Rosa Trade FZE (renamed)"}]', true) = '{"created": 0, "updated": 1}'::jsonb, 'importing again matches by the Odoo link');
+select pg_temp.check((select count(*) from customers where odoo_partner_id = 803) = 1, 'no duplicates');
+select pg_temp.check(import_odoo_customers('[{"odoo_id": 990, "name": "Demo Odoo Buyer", "term_id": 4}]', false) = '{"created": 1, "updated": 0}'::jsonb, 'from the demo Odoo: added');
+select pg_temp.check((select odoo_partner_id is null and odoo_payment_term_id is null from customers where company_name = 'Demo Odoo Buyer'), 'from the demo Odoo: no Odoo ids kept');
+set request.jwt.claim.sub = 'c0000000-0000-0000-0000-00000000000d';
+select pg_temp.check_refused($$select import_odoo_customers('[]', true)$$, 'Only Admin and Consolidator');
+reset role;
+set role authenticated;
+
 -- ---------------------------------------------------------------- Go-live
 select pg_temp.check((select send_from from odoo_settings) is null, 'no go-live until sending is switched on');
 reset role;

@@ -4,10 +4,14 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '~/lib/auth'
 import { STAFF_ROLES, hasAnyRole } from '~/lib/roles'
 import { SERVICES, SERVICE_LABELS, setCustomerService, type Service } from '~/lib/fees/api'
-import { setBuyerOdooTerm, useOdooPaymentTerms } from '~/lib/odoo/api'
+import { importBuyersFromOdoo, saveBuyerDetails, setBuyerOdooTerm, useBuyerLists, useOdooPaymentTerms, type BuyerDetails } from '~/lib/odoo/api'
 import { DataList } from '~/components/data-list'
 import { rolesFor } from '~/components/layout/nav'
-import { Select } from '~/components/ui/input'
+import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import { Card, CardContent } from '~/components/ui/card'
+import { Dialog } from '~/components/ui/dialog'
+import { Field, Input, Select } from '~/components/ui/input'
 import { useToast } from '~/components/ui/toaster'
 
 const money = (currency: unknown, value: unknown) =>
@@ -20,15 +24,27 @@ export const Route = createFileRoute('/_app/customers')({
       roles={rolesFor('/customers')}
       title="Customers"
       description="Buyers, their service, delivery terms and credit limits."
+      tip={<ImportFromOdoo />}
       table="customers"
-      select="id, customer_code, company_name, country, city, contact_name, currency, incoterm, payment_terms, odoo_payment_term_id, odoo_payment_term_name, credit_limit, destination_airport, service, active"
+      select="id, customer_code, company_name, country, city, contact_name, contact_email, source, needs_details, currency, incoterm, payment_terms, odoo_payment_term_id, odoo_payment_term_name, credit_limit, destination_airport, service, active"
       orderBy="customer_code"
       searchKeys={['customer_code', 'company_name', 'city', 'contact_name']}
       columns={[
         { key: 'customer_code', header: 'Code', className: 'font-semibold' },
-        { key: 'company_name', header: 'Company' },
+        {
+          key: 'company_name',
+          header: 'Company',
+          render: (r) => (
+            <span className="flex flex-wrap items-center gap-2">
+              {String(r.company_name)}
+              {r.source === 'odoo' && <Badge variant="outline">From Odoo</Badge>}
+              {r.source === 'demo' && <Badge>Demo</Badge>}
+              {r.needs_details === true && <DetailsButton row={r} />}
+            </span>
+          ),
+        },
         { key: 'country', header: 'Country' },
-        { key: 'destination_airport', header: 'Airport' },
+        { key: 'destination_airport', header: 'Airport', render: (r) => (r.destination_airport as string | null) ?? '—' },
         { key: 'incoterm', header: 'Incoterm' },
         { key: 'service', header: 'Service', render: (r) => <ServicePicker customerId={r.id} name={String(r.company_name)} service={r.service as Service} /> },
         { key: 'payment_terms', header: 'Terms' },
@@ -135,5 +151,145 @@ function OdooTermPicker({ customerId, name, termId, termName }: { customerId: st
         ))}
       </Select>
     </>
+  )
+}
+
+/** Buyers come from Odoo: links each buyer company in Odoo to its ConsolFlora buyer, or adds it. */
+function ImportFromOdoo() {
+  const { roles } = useAuth()
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const [busy, setBusy] = React.useState(false)
+  if (!hasAnyRole(roles, STAFF_ROLES)) return null
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">
+          Buyers come from Odoo&apos;s customer list. A buyer already here is matched by its Odoo link, its code (Odoo&apos;s Reference) or its
+          exact name; the rest are added on FOB and Prepaid, marked <strong>Needs details</strong> until you add the airport and contact. Demo
+          buyers are hidden: tick Show inactive to see them.
+        </p>
+        <Button
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true)
+            try {
+              const r = await importBuyersFromOdoo()
+              toast({
+                kind: 'success',
+                title: `${r.found} buyer${r.found === 1 ? '' : 's'} in Odoo`,
+                description: `${r.created} added, ${r.updated} already here and linked.`,
+              })
+              void queryClient.invalidateQueries({ queryKey: ['list', 'customers'] })
+            } catch (err) {
+              toast({ kind: 'error', title: 'Not imported', description: (err as Error).message })
+            } finally {
+              setBusy(false)
+            }
+          }}
+        >
+          {busy ? 'Reading Odoo…' : 'Import buyers from Odoo'}
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+/** What Odoo doesn't hold for a buyer: the ordering contact, country, destination airport, incoterm and currency. */
+function DetailsButton({ row }: { row: Record<string, unknown> }) {
+  const { roles } = useAuth()
+  const [open, setOpen] = React.useState(false)
+  if (!hasAnyRole(roles, STAFF_ROLES)) return <Badge variant="warning">Needs details</Badge>
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className="rounded-full focus-visible:outline-2">
+        <Badge variant="warning">Needs details</Badge>
+        <span className="sr-only">: fill in {String(row.company_name)}</span>
+      </button>
+      <Dialog open={open} onClose={() => setOpen(false)} title={`${String(row.company_name)}: details`} description="Odoo doesn't hold these. Orders need the airport and an ordering contact.">
+        {open && <DetailsForm row={row} onDone={() => setOpen(false)} />}
+      </Dialog>
+    </>
+  )
+}
+
+function DetailsForm({ row, onDone }: { row: Record<string, unknown>; onDone: () => void }) {
+  const lists = useBuyerLists()
+  const toast = useToast()
+  const queryClient = useQueryClient()
+  const [d, setD] = React.useState<BuyerDetails>({
+    contact_name: String(row.contact_name ?? ''),
+    contact_email: String(row.contact_email ?? ''),
+    country: String(row.country ?? ''),
+    destination_airport: (row.destination_airport as string | null) ?? '',
+    incoterm: String(row.incoterm ?? 'FOB'),
+    currency: String(row.currency ?? 'USD'),
+  })
+  const [error, setError] = React.useState<string | null>(null)
+  const id = String(row.id)
+  const set = (k: keyof BuyerDetails) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setD({ ...d, [k]: e.target.value })
+  const airport = (d.destination_airport ?? '').trim().toUpperCase()
+  return (
+    <form
+      className="grid gap-4"
+      onSubmit={async (e) => {
+        e.preventDefault()
+        if (!/^[A-Z]{3}$/.test(airport)) return setError('The destination airport is three letters, e.g. NRT.')
+        if (!d.contact_name.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.contact_email.trim()) || !d.country.trim()) return setError('Fill in the contact, a valid email and the country.')
+        try {
+          await saveBuyerDetails(id, { ...d, contact_name: d.contact_name.trim(), contact_email: d.contact_email.trim(), country: d.country.trim(), destination_airport: airport })
+          toast({ kind: 'success', title: `${String(row.company_name)} is ready for orders` })
+          void queryClient.invalidateQueries({ queryKey: ['list', 'customers'] })
+          onDone()
+        } catch (err) {
+          setError((err as Error).message)
+        }
+      }}
+    >
+      <Field id={`${id}-cn`} label="Ordering contact">
+        {(b) => <Input id={`${id}-cn`} value={d.contact_name} onChange={set('contact_name')} aria-describedby={b} autoComplete="off" />}
+      </Field>
+      <Field id={`${id}-ce`} label="Contact email">
+        {(b) => <Input id={`${id}-ce`} type="email" value={d.contact_email} onChange={set('contact_email')} aria-describedby={b} autoComplete="off" />}
+      </Field>
+      <Field id={`${id}-co`} label="Country">
+        {(b) => (
+          <>
+            <Input id={`${id}-co`} list={`${id}-countries`} value={d.country} onChange={set('country')} aria-describedby={b} />
+            <datalist id={`${id}-countries`}>{(lists.data?.countries ?? []).map((c) => <option key={c} value={c} />)}</datalist>
+          </>
+        )}
+      </Field>
+      <Field id={`${id}-ap`} label="Destination airport" hint="Three letters, e.g. NRT, AMS, DXB.">
+        {(b) => <Input id={`${id}-ap`} value={d.destination_airport ?? ''} maxLength={3} onChange={set('destination_airport')} aria-describedby={b} className="uppercase" />}
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field id={`${id}-ic`} label="Incoterm">
+          {(b) => (
+            <Select id={`${id}-ic`} value={d.incoterm} onChange={set('incoterm')} aria-describedby={b}>
+              {[...new Set([d.incoterm, ...(lists.data?.incoterms ?? [])])].map((v) => <option key={v}>{v}</option>)}
+            </Select>
+          )}
+        </Field>
+        <Field id={`${id}-cu`} label="Currency">
+          {(b) => (
+            <Select id={`${id}-cu`} value={d.currency} onChange={set('currency')} aria-describedby={b}>
+              {[...new Set([d.currency, ...(lists.data?.currencies ?? [])])].map((v) => <option key={v}>{v}</option>)}
+            </Select>
+          )}
+        </Field>
+      </div>
+      {error && (
+        <p role="alert" className="text-sm font-semibold text-destructive">
+          {error}
+        </p>
+      )}
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button type="submit">Save</Button>
+      </div>
+    </form>
   )
 }

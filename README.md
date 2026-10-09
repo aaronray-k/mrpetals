@@ -347,6 +347,22 @@ addresses** in Odoo (otherwise the company's email, otherwise ConsolFlora's cont
 their Odoo contacts to add to To or Cc. Odoo customers are matched by the buyer's code (Odoo's reference); an Odoo
 customer id from the preview's demo Odoo is never used with the real Odoo.
 
+## Buyers from Odoo
+
+Buyers come from Odoo's customer list. On **Customers**, Admin and Consolidator press **Import buyers from Odoo**
+(read only in Odoo; run it again any time). Every company in Odoo that is a customer is:
+
+- **linked** to the ConsolFlora buyer it already is: matched by its Odoo link, then its code (Odoo's Reference),
+  then its exact name. That buyer is made active and only its empty details are filled from Odoo; its Odoo payment
+  term comes too, if it has none yet.
+- otherwise **added**: code from Odoo's Reference (or three letters of the name), contact email, phone, country,
+  city, street and VAT from Odoo, currency of its latest Odoo invoice (USD if none), FOB, Prepaid, no credit, and
+  its Odoo payment term. Odoo has no destination airport or ordering contact, so it shows **Needs details**: click
+  it to fill in the contact, email, country, airport, incoterm and currency. Orders need those.
+
+The preview's demo buyers are marked **Demo** and hidden (inactive); tick **Show inactive** to see them. Their
+old demo orders stay. A buyer brought in from the preview's demo Odoo never keeps a demo Odoo id.
+
 ## Payment terms
 
 Terms are Prepaid, Net 7, Net 15, Net 30 and **15th of following month** (everything for a month's orders is due

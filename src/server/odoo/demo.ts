@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib'
-import { MAPPED_FIELDS, lineLabel, type InvoicePayload, type LedgerLine, type LedgerQuery, type LedgerResult, type ContactQuery, type MoveQuery, type OdooAdapter, type OdooContact, type OdooMove, type OdooMoveDetail, type OdooMoveSummary } from './client'
+import { MAPPED_FIELDS, lineLabel, type InvoicePayload, type LedgerLine, type LedgerQuery, type LedgerResult, type ContactQuery, type MoveQuery, type OdooAdapter, type OdooContact, type OdooCustomer, type OdooMove, type OdooMoveDetail, type OdooMoveSummary } from './client'
 
 const TERMS = [
   { id: 1, name: 'Immediate Payment' },
@@ -175,6 +175,13 @@ const DEMO_CONTACTS: OdooContact[] = [
   contact(5051, 'Oleria Growers', { is_company: true, ref: 'OLER', email: 'sales@oleria.example', grower: true }),
 ]
 
+// The demo Odoo's buyer companies, as "Import buyers from Odoo" reads them; Rosa Trade has no ConsolFlora code yet.
+const DEMO_CUSTOMERS: OdooCustomer[] = [
+  { odoo_id: 5001, name: 'Pacific Floral Japan GK', ref: 'PFJ', email: 'orders@pfj.example', phone: '+81 3 5555 0101', contact_name: 'Aiko Tanaka', country: 'Japan', city: 'Tokyo', street: null, vat: null, currency: 'USD', term_id: null, term_name: null },
+  { odoo_id: 5011, name: 'Bloem Handel BV', ref: 'BLM', email: 'inkoop@bloem.example', phone: '+31 297 555 010', contact_name: 'Jan de Vries', country: 'Netherlands', city: 'Aalsmeer', street: null, vat: null, currency: 'EUR', term_id: 4, term_name: '30 Days' },
+  { odoo_id: 5061, name: 'Rosa Trade FZE', ref: null, email: 'buying@rosatrade.example', phone: null, contact_name: null, country: 'United Arab Emirates', city: 'Dubai', street: null, vat: null, currency: 'USD', term_id: null, term_name: null },
+]
+
 function demoMove(id: number): OdooMoveSummary {
   const m = demoMoves().find((x) => x.move_id === id)
   if (!m) throw new Error(`Odoo invoice ${id} no longer exists.`)
@@ -276,6 +283,9 @@ export function demoOdoo(nextNumber: (kind: InvoicePayload['kind']) => Promise<n
         (c) => !needle || [c.name, c.email ?? '', c.company ?? ''].some((x) => x.toLowerCase().includes(needle)),
       )
       return { total: all.length, contacts: [...all].sort((a, b) => a.name.localeCompare(b.name)).slice(q.offset, q.offset + q.limit) }
+    },
+    async customers() {
+      return DEMO_CUSTOMERS.map((c) => ({ ...c }))
     },
     async contactsOf(p) {
       const company = DEMO_CONTACTS.find((c) => c.is_company && c.ref === p.code)

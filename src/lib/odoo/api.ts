@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getSupabase } from '~/lib/supabase'
-import { createManualInvoice, listOdooContacts, listOdooPaymentTerms, makeOdooPdf, setUpOdooLineProduct, fetchInvoices, getInvoiceDetail, getInvoicePdf, getOdooMappingOptions, getOdooMove, getOdooMovePdf, getOdooStatus, invoiceAction, listOdooMoves, odooMoveAction, pushInvoices, testOdoo } from '~/server/odoo.functions'
+import { createManualInvoice, importOdooCustomers, listOdooContacts, listOdooPaymentTerms, makeOdooPdf, setUpOdooLineProduct, fetchInvoices, getInvoiceDetail, getInvoicePdf, getOdooMappingOptions, getOdooMove, getOdooMovePdf, getOdooStatus, invoiceAction, listOdooMoves, odooMoveAction, pushInvoices, testOdoo } from '~/server/odoo.functions'
 import type { MappedField, MoveQuery } from '~/server/odoo/client'
 
 export interface Invoice {
@@ -182,4 +182,40 @@ export function useOdooPaymentTerms(enabled = true) {
 export async function setBuyerOdooTerm(customerId: string, term: { id: number; name: string } | null) {
   const { error } = await getSupabase().rpc('set_customer_odoo_term', { p_customer_id: customerId, p_term_id: term?.id ?? null, p_term_name: term?.name ?? null })
   if (error) throw new Error(error.message)
+}
+
+/** Customers ← Odoo: links or adds every buyer company in Odoo (Admin, Consolidator). */
+export async function importBuyersFromOdoo() {
+  const r = await importOdooCustomers()
+  if (r.error) throw new Error(r.error)
+  return r
+}
+
+export interface BuyerDetails {
+  contact_name: string
+  contact_email: string
+  country: string
+  destination_airport: string | null
+  incoterm: string
+  currency: string
+}
+/** What Odoo doesn't hold for a buyer: filled in on Customers (Admin, Consolidator). */
+export async function saveBuyerDetails(customerId: string, d: BuyerDetails) {
+  const { error } = await getSupabase().from('customers').update(d).eq('id', customerId)
+  if (error) throw new Error(error.message)
+}
+
+/** The Incoterm, Currency and Country lists. */
+export function useBuyerLists(enabled = true) {
+  return useQuery({
+    queryKey: ['lookups', 'buyer-details'],
+    enabled,
+    staleTime: 10 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await getSupabase().from('lookup_values').select('list_name, value').in('list_name', ['Incoterm', 'Currency', 'Country']).eq('active', true).order('sort_order')
+      if (error) throw new Error(error.message)
+      const of = (n: string) => (data ?? []).filter((r: { list_name: string }) => r.list_name === n).map((r: { value: string }) => r.value)
+      return { incoterms: of('Incoterm'), currencies: of('Currency'), countries: of('Country') }
+    },
+  })
 }

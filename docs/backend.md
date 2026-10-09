@@ -263,6 +263,14 @@ Provided by migration `…018_odoo.sql`; the Odoo calls are in `src/server/odoo/
 `invoice_payload()` sends it as `due_date` for invoices (from the latest order's placed date), and then no
 `payment_term_id`. New farms default to that term (column default and a trigger for empty imports).
 
+Buyers from Odoo (`…028_customers_from_odoo.sql`): `customers.source` ('app', 'odoo', 'demo'),
+`destination_airport` optional, `needs_details` (generated: no airport, contact, email or country).
+`import_odoo_customers(rows, keep_ids)` (Admin, Consolidator) matches by `odoo_partner_id`, then code = Odoo
+Reference, then exact name; links and fills only empty details, or adds the buyer on FOB / Prepaid. `keep_ids` is
+false for the preview's demo Odoo. The app server reads the companies (`customer_rank > 0`, no parent), their first
+person and their latest invoice currency. A kept Odoo customer id is checked by Reference or by the same name.
+The preview marks its seeded buyers `source = 'demo'` and inactive once (step `demo-buyers-hidden`).
+
 `customers.odoo_payment_term_id`, `odoo_payment_term_name` (`…027_customer_odoo_term.sql`), set with
 `set_customer_odoo_term()` (Admin, Consolidator, Finance): the buyer's own Odoo payment term. `invoice_payload()`
 then sends it as `payment_term_id` and no `due_date`. Precedence: the invoice's own `due_date` (manual invoices), the

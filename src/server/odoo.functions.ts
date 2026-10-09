@@ -501,3 +501,24 @@ export const listOdooPaymentTerms = createServerFn({ method: 'GET' })
       return { error: (e as Error).message, terms: [] as { id: number; name: string }[] }
     }
   })
+
+/**
+ * Customers ← Odoo (Admin, Consolidator): every buyer company in Odoo is linked to, or added as, a ConsolFlora
+ * buyer. Read only in Odoo. Odoo ids are kept only from the real Odoo, never the preview's demo one.
+ */
+export const importOdooCustomers = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    requireRoles(context, ['admin', 'consolidator'])
+    const r = await readOdoo(context)
+    if (!r.odoo) return { error: r.reason ?? 'Odoo is not connected.', created: 0, updated: 0, found: 0 }
+    try {
+      const rows = await r.odoo.customers()
+      const { data, error } = await context.supabase.rpc('import_odoo_customers', { p_rows: rows, p_keep_ids: r.source !== 'demo' })
+      if (error) throw new Error(error.message)
+      const n = data as { created: number; updated: number }
+      return { error: null, created: n.created, updated: n.updated, found: rows.length }
+    } catch (e) {
+      return { error: (e as Error).message, created: 0, updated: 0, found: 0 }
+    }
+  })

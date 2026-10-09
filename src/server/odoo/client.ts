@@ -160,6 +160,25 @@ export interface OdooContact {
   buyer: boolean
   grower: boolean
 }
+/** A buyer company in Odoo (a customer with no parent), as ConsolFlora brings it into Customers. */
+export interface OdooCustomer {
+  odoo_id: number
+  name: string
+  /** Odoo's Reference: ConsolFlora's customer code when it has one. */
+  ref: string | null
+  email: string | null
+  phone: string | null
+  /** The first person under the company, if any. */
+  contact_name: string | null
+  country: string | null
+  city: string | null
+  street: string | null
+  vat: string | null
+  /** The currency of the buyer's latest invoice in Odoo. */
+  currency: string | null
+  term_id: number | null
+  term_name: string | null
+}
 export interface ContactQuery {
   kind: 'all' | 'buyers' | 'growers'
   search: string | null
@@ -194,6 +213,8 @@ export interface OdooAdapter {
   /** Odoo's text fields on invoices, to choose where the MAWB, proforma and flight go. */
   fields(): Promise<OdooField[]>
   paymentTerms(): Promise<{ id: number; name: string }[]>
+  /** Buyer companies in Odoo, for Customers ("Import buyers from Odoo"). Read only. */
+  customers(): Promise<OdooCustomer[]>
   detail(p: InvoicePayload): Promise<OdooMoveDetail>
   /** Odoo's PDF of the invoice, if Odoo has made one (it does when the invoice is printed or sent). */
   pdf(p: InvoicePayload): Promise<{ name: string; base64: string } | null>
@@ -337,7 +358,8 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
   /** The buyer's company in Odoo: the id ConsolFlora kept, if it is still that buyer's (its reference is the buyer's code), else found by code. */
   async function knownPartner(id: number | null, code: string, name?: string) {
     if (id) {
-      const r = (await kw('res.partner', 'search_read', [[['id', '=', id], ['ref', '=', code]]], { fields: ['id'], limit: 1 })) as { id: number }[]
+      // The kept id is checked: same reference, or (a buyer brought in from Odoo, often without one) the same name.
+      const r = (await kw('res.partner', 'search_read', [[['id', '=', id], ...(name ? ['|', ['ref', '=', code], ['name', '=ilike', name]] : [['ref', '=', code]])]], { fields: ['id'], limit: 1 })) as { id: number }[]
       if (r[0]) return r[0].id
     }
     const byRef = ((await kw('res.partner', 'search', [[['ref', '=', code], ['parent_id', '=', false]]], { limit: 1 })) as number[])[0]
@@ -436,6 +458,41 @@ export function odooClient(cfg: OdooConfig): OdooAdapter {
         .filter(([name, f]) => ['char', 'text'].includes(f.type) && f.store !== false && (name.startsWith('x_') || !f.readonly))
         .map(([name, f]) => ({ name, label: f.string, type: f.type }))
         .sort((a, b) => Number(b.name.startsWith('x_')) - Number(a.name.startsWith('x_')) || a.label.localeCompare(b.label))
+    },
+    async customers() {
+      type P = { id: number; name: string; ref: string | false; email: string | false; phone: string | false; country_id: [number, string] | false; city: string | false; street: string | false; vat: string | false; property_payment_term_id: [number, string] | false }
+      const companies = (await kw('res.partner', 'search_read', [[['parent_id', '=', false], ['customer_rank', '>', 0]]], {
+        fields: ['name', 'ref', 'email', 'phone', 'country_id', 'city', 'street', 'vat', 'property_payment_term_id'],
+        order: 'name asc',
+        limit: 2000,
+      })) as P[]
+      if (!companies.length) return []
+      const ids = companies.map((c) => c.id)
+      const people = (await kw('res.partner', 'search_read', [[['parent_id', 'in', ids], ['type', '=', 'contact']]], { fields: ['name', 'email', 'parent_id'], order: 'id asc' })) as { name: string | false; email: string | false; parent_id: [number, string] }[]
+      const invoices = (await kw('account.move', 'search_read', [[['move_type', '=', 'out_invoice'], ['partner_id', 'child_of', ids]]], {
+        fields: ['commercial_partner_id', 'currency_id'],
+        order: 'date desc, id desc',
+        limit: 5000,
+      })) as { commercial_partner_id: [number, string] | false; currency_id: [number, string] }[]
+      const person = new Map<number, (typeof people)[number]>()
+      for (const x of people) if (!person.has(x.parent_id[0]) && str(x.name)) person.set(x.parent_id[0], x)
+      const currency = new Map<number, string>()
+      for (const i of invoices) if (i.commercial_partner_id && !currency.has(i.commercial_partner_id[0])) currency.set(i.commercial_partner_id[0], i.currency_id[1])
+      return companies.map((c) => ({
+        odoo_id: c.id,
+        name: c.name,
+        ref: str(c.ref)?.trim() || null,
+        email: str(c.email)?.trim() || str(person.get(c.id)?.email)?.trim() || null,
+        phone: str(c.phone),
+        contact_name: str(person.get(c.id)?.name),
+        country: c.country_id ? c.country_id[1] : null,
+        city: str(c.city),
+        street: str(c.street),
+        vat: str(c.vat),
+        currency: currency.get(c.id) ?? null,
+        term_id: c.property_payment_term_id ? c.property_payment_term_id[0] : null,
+        term_name: c.property_payment_term_id ? c.property_payment_term_id[1] : null,
+      }))
     },
     async paymentTerms() {
       return (await kw('account.payment.term', 'search_read', [[]], { fields: ['name'], order: 'name' })) as { id: number; name: string }[]
