@@ -1,0 +1,93 @@
+import { ArrowLeftRight, Barcode, Bell, CircleUser, MessageSquareWarning, ReceiptText, Boxes, Building2, CalendarClock, ClipboardList, FileSpreadsheet, Flower2, LayoutDashboard, ListChecks, Mail, Percent, Plane, ScanLine, Settings, ShoppingBasket, Store, Tag, Tags, Truck, Users, type LucideIcon } from 'lucide-react'
+import { ROLES, type Role } from '~/lib/roles'
+
+export interface NavItem {
+  to: string
+  label: string
+  icon: LucideIcon
+  /** One-line navigation tip, shown under the label while tips are on. */
+  tip: string
+  roles: Role[] | 'all'
+}
+
+export interface NavGroup {
+  label: string
+  items: NavItem[]
+}
+
+export const NAV: NavGroup[] = [
+  {
+    label: 'Overview',
+    items: [
+      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, tip: 'Your shortcuts and what needs attention', roles: 'all' },
+      { to: '/notifications', label: 'Notifications', icon: Bell, tip: 'Updates on your orders', roles: 'all' },
+      { to: '/account', label: 'My account', icon: CircleUser, tip: 'Your details, agreements and email choices', roles: 'all' },
+    ],
+  },
+  {
+    label: 'Buy flowers',
+    items: [
+      { to: '/shop', label: 'Catalog', icon: ShoppingBasket, tip: 'Prices per variety and length; add to cart', roles: ['customer'] },
+      { to: '/my-orders', label: 'My orders', icon: ListChecks, tip: 'Where each order is now', roles: ['customer'] },
+      { to: '/standing-orders', label: 'Standing orders', icon: CalendarClock, tip: 'Orders that repeat every week', roles: ['customer'] },
+      { to: '/my-claims', label: 'My claims', icon: MessageSquareWarning, tip: 'Report a problem with flowers you received', roles: ['customer'] },
+    ],
+  },
+  {
+    label: 'Orders and shipping',
+    items: [
+      { to: '/orders', label: 'Orders', icon: ClipboardList, tip: 'Buyer orders, split across farms', roles: ['admin', 'consolidator', 'finance'] },
+      { to: '/qc/scan', label: 'Scan boxes', icon: ScanLine, tip: 'QC: scan, check and send back boxes', roles: ['qc', 'senior_qc', 'admin', 'consolidator'] },
+      { to: '/shipments', label: 'Shipments', icon: Plane, tip: 'Flights, boxes, labels and packing lists', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
+      { to: '/farm/orders', label: 'My purchase orders', icon: Truck, tip: 'Confirm what ConsolFlora ordered from you', roles: ['farm'] },
+      { to: '/farm/claims', label: 'Claims on your flowers', icon: MessageSquareWarning, tip: 'Claim notices: send your credit note', roles: ['farm'] },
+      { to: '/documents', label: 'Shipment documents', icon: FileSpreadsheet, tip: 'Every document under a shipment: find it by MAWB or proforma no.', roles: ['admin', 'consolidator', 'finance'] },
+      { to: '/invoices', label: 'Invoices', icon: ReceiptText, tip: 'Odoo invoices and credit notes, and their payments', roles: ['admin', 'consolidator', 'finance'] },
+      { to: '/odoo-invoices', label: 'All invoices in Odoo', icon: ReceiptText, tip: 'Everything in Odoo: sent to buyers and received from growers', roles: ['admin', 'consolidator', 'finance'] },
+      { to: '/contacts', label: 'Contacts (Odoo)', icon: Users, tip: "Buyers' and growers' contacts and emails, from Odoo", roles: ['admin', 'consolidator', 'finance'] },
+      { to: '/statements', label: 'Statements of account', icon: FileSpreadsheet, tip: 'Supplier and buyer balances from Odoo, as PDF or Excel', roles: ['admin', 'finance'] },
+      { to: '/claims', label: 'Claims', icon: MessageSquareWarning, tip: 'Buyer claims: review, credit notes, farm notices', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
+    ],
+  },
+  {
+    label: 'Master data',
+    items: [
+      { to: '/farms', label: 'Farms', icon: Building2, tip: 'Growers, sales agents and payment terms', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
+      { to: '/customers', label: 'Customers', icon: Store, tip: 'Buyers, incoterms and credit limits', roles: ['admin', 'consolidator', 'finance'] },
+      { to: '/varieties', label: 'Varieties', icon: Flower2, tip: 'Every flower once, with its photo and growers', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
+      { to: '/products', label: 'Products', icon: Flower2, tip: 'Varieties, grades and stem lengths', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc', 'farm'] },
+      { to: '/floricode', label: 'Floricode', icon: Barcode, tip: 'VBN, feature and packaging codes; sync with Floricode', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
+      { to: '/box-types', label: 'Box types', icon: Boxes, tip: 'Box sizes and volumetric weight', roles: ['admin', 'consolidator', 'qc', 'senior_qc'] },
+      { to: '/prices', label: 'Selling prices', icon: Tag, tip: 'Pin a farm or fix a price per product', roles: ['admin', 'consolidator', 'finance'] },
+      { to: '/exchange-rates', label: 'Exchange rates', icon: ArrowLeftRight, tip: 'Convert farm prices into each buyer\'s currency', roles: ['admin', 'consolidator', 'finance'] },
+      { to: '/margins', label: 'Fees and margins', icon: Percent, tip: 'Fee per stem by incoterm, and per shipment by service', roles: ['admin', 'consolidator', 'finance'] },
+    ],
+  },
+  {
+    label: 'Tools',
+    items: [
+      { to: '/import', label: 'Import', icon: FileSpreadsheet, tip: 'Load data from the Excel template', roles: ['admin', 'consolidator'] },
+      { to: '/load-planner', label: 'Load planner', icon: Boxes, tip: 'How many boxes fit in an AKE or on a PMC, in 3D', roles: ['admin', 'consolidator', 'finance', 'qc', 'senior_qc'] },
+      { to: '/master-import', label: 'Master price file', icon: FileSpreadsheet, tip: 'Farms, varieties and prices from the master file; freight rate', roles: ['admin', 'consolidator'] },
+      { to: '/users', label: 'Users', icon: Users, tip: 'Create accounts and give roles', roles: ['admin'] },
+      { to: '/settings/email', label: 'Email settings', icon: Mail, tip: 'Zoho mailbox details (email is off for now)', roles: ['admin'] },
+      { to: '/settings/odoo', label: 'Odoo settings', icon: ReceiptText, tip: 'Where invoices are made', roles: ['admin'] },
+      { to: '/settings/ordering', label: 'Ordering settings', icon: Settings, tip: 'Lead time and farm delivery hours', roles: ['admin'] },
+      { to: '/labels', label: 'Label designer', icon: Tags, tip: 'Box label layouts, QR code and test prints', roles: ['admin'] },
+    ],
+  },
+]
+
+export function navFor(roles: Role[]): NavGroup[] {
+  return NAV.map((g) => ({
+    ...g,
+    items: g.items.filter((i) => i.roles === 'all' || i.roles.some((r) => roles.includes(r))),
+  })).filter((g) => g.items.length > 0)
+}
+
+/** Who may open a page. The menu is the single source of truth, so a page and its menu item can't disagree. */
+export function rolesFor(to: string): Role[] {
+  const item = NAV.flatMap((g) => g.items).find((i) => i.to === to)
+  if (!item) throw new Error(`No menu item for ${to}`)
+  return item.roles === 'all' ? [...ROLES] : item.roles
+}

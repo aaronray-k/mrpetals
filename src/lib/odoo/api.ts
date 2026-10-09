@@ -1,0 +1,221 @@
+import { useQuery } from '@tanstack/react-query'
+import { getSupabase } from '~/lib/supabase'
+import { createManualInvoice, importOdooCustomers, listOdooContacts, listOdooPaymentTerms, makeOdooPdf, setUpOdooLineProduct, fetchInvoices, getInvoiceDetail, getInvoicePdf, getOdooMappingOptions, getOdooMove, getOdooMovePdf, getOdooStatus, invoiceAction, listOdooMoves, odooMoveAction, pushInvoices, testOdoo } from '~/server/odoo.functions'
+import type { MappedField, MoveQuery } from '~/server/odoo/client'
+
+export interface Invoice {
+  id: string
+  kind: 'invoice' | 'credit_note'
+  customer_id: string
+  shipment_id: string | null
+  credit_note_id: string | null
+  currency: string
+  amount: number
+  reference: string
+  order_ids: string[]
+  status: 'pending' | 'pushed' | 'failed'
+  attempts: number
+  last_error: string | null
+  odoo_name: string | null
+  odoo_state: string | null
+  odoo_payment_state: string | null
+  odoo_amount_due: number | null
+  odoo_url: string | null
+  created_at: string
+  pushed_at: string | null
+  fetched_at: string | null
+  odoo_source: 'demo' | 'api' | null
+  posted_at: string | null
+  odoo_due_date: string | null
+  manual: boolean
+  customers: { company_name: string; customer_code: string } | null
+}
+
+export function useInvoice(id: string) {
+  return useQuery({
+    queryKey: ['invoices', 'one', id],
+    queryFn: async () => {
+      const { data, error } = await getSupabase().from('invoices').select('*, customers(company_name, customer_code, payment_terms)').eq('id', id).maybeSingle()
+      if (error) throw new Error(error.message)
+      if (!data) return null
+      const i = data as Invoice & { customers: { company_name: string; customer_code: string; payment_terms: string } | null }
+      return { ...i, amount: Number(i.amount), odoo_amount_due: i.odoo_amount_due == null ? null : Number(i.odoo_amount_due) }
+    },
+  })
+}
+/** Odoo's version of an invoice, for the live preview. */
+export function useOdooInvoice(id: string, enabled = true) {
+  return useQuery({ queryKey: ['odoo-invoice', id], enabled, queryFn: () => getInvoiceDetail({ data: { id } }), staleTime: 30_000 })
+}
+export const odooInvoicePdf = (id: string) => getInvoicePdf({ data: { id } })
+export const odooInvoiceAction = (id: string, action: 'confirm' | 'reset' | 'update') => invoiceAction({ data: { id, action } })
+export function useOdooMappingOptions(enabled = true) {
+  return useQuery({ queryKey: ['odoo-mapping'], enabled, queryFn: () => getOdooMappingOptions(), staleTime: 5 * 60_000 })
+}
+
+/** Odoo calls a draft's number "/" until it is confirmed. */
+export const invoiceNumber = (i: Pick<Invoice, 'odoo_name' | 'kind' | 'odoo_state'>) =>
+  i.odoo_name && i.odoo_name !== '/' ? i.odoo_name : i.odoo_state === 'draft' ? `Draft ${i.kind === 'credit_note' ? 'credit note' : 'invoice'}` : i.kind === 'credit_note' ? 'Credit note' : 'Invoice'
+
+export function useInvoices(filter?: { shipmentId?: string; orderId?: string }) {
+  return useQuery({
+    queryKey: ['invoices', filter ?? {}],
+    queryFn: async () => {
+      let q = getSupabase().from('invoices').select('*, customers(company_name, customer_code)').order('created_at', { ascending: false })
+      if (filter?.shipmentId) q = q.eq('shipment_id', filter.shipmentId)
+      if (filter?.orderId) q = q.contains('order_ids', [filter.orderId])
+      const { data, error } = await q
+      if (error) throw new Error(error.message)
+      return (data as Invoice[]).map((i) => ({ ...i, amount: Number(i.amount), odoo_amount_due: i.odoo_amount_due == null ? null : Number(i.odoo_amount_due) }))
+    },
+  })
+}
+
+export interface OdooSettings {
+  url: string | null
+  database: string | null
+  login: string | null
+  enabled: boolean
+  line_label: string
+  last_fetch_at: string | null
+  send_from: string | null
+  field_map: Partial<Record<MappedField, string>>
+  payment_term_map: Record<string, number>
+  line_product_id: number | null
+  line_product_name: string | null
+}
+export function useOdooSettings() {
+  return useQuery({
+    queryKey: ['odoo-settings'],
+    queryFn: async () => {
+      const { data, error } = await getSupabase().from('odoo_settings').select('url, database, login, enabled, line_label, last_fetch_at, send_from, field_map, payment_term_map, line_product_id, line_product_name').maybeSingle()
+      if (error) throw new Error(error.message)
+      return data as OdooSettings | null
+    },
+  })
+}
+export async function saveOdooSettings(s: Partial<Omit<OdooSettings, 'last_fetch_at' | 'send_from'>>) {
+  const { data, error } = await getSupabase().from('odoo_settings').update(s).eq('id', true).select('id')
+  if (error) throw new Error(error.message)
+  if (!data?.length) throw new Error('Only Admin users can change Odoo settings.')
+}
+
+export function useOdooLog() {
+  return useQuery({
+    queryKey: ['odoo-log'],
+    queryFn: async () => {
+      const { data, error } = await getSupabase().from('odoo_sync_log').select('id, at, action, ok, message, invoice_id').order('at', { ascending: false }).limit(20)
+      if (error) throw new Error(error.message)
+      return data as { id: number; at: string; action: string; ok: boolean; message: string | null; invoice_id: string | null }[]
+    },
+  })
+}
+
+export function useOdooStatus(enabled = true) {
+  return useQuery({ queryKey: ['odoo-status'], enabled, queryFn: () => getOdooStatus(), staleTime: 60_000 })
+}
+export const pushToOdoo = (data: { shipmentId?: string; invoiceIds?: string[] } = {}) => pushInvoices({ data })
+export const fetchFromOdoo = () => fetchInvoices()
+export const testOdooConnection = () => testOdoo()
+
+const PAYMENT: Record<string, string> = { not_paid: 'Not paid', in_payment: 'Payment in progress', partial: 'Partly paid', paid: 'Paid', reversed: 'Reversed' }
+export const paymentLabel = (s: string | null) => (s ? (PAYMENT[s] ?? s) : '—')
+
+/** All invoices in Odoo (sent to buyers or received from growers), 50 at a time. */
+export type MovesQuery = Omit<MoveQuery, 'limit'>
+export function useOdooMoves(q: MovesQuery) {
+  return useQuery({ queryKey: ['odoo-moves', q], queryFn: () => listOdooMoves({ data: q }), staleTime: 30_000 })
+}
+export function useOdooMove(id: number) {
+  return useQuery({ queryKey: ['odoo-move', id], queryFn: () => getOdooMove({ data: { id } }), staleTime: 30_000 })
+}
+export const odooMovePdf = (id: number) => getOdooMovePdf({ data: { id } })
+export const runOdooMoveAction = (id: number, action: 'confirm' | 'reset') => odooMoveAction({ data: { id, action } })
+
+export interface ManualInvoiceInput {
+  customerId: string
+  kind: 'invoice' | 'credit_note'
+  currency: string
+  reference: string
+  lines: { name: string; quantity: number; price_unit: number }[]
+  mawb: string | null
+  proforma: string | null
+  flight: string | null
+  dueDate: string | null
+}
+export const createInvoice = (data: ManualInvoiceInput) => createManualInvoice({ data })
+
+/** Active buyers and the currency list, for the manual invoice form. */
+export function useInvoiceFormData() {
+  return useQuery({
+    queryKey: ['invoice-form-data'],
+    queryFn: async () => {
+      const sb = getSupabase()
+      const [c, l] = await Promise.all([
+        sb.from('customers').select('id, customer_code, company_name, currency, payment_terms').eq('active', true).order('company_name'),
+        sb.from('lookup_values').select('value').eq('list_name', 'Currency').eq('active', true).order('sort_order'),
+      ])
+      if (c.error) throw new Error(c.error.message)
+      if (l.error) throw new Error(l.error.message)
+      return {
+        buyers: c.data as { id: string; customer_code: string; company_name: string; currency: string; payment_terms: string }[],
+        currencies: (l.data as { value: string }[]).map((x) => x.value),
+      }
+    },
+  })
+}
+
+/** Has Odoo make its PDF of a confirmed invoice: ConsolFlora's (invoiceId) or any Odoo document (moveId). */
+export const makePdfInOdoo = (target: { invoiceId: string } | { moveId: number }) => makeOdooPdf({ data: target })
+
+/** Contacts in Odoo, 50 at a time. */
+export function useOdooContacts(q: { kind: 'all' | 'buyers' | 'growers'; search: string | null; offset: number }) {
+  return useQuery({ queryKey: ['odoo-contacts', q], queryFn: () => listOdooContacts({ data: q }), staleTime: 60_000 })
+}
+
+export const setUpLineProduct = () => setUpOdooLineProduct()
+
+/** Odoo's payment terms (for a buyer's term on Customers). */
+export function useOdooPaymentTerms(enabled = true) {
+  return useQuery({ queryKey: ['odoo-payment-terms'], enabled, queryFn: () => listOdooPaymentTerms(), staleTime: 5 * 60_000 })
+}
+export async function setBuyerOdooTerm(customerId: string, term: { id: number; name: string } | null) {
+  const { error } = await getSupabase().rpc('set_customer_odoo_term', { p_customer_id: customerId, p_term_id: term?.id ?? null, p_term_name: term?.name ?? null })
+  if (error) throw new Error(error.message)
+}
+
+/** Customers ← Odoo: links or adds every buyer company in Odoo (Admin, Consolidator). */
+export async function importBuyersFromOdoo() {
+  const r = await importOdooCustomers()
+  if (r.error) throw new Error(r.error)
+  return r
+}
+
+export interface BuyerDetails {
+  contact_name: string
+  contact_email: string
+  country: string
+  destination_airport: string | null
+  incoterm: string
+  currency: string
+}
+/** What Odoo doesn't hold for a buyer: filled in on Customers (Admin, Consolidator). */
+export async function saveBuyerDetails(customerId: string, d: BuyerDetails) {
+  const { error } = await getSupabase().from('customers').update(d).eq('id', customerId)
+  if (error) throw new Error(error.message)
+}
+
+/** The Incoterm, Currency and Country lists. */
+export function useBuyerLists(enabled = true) {
+  return useQuery({
+    queryKey: ['lookups', 'buyer-details'],
+    enabled,
+    staleTime: 10 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await getSupabase().from('lookup_values').select('list_name, value').in('list_name', ['Incoterm', 'Currency', 'Country']).eq('active', true).order('sort_order')
+      if (error) throw new Error(error.message)
+      const of = (n: string) => (data ?? []).filter((r: { list_name: string }) => r.list_name === n).map((r: { value: string }) => r.value)
+      return { incoterms: of('Incoterm'), currencies: of('Currency'), countries: of('Country') }
+    },
+  })
+}

@@ -1,0 +1,640 @@
+{
+ "_note": "Demo Floricode master data for the preview. Codes are examples, not real Floricode codes.",
+ "initial": {
+  "products": [
+   {
+    "code": "13000",
+    "name": "R GR EVER RED",
+    "latin_name": "Rosa 'Ever Red'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13007",
+    "name": "R GR MADAM RED",
+    "latin_name": "Rosa 'Madam Red'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13014",
+    "name": "R GR KINGS DAY",
+    "latin_name": "Rosa 'Kings Day'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13021",
+    "name": "R GR REVIVAL",
+    "latin_name": "Rosa 'Revival'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13028",
+    "name": "R GR RED NAOMI",
+    "latin_name": "Rosa 'Red Naomi'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13035",
+    "name": "R GR FREEDOM",
+    "latin_name": "Rosa 'Freedom'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13042",
+    "name": "R GR EXPLORER",
+    "latin_name": "Rosa 'Explorer'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13049",
+    "name": "R GR RHODOS",
+    "latin_name": "Rosa 'Rhodos'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13056",
+    "name": "R GR UPPER CLASS",
+    "latin_name": "Rosa 'Upper Class'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13063",
+    "name": "R GR AVALANCHE",
+    "latin_name": "Rosa 'Avalanche'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13070",
+    "name": "R GR MONDIAL",
+    "latin_name": "Rosa 'Mondial'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13077",
+    "name": "R GR PINK FLOYD",
+    "latin_name": "Rosa 'Pink Floyd'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13084",
+    "name": "R GR SWEETNESS",
+    "latin_name": "Rosa 'Sweetness'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13091",
+    "name": "R GR VENDELA",
+    "latin_name": "Rosa 'Vendela'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13098",
+    "name": "R GR ATHENA",
+    "latin_name": "Rosa 'Athena'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13105",
+    "name": "R GR PENNY LANE",
+    "latin_name": "Rosa 'Penny Lane'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13112",
+    "name": "R GR WOW",
+    "latin_name": "Rosa 'Wow'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13119",
+    "name": "R GR DEEP PURPLE",
+    "latin_name": "Rosa 'Deep Purple'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13126",
+    "name": "R GR TAJ MAHAL",
+    "latin_name": "Rosa 'Taj Mahal'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13133",
+    "name": "R GR MOONSTONE",
+    "latin_name": "Rosa 'Moonstone'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13140",
+    "name": "R GR PLAYA BLANCA",
+    "latin_name": "Rosa 'Playa Blanca'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13147",
+    "name": "R GR HEARTS",
+    "latin_name": "Rosa 'Hearts'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13154",
+    "name": "R GR JUMILIA",
+    "latin_name": "Rosa 'Jumilia'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13161",
+    "name": "R GR ESPERANCE",
+    "latin_name": "Rosa 'Esperance'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13168",
+    "name": "R GR COUNTRY BLUES",
+    "latin_name": "Rosa 'Country Blues'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13175",
+    "name": "R GR CHERRY O",
+    "latin_name": "Rosa 'Cherry O'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13182",
+    "name": "R GR NINA",
+    "latin_name": "Rosa 'Nina'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13189",
+    "name": "R GR SOPHIA LOREN",
+    "latin_name": "Rosa 'Sophia Loren'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "14500",
+    "name": "R TR SNOWFLAKE",
+    "latin_name": "Rosa 'Snowflake'",
+    "product_group": "Rosa trosbloemig",
+    "status": "active"
+   },
+   {
+    "code": "14507",
+    "name": "R TR LYDIA",
+    "latin_name": "Rosa 'Lydia'",
+    "product_group": "Rosa trosbloemig",
+    "status": "active"
+   },
+   {
+    "code": "14514",
+    "name": "R TR BABE",
+    "latin_name": "Rosa 'Babe'",
+    "product_group": "Rosa trosbloemig",
+    "status": "active"
+   },
+   {
+    "code": "14521",
+    "name": "R TR MIRABEL",
+    "latin_name": "Rosa 'Mirabel'",
+    "product_group": "Rosa trosbloemig",
+    "status": "active"
+   },
+   {
+    "code": "14528",
+    "name": "R TR RUBICON",
+    "latin_name": "Rosa 'Rubicon'",
+    "product_group": "Rosa trosbloemig",
+    "status": "active"
+   },
+   {
+    "code": "14535",
+    "name": "R TR FIRE FLASH",
+    "latin_name": "Rosa 'Fire Flash'",
+    "product_group": "Rosa trosbloemig",
+    "status": "active"
+   },
+   {
+    "code": "17201",
+    "name": "GYPS PA XLENCE",
+    "latin_name": "Gypsophila paniculata 'Xlence'",
+    "product_group": "Gypsophila",
+    "status": "active"
+   },
+   {
+    "code": "17208",
+    "name": "GYPS PA MILLION STARS",
+    "latin_name": "Gypsophila paniculata 'Million Stars'",
+    "product_group": "Gypsophila",
+    "status": "active"
+   },
+   {
+    "code": "18310",
+    "name": "HYPERICUM RED FAME",
+    "latin_name": "Hypericum 'Red Fame'",
+    "product_group": "Hypericum",
+    "status": "active"
+   },
+   {
+    "code": "19022",
+    "name": "ALSTROEMERIA WHISTLER",
+    "latin_name": "Alstroemeria 'Whistler'",
+    "product_group": "Alstroemeria",
+    "status": "active"
+   },
+   {
+    "code": "19105",
+    "name": "CARNATION MOONLIGHT",
+    "latin_name": "Dianthus caryophyllus 'Moonlight'",
+    "product_group": "Dianthus",
+    "status": "active"
+   },
+   {
+    "code": "13400",
+    "name": "R GR SPIRIT OF FREEDOM",
+    "latin_name": "Rosa 'Spirit of Freedom'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "12999",
+    "name": "R GR FIRST RED",
+    "latin_name": "Rosa 'First Red'",
+    "product_group": "Rosa grootbloemig",
+    "status": "blocked",
+    "replaced_by": null
+   }
+  ],
+  "feature_types": [
+   {
+    "code": "S20",
+    "name": "Stem length",
+    "product_field": "stem_length_cm"
+   },
+   {
+    "code": "S62",
+    "name": "Flower head size",
+    "product_field": "head_size_cm"
+   },
+   {
+    "code": "S98",
+    "name": "Ripeness stage",
+    "product_field": "maturity"
+   },
+   {
+    "code": "Q01",
+    "name": "Quality group",
+    "product_field": "grade"
+   },
+   {
+    "code": "S05",
+    "name": "Flowers per stem",
+    "product_field": null
+   }
+  ],
+  "feature_values": [
+   {
+    "feature_type": "S20",
+    "code": "030",
+    "name": "30 cm",
+    "numeric_value": 30
+   },
+   {
+    "feature_type": "S20",
+    "code": "035",
+    "name": "35 cm",
+    "numeric_value": 35
+   },
+   {
+    "feature_type": "S20",
+    "code": "040",
+    "name": "40 cm",
+    "numeric_value": 40
+   },
+   {
+    "feature_type": "S20",
+    "code": "045",
+    "name": "45 cm",
+    "numeric_value": 45
+   },
+   {
+    "feature_type": "S20",
+    "code": "050",
+    "name": "50 cm",
+    "numeric_value": 50
+   },
+   {
+    "feature_type": "S20",
+    "code": "055",
+    "name": "55 cm",
+    "numeric_value": 55
+   },
+   {
+    "feature_type": "S20",
+    "code": "060",
+    "name": "60 cm",
+    "numeric_value": 60
+   },
+   {
+    "feature_type": "S20",
+    "code": "065",
+    "name": "65 cm",
+    "numeric_value": 65
+   },
+   {
+    "feature_type": "S20",
+    "code": "070",
+    "name": "70 cm",
+    "numeric_value": 70
+   },
+   {
+    "feature_type": "S20",
+    "code": "075",
+    "name": "75 cm",
+    "numeric_value": 75
+   },
+   {
+    "feature_type": "S20",
+    "code": "080",
+    "name": "80 cm",
+    "numeric_value": 80
+   },
+   {
+    "feature_type": "S20",
+    "code": "090",
+    "name": "90 cm",
+    "numeric_value": 90
+   },
+   {
+    "feature_type": "S62",
+    "code": "035",
+    "name": "3.5 cm",
+    "numeric_value": 3.5
+   },
+   {
+    "feature_type": "S62",
+    "code": "040",
+    "name": "4.0 cm",
+    "numeric_value": 4.0
+   },
+   {
+    "feature_type": "S62",
+    "code": "045",
+    "name": "4.5 cm",
+    "numeric_value": 4.5
+   },
+   {
+    "feature_type": "S62",
+    "code": "050",
+    "name": "5.0 cm",
+    "numeric_value": 5.0
+   },
+   {
+    "feature_type": "S62",
+    "code": "055",
+    "name": "5.5 cm",
+    "numeric_value": 5.5
+   },
+   {
+    "feature_type": "S62",
+    "code": "060",
+    "name": "6.0 cm",
+    "numeric_value": 6.0
+   },
+   {
+    "feature_type": "S62",
+    "code": "065",
+    "name": "6.5 cm",
+    "numeric_value": 6.5
+   },
+   {
+    "feature_type": "S98",
+    "code": "1",
+    "name": "Stage 1",
+    "numeric_value": 1
+   },
+   {
+    "feature_type": "S98",
+    "code": "2",
+    "name": "Stage 2",
+    "numeric_value": 2
+   },
+   {
+    "feature_type": "S98",
+    "code": "3",
+    "name": "Stage 3",
+    "numeric_value": 3
+   },
+   {
+    "feature_type": "S98",
+    "code": "4",
+    "name": "Stage 4",
+    "numeric_value": 4
+   },
+   {
+    "feature_type": "S98",
+    "code": "5",
+    "name": "Stage 5",
+    "numeric_value": 5
+   },
+   {
+    "feature_type": "Q01",
+    "code": "A1",
+    "name": "A1 (first quality)",
+    "numeric_value": null
+   },
+   {
+    "feature_type": "Q01",
+    "code": "A2",
+    "name": "A2",
+    "numeric_value": null
+   },
+   {
+    "feature_type": "Q01",
+    "code": "B1",
+    "name": "B1 (second quality)",
+    "numeric_value": null
+   },
+   {
+    "feature_type": "S05",
+    "code": "001",
+    "name": "1 or more",
+    "numeric_value": 1
+   },
+   {
+    "feature_type": "S05",
+    "code": "003",
+    "name": "3 or more",
+    "numeric_value": 3
+   },
+   {
+    "feature_type": "S05",
+    "code": "005",
+    "name": "5 or more",
+    "numeric_value": 5
+   },
+   {
+    "feature_type": "S05",
+    "code": "007",
+    "name": "7 or more",
+    "numeric_value": 7
+   }
+  ],
+  "packaging": [
+   {
+    "code": "901",
+    "name": "Quarter box (100 x 25 x 15)",
+    "length_cm": 100,
+    "width_cm": 25,
+    "height_cm": 15
+   },
+   {
+    "code": "902",
+    "name": "Half box (100 x 50 x 15)",
+    "length_cm": 100,
+    "width_cm": 50,
+    "height_cm": 15
+   },
+   {
+    "code": "903",
+    "name": "Full box (100 x 50 x 30)",
+    "length_cm": 100,
+    "width_cm": 50,
+    "height_cm": 30
+   },
+   {
+    "code": "904",
+    "name": "Eighth box (100 x 12.5 x 15)",
+    "length_cm": 100,
+    "width_cm": 12.5,
+    "height_cm": 15
+   },
+   {
+    "code": "566",
+    "name": "Procona bucket",
+    "length_cm": 40,
+    "width_cm": 30,
+    "height_cm": 40
+   }
+  ],
+  "companies": [
+   {
+    "code": "KE1001",
+    "gln": "6160001001001",
+    "name": "Kibo Roses Ltd",
+    "country": "Kenya",
+    "kind": "grower"
+   },
+   {
+    "code": "KE1002",
+    "gln": "6160001002008",
+    "name": "Naku Flowers",
+    "country": "Kenya",
+    "kind": "grower"
+   },
+   {
+    "code": "KE1003",
+    "gln": "6160001003005",
+    "name": "Oleria Growers",
+    "country": "Kenya",
+    "kind": "grower"
+   },
+   {
+    "code": "KE2001",
+    "gln": "6160002001000",
+    "name": "ConsolFlora",
+    "country": "Kenya",
+    "kind": "trader"
+   },
+   {
+    "code": "NL3001",
+    "gln": "8710003001004",
+    "name": "Bloem Handel BV",
+    "country": "Netherlands",
+    "kind": "buyer"
+   },
+   {
+    "code": "JP4001",
+    "gln": "4500004001004",
+    "name": "Pacific Floral Japan GK",
+    "country": "Japan",
+    "kind": "buyer"
+   },
+   {
+    "code": "NL0001",
+    "gln": "8710000001007",
+    "name": "Royal FloraHolland",
+    "country": "Netherlands",
+    "kind": "auction"
+   }
+  ]
+ },
+ "update": {
+  "products": [
+   {
+    "code": "13021",
+    "name": "R GR REVIVAL",
+    "latin_name": "Rosa 'Revival'",
+    "product_group": "Rosa grootbloemig",
+    "status": "blocked",
+    "replaced_by": "13405"
+   },
+   {
+    "code": "13405",
+    "name": "R GR REVIVAL!",
+    "latin_name": "Rosa 'Revival!'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13014",
+    "name": "R GR KING'S DAY",
+    "latin_name": "Rosa 'King's Day'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   },
+   {
+    "code": "13412",
+    "name": "R GR PINK MONDIAL",
+    "latin_name": "Rosa 'Pink Mondial'",
+    "product_group": "Rosa grootbloemig",
+    "status": "active"
+   }
+  ],
+  "feature_values": [
+   {
+    "feature_type": "S20",
+    "code": "035",
+    "name": "35 cm",
+    "numeric_value": 35,
+    "status": "blocked"
+   }
+  ]
+ }
+}

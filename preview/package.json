@@ -1,0 +1,9 @@
+{
+  "name": "consolflora-preview",
+  "private": true,
+  "type": "module",
+  "description": "Preview site only: runs the app with a small stand-in for Supabase on one Render web service.",
+  "dependencies": {
+    "pg": "^8.16.3"
+  }
+}
