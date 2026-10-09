@@ -334,3 +334,9 @@ browser and calls `master_import_farms()`, `master_import_varieties()` and `mast
 Rates per kg are `freight_rates` rows with origin NBO, the destination and the airline code. `shipment_load_lines()`
 gives a shipment's active boxes by box type with counts and the estimated full-box weight (pack rate, else the box's
 own weight). The packing itself runs in the browser (`src/lib/freight/packing.ts`, `mixed.ts`).
+
+Box allowances and load checks (`…032_box_allowances.sql`): `box_types.size_basis`, `wall_mm`, `bulge_top_mm`,
+`bulge_side_mm`, `bulge_end_mm` (defaults outside, 5, 10, 5, 0); `shipment_load_lines()` returns them. `load_checks`
+(planned against actual boxes per container, with the plan: box lines still to load, allowances, options; staff and
+QC insert, staff, Finance and QC read) feed accuracy, the loading factor and the bulge suggestion
+(`src/lib/freight/calibrate.ts`).

@@ -2,7 +2,7 @@ import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { getSupabase } from '~/lib/supabase'
-import { ULDS, chargeableKg, packUld, type PackResult } from '~/lib/freight/packing'
+import { DEFAULT_ALLOWANCES, ULDS, boxSizes, chargeableKg, packUld, type Allowances, type PackResult } from '~/lib/freight/packing'
 import { useCostingSettings } from '~/lib/master/api'
 import { UldView } from '~/components/freight/uld-view'
 import { MixedPlanner } from '~/components/freight/mixed-planner'
@@ -31,6 +31,16 @@ interface BoxType {
   length_cm: number
   width_cm: number
   height_cm: number
+  size_basis: 'outside' | 'inside'
+  wall_mm: number
+  bulge_top_mm: number
+  bulge_side_mm: number
+  bulge_end_mm: number
+}
+const allowancesOfType = (b: BoxType): Allowances => ({ sizes: b.size_basis, wallMm: Number(b.wall_mm), bulgeTopMm: Number(b.bulge_top_mm), bulgeSideMm: Number(b.bulge_side_mm), bulgeEndMm: Number(b.bulge_end_mm) })
+const num0 = (s: string) => {
+  const v = Number(s.replace(',', '.'))
+  return Number.isFinite(v) && v >= 0 ? v : 0
 }
 const num = (s: string) => {
   const v = Number(s.replace(',', '.'))
@@ -75,7 +85,7 @@ function LoadPlanner() {
   const boxTypes = useQuery({
     queryKey: ['box-types-planner'],
     queryFn: async () => {
-      const { data, error } = await getSupabase().from('box_types').select('box_code, description, length_cm, width_cm, height_cm').eq('active', true).order('box_code')
+      const { data, error } = await getSupabase().from('box_types').select('box_code, description, length_cm, width_cm, height_cm, size_basis, wall_mm, bulge_top_mm, bulge_side_mm, bulge_end_mm').eq('active', true).order('box_code')
       if (error) throw new Error(error.message)
       return ((data ?? []) as BoxType[]).map((b) => ({ ...b, length_cm: Number(b.length_cm), width_cm: Number(b.width_cm), height_cm: Number(b.height_cm) }))
     },
@@ -89,14 +99,21 @@ function LoadPlanner() {
   const [stems, setStems] = React.useState('')
   const [clearance, setClearance] = React.useState('2')
   const [onSide, setOnSide] = React.useState(false)
+  const [basis, setBasis] = React.useState<'outside' | 'inside'>('outside')
+  const [wall, setWall] = React.useState(String(DEFAULT_ALLOWANCES.wallMm))
+  const [bulgeTop, setBulgeTop] = React.useState(String(DEFAULT_ALLOWANCES.bulgeTopMm))
+  const [bulgeSide, setBulgeSide] = React.useState(String(DEFAULT_ALLOWANCES.bulgeSideMm))
+  const [bulgeEnd, setBulgeEnd] = React.useState(String(DEFAULT_ALLOWANCES.bulgeEndMm))
   const uld = ULDS.find((u) => u.code === uldCode)!
   const box = { l: num(L), w: num(W), h: num(H) }
   const valid = box.l && box.w && box.h
+  const allowances: Allowances = { sizes: basis, wallMm: num0(wall), bulgeTopMm: num0(bulgeTop), bulgeSideMm: num0(bulgeSide), bulgeEndMm: num0(bulgeEnd) }
+  const sizes = valid ? boxSizes({ length: box.l! * 10, width: box.w! * 10, height: box.h! * 10 }, allowances) : null
   const opts = { clearance: (num(clearance) ?? 0) * 10, allowOnSide: onSide, boxWeightKg: num(weight) }
   const plan = React.useMemo(
-    () => (valid ? packUld(uld, { length: box.l! * 10, width: box.w! * 10, height: box.h! * 10 }, opts) : null),
+    () => (sizes ? packUld(uld, sizes.space, { ...opts, outside: sizes.outside }) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [uldCode, L, W, H, weight, clearance, onSide],
+    [uldCode, L, W, H, weight, clearance, onSide, basis, wall, bulgeTop, bulgeSide, bulgeEnd],
   )
   const [upTo, setUpTo] = React.useState(99)
   React.useEffect(() => setUpTo(plan?.layers.length ?? 0), [plan])
@@ -134,6 +151,11 @@ function LoadPlanner() {
                       setL(String(b.length_cm))
                       setW(String(b.width_cm))
                       setH(String(b.height_cm))
+                      setBasis(b.size_basis)
+                      setWall(String(Number(b.wall_mm)))
+                      setBulgeTop(String(Number(b.bulge_top_mm)))
+                      setBulgeSide(String(Number(b.bulge_side_mm)))
+                      setBulgeEnd(String(Number(b.bulge_end_mm)))
                     }
                   }}
                 >
@@ -171,6 +193,39 @@ function LoadPlanner() {
             <Field id="lp-clear" label="Space kept free on each side (cm)" hint="Walls, net and loading room.">
               {(d) => <Input id="lp-clear" inputMode="decimal" value={clearance} onChange={(e) => setClearance(e.target.value)} aria-describedby={d} />}
             </Field>
+            <fieldset className="grid gap-2">
+              <legend className="mb-1.5 text-sm font-semibold">Thickness and bulge</legend>
+              <div className="grid grid-cols-2 gap-2">
+                <Field id="lp-basis" label="Sizes are">
+                  {(d) => (
+                    <Select id="lp-basis" value={basis} onChange={(e) => setBasis(e.target.value as 'outside' | 'inside')} aria-describedby={d}>
+                      <option value="outside">Outside</option>
+                      <option value="inside">Inside</option>
+                    </Select>
+                  )}
+                </Field>
+                <Field id="lp-wall" label="Wall (mm)">
+                  {(d) => <Input id="lp-wall" inputMode="decimal" value={wall} onChange={(e) => setWall(e.target.value)} aria-describedby={d} disabled={basis === 'outside'} />}
+                </Field>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    ['lp-bt', 'Bulge top', bulgeTop, setBulgeTop],
+                    ['lp-bs', 'Bulge sides', bulgeSide, setBulgeSide],
+                    ['lp-be', 'Bulge ends', bulgeEnd, setBulgeEnd],
+                  ] as const
+                ).map(([id, label, v, set]) => (
+                  <Field key={id} id={id} label={`${label} (mm)`}>
+                    {(d) => <Input id={id} inputMode="decimal" value={v} onChange={(e) => set(e.target.value)} aria-describedby={d} />}
+                  </Field>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Per face: a box takes its size plus the bulge on both faces.
+                {sizes && ` Each box takes ${sizes.space.length / 10} × ${sizes.space.width / 10} × ${sizes.space.height / 10} cm; the airline measures ${sizes.outside.length / 10} × ${sizes.outside.width / 10} × ${sizes.outside.height / 10} cm.`}
+              </p>
+            </fieldset>
             <label className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold">
               <input type="checkbox" className="size-5 accent-accent" checked={onSide} onChange={(e) => setOnSide(e.target.checked)} />
               Boxes may be turned on their side
@@ -207,7 +262,7 @@ function LoadPlanner() {
               </div>
               <Compare
                 uld={uld}
-                current={{ label: 'This box', l: box.l!, w: box.w!, h: box.h! }}
+                current={{ label: 'This box', l: box.l!, w: box.w!, h: box.h!, a: allowances }}
                 types={boxTypes.data ?? []}
                 opts={opts}
                 rate={rate}
@@ -216,6 +271,11 @@ function LoadPlanner() {
                   setL(String(b.l))
                   setW(String(b.w))
                   setH(String(b.h))
+                  setBasis(b.a.sizes)
+                  setWall(String(b.a.wallMm))
+                  setBulgeTop(String(b.a.bulgeTopMm))
+                  setBulgeSide(String(b.a.bulgeSideMm))
+                  setBulgeEnd(String(b.a.bulgeEndMm))
                 }}
               />
             </>
@@ -319,7 +379,7 @@ function Weights({ plan, rate, cur, stems }: { plan: PackResult; rate: number | 
   )
 }
 
-type Candidate = { label: string; l: number; w: number; h: number }
+type Candidate = { label: string; l: number; w: number; h: number; a: Allowances }
 function Compare({ uld, current, types, opts, rate, cur, onPick }: {
   uld: (typeof ULDS)[number]
   current: Candidate
@@ -329,8 +389,9 @@ function Compare({ uld, current, types, opts, rate, cur, onPick }: {
   cur: string
   onPick: (b: Candidate) => void
 }) {
-  const rows = [current, ...types.map((t) => ({ label: t.box_code, l: t.length_cm, w: t.width_cm, h: t.height_cm }))].map((c) => {
-    const p = packUld(uld, { length: c.l * 10, width: c.w * 10, height: c.h * 10 }, opts)
+  const rows = [current, ...types.map((t) => ({ label: t.box_code, l: t.length_cm, w: t.width_cm, h: t.height_cm, a: allowancesOfType(t) }))].map((c) => {
+    const { space, outside } = boxSizes({ length: c.l * 10, width: c.w * 10, height: c.h * 10 }, c.a)
+    const p = packUld(uld, space, { ...opts, outside })
     const charge = chargeableKg(p)
     return { c, p, perBox: rate != null && p.total ? (charge * rate) / p.total : null }
   })

@@ -35,6 +35,36 @@ export interface BoxSize {
   width: number
   height: number
 }
+/**
+ * What a real flower box takes besides its nominal size. Board thickness: sizes measured inside get the wall added
+ * on both sides. Bulging: the flowers push each face out in the middle, and two neighbouring boxes' bulges meet,
+ * so each box takes its outside size plus the bulge on both faces, in each direction. The bulge follows the box
+ * when it is laid on its side. Airlines measure the outside size for volumetric weight. All in mm.
+ */
+export interface Allowances {
+  sizes: 'outside' | 'inside'
+  wallMm: number
+  /** Top and bottom faces (per face). */
+  bulgeTopMm: number
+  /** The two long sides (per face). */
+  bulgeSideMm: number
+  /** The two ends (per face). */
+  bulgeEndMm: number
+}
+/** Starting figures until real loads tune them (see load checks). */
+export const DEFAULT_ALLOWANCES: Allowances = { sizes: 'outside', wallMm: 5, bulgeTopMm: 10, bulgeSideMm: 5, bulgeEndMm: 0 }
+export const NO_ALLOWANCES: Allowances = { sizes: 'outside', wallMm: 0, bulgeTopMm: 0, bulgeSideMm: 0, bulgeEndMm: 0 }
+
+/** A box's outside size (for volumetric weight) and the space it really takes (for packing). */
+export function boxSizes(b: BoxSize, a: Allowances): { outside: BoxSize; space: BoxSize } {
+  const wall = a.sizes === 'inside' ? 2 * a.wallMm : 0
+  const outside = { length: b.length + wall, width: b.width + wall, height: b.height + wall }
+  return {
+    outside,
+    space: { length: outside.length + 2 * a.bulgeEndMm, width: outside.width + 2 * a.bulgeSideMm, height: outside.height + 2 * a.bulgeTopMm },
+  }
+}
+
 export interface PackOptions {
   /** Kept free on every side for the walls, net and loading (mm). */
   clearance: number
@@ -42,6 +72,8 @@ export interface PackOptions {
   allowOnSide: boolean
   /** Weight of one full box, kg; with it, the container's weight limit caps the count. */
   boxWeightKg: number | null
+  /** The box's outside size for volumetric weight, when the packed size includes bulge. */
+  outside?: BoxSize
 }
 export interface Placed {
   x: number
@@ -154,6 +186,8 @@ export function packUld(u: Uld, box: BoxSize, o: PackOptions): PackResult {
     }
     const usedLayers = layers.filter((l) => l.count > 0)
     const vol = box.length * box.width * box.height
+    const out = o.outside ?? box
+    const outVol = out.length * out.width * out.height
     const r: PackResult = {
       boxes: kept,
       layers: usedLayers,
@@ -163,7 +197,7 @@ export function packUld(u: Uld, box: BoxSize, o: PackOptions): PackResult {
       fill: (kept.length * vol) / usableVolume(u, o.clearance),
       grossKg: o.boxWeightKg ? Math.round(kept.length * o.boxWeightKg * 10) / 10 : null,
       payloadKg,
-      volumetricKg: Math.round(((kept.length * vol) / 1000 / 6000) * 10) / 10,
+      volumetricKg: Math.round(((kept.length * outVol) / 1000 / 6000) * 10) / 10,
       standing: h,
     }
     if (!best || r.total > best.total || (r.total === best.total && r.layers.length < best.layers.length)) best = r

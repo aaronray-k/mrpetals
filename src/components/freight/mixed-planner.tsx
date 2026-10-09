@@ -2,7 +2,10 @@ import * as React from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Sparkles, Trash2 } from 'lucide-react'
 import { getSupabase } from '~/lib/supabase'
-import { ULDS, type Uld } from '~/lib/freight/packing'
+import { DEFAULT_ALLOWANCES, ULDS, boxSizes, type Allowances, type Uld } from '~/lib/freight/packing'
+import { toBoxLine, type BoxSpec } from '~/lib/freight/calibrate'
+import { LoadChecks } from '~/components/freight/load-checks'
+import { AssumptionsPanel } from '~/components/freight/assumptions-panel'
 import { planShipment, suggestBestFit, type BoxLine, type ShipmentPlan, type Suggestion } from '~/lib/freight/mixed'
 import { BOX_COLOURS, UldView } from '~/components/freight/uld-view'
 import { Alert } from '~/components/ui/alert'
@@ -37,7 +40,28 @@ interface Row {
   h: string
   kg: string
   count: string
+  /** Inside or outside sizes, board thickness and bulge (mm per face), as typed. */
+  basis: 'outside' | 'inside'
+  wall: string
+  bulgeTop: string
+  bulgeSide: string
+  bulgeEnd: string
 }
+/** A number that may be 0 (thickness, bulge). */
+const num0 = (s: string) => {
+  const v = Number(String(s).replace(',', '.'))
+  return Number.isFinite(v) && v >= 0 ? v : 0
+}
+const allowancesOf = (r: Row): Allowances => ({ sizes: r.basis, wallMm: num0(r.wall), bulgeTopMm: num0(r.bulgeTop), bulgeSideMm: num0(r.bulgeSide), bulgeEndMm: num0(r.bulgeEnd) })
+type BoxTypeAllowances = { size_basis?: string; wall_mm?: number | null; bulge_top_mm?: number | null; bulge_side_mm?: number | null; bulge_end_mm?: number | null }
+/** Row fields from a box type's allowances (or the starting figures). */
+const rowAllowances = (b: BoxTypeAllowances = {}) => ({
+  basis: (b.size_basis === 'inside' ? 'inside' : 'outside') as Row['basis'],
+  wall: String(b.wall_mm ?? DEFAULT_ALLOWANCES.wallMm),
+  bulgeTop: String(b.bulge_top_mm ?? DEFAULT_ALLOWANCES.bulgeTopMm),
+  bulgeSide: String(b.bulge_side_mm ?? DEFAULT_ALLOWANCES.bulgeSideMm),
+  bulgeEnd: String(b.bulge_end_mm ?? DEFAULT_ALLOWANCES.bulgeEndMm),
+})
 const num = (s: string) => {
   const v = Number(String(s).replace(',', '.'))
   return Number.isFinite(v) && v > 0 ? v : null
@@ -47,7 +71,7 @@ const pct = (n: number) => `${(n * 100).toFixed(0)}%`
 const chargeable = (p: ShipmentPlan) => Math.max(p.grossKg, p.volumetricKg)
 const uldsOf = (codes: string[]) => ULDS.filter((u) => codes.includes(u.code))
 let seq = 0
-const newRow = (r: Partial<Row> = {}): Row => ({ key: `r${++seq}`, label: 'Box', l: '', w: '', h: '', kg: '', count: '1', ...r })
+const newRow = (r: Partial<Row> = {}): Row => ({ key: `r${++seq}`, label: 'Box', l: '', w: '', h: '', kg: '', count: '1', ...rowAllowances(), ...r })
 
 export function MixedPlanner() {
   const toast = useToast()
@@ -60,14 +84,14 @@ export function MixedPlanner() {
         sb.from('airlines').select('code, name, ulds, via, notes').eq('active', true).order('code'),
         sb.from('freight_rates').select('airline_or_agent, destination_airport, currency, rate_per_kg, valid_from').eq('origin_airport', 'NBO').order('valid_from', { ascending: false }),
         sb.from('shipments').select('id, shipment_ref, flight_no, flight_date, destination_airport, status').order('flight_date', { ascending: false, nullsFirst: false }).limit(40),
-        sb.from('box_types').select('box_code, length_cm, width_cm, height_cm, tare_weight_kg').eq('active', true).order('box_code'),
+        sb.from('box_types').select('box_code, length_cm, width_cm, height_cm, tare_weight_kg, size_basis, wall_mm, bulge_top_mm, bulge_side_mm, bulge_end_mm').eq('active', true).order('box_code'),
       ])
       for (const x of [a, r, s, bt]) if (x.error) throw new Error(x.error.message)
       return {
         airlines: (a.data ?? []) as Airline[],
         rates: ((r.data ?? []) as Rate[]).map((x) => ({ ...x, rate_per_kg: Number(x.rate_per_kg) })),
         shipments: (s.data ?? []) as { id: string; shipment_ref: string; flight_no: string | null; flight_date: string | null; destination_airport: string | null; status: string }[],
-        boxTypes: (bt.data ?? []) as { box_code: string; length_cm: number; width_cm: number; height_cm: number; tare_weight_kg: number | null }[],
+        boxTypes: (bt.data ?? []) as ({ box_code: string; length_cm: number; width_cm: number; height_cm: number; tare_weight_kg: number | null } & BoxTypeAllowances)[],
       }
     },
   })
@@ -78,15 +102,18 @@ export function MixedPlanner() {
   const [clearance, setClearance] = React.useState('2')
   const [onSide, setOnSide] = React.useState(true)
   const [busy, setBusy] = React.useState(false)
-  const [result, setResult] = React.useState<{ suggestion: Suggestion | null; plan: ShipmentPlan; byAirline: { a: Airline; plan: ShipmentPlan }[]; lines: BoxLine[] } | null>(null)
+  const [result, setResult] = React.useState<{ suggestion: Suggestion | null; plan: ShipmentPlan; byAirline: { a: Airline; plan: ShipmentPlan }[]; lines: BoxLine[]; specs: BoxSpec[]; shipmentId: string | null; allowOnSide: boolean } | null>(null)
+  const [shipmentId, setShipmentId] = React.useState<string | null>(null)
   const [shown, setShown] = React.useState(0)
   const [upTo, setUpTo] = React.useState(99)
 
   const al = lookups.data?.airlines.find((a) => a.code === airline)
   const rateFor = (code: string) => lookups.data?.rates.find((r) => r.airline_or_agent === code && r.destination_airport === dest) ?? null
-  const lines: BoxLine[] = rows
-    .map((r) => ({ key: r.key, label: r.label || 'Box', length: (num(r.l) ?? 0) * 10, width: (num(r.w) ?? 0) * 10, height: (num(r.h) ?? 0) * 10, weightKg: num(r.kg), count: Math.floor(num(r.count) ?? 0) }))
+  // Each line as typed (nominal size, allowances), then the space each box really takes for the packer.
+  const specs: BoxSpec[] = rows
+    .map((r) => ({ key: r.key, label: r.label || 'Box', length: (num(r.l) ?? 0) * 10, width: (num(r.w) ?? 0) * 10, height: (num(r.h) ?? 0) * 10, allowances: allowancesOf(r), weightKg: num(r.kg), count: Math.floor(num(r.count) ?? 0) }))
     .filter((l) => l.length && l.width && l.height && l.count)
+  const lines: BoxLine[] = specs.map(toBoxLine)
   const clear = (num(clearance) ?? 0) * 10
 
   const run = (suggest: boolean) => {
@@ -106,7 +133,7 @@ export function MixedPlanner() {
         }
         // Every airline's best plan, to compare containers and cost.
         const byAirline = (lookups.data?.airlines ?? []).map((a) => ({ a, plan: a.code === airline && suggestion ? plan : suggestBestFit(uldsOf(a.ulds), lines, clear, onSide).best }))
-        setResult({ suggestion, plan, byAirline, lines })
+        setResult({ suggestion, plan, byAirline, lines, specs, shipmentId, allowOnSide: onSide })
         setShown(0)
         setUpTo(99)
       } finally {
@@ -140,9 +167,10 @@ export function MixedPlanner() {
                   if (!s) return
                   const { data, error } = await getSupabase().rpc('shipment_load_lines', { p_shipment_id: s.id })
                   if (error) return toast({ kind: 'error', title: 'Couldn\'t read the shipment', description: error.message })
-                  const got = (data ?? []) as { box_code: string; description: string | null; length_cm: number; width_cm: number; height_cm: number; boxes: number; est_weight_kg: number | null }[]
+                  const got = (data ?? []) as ({ box_code: string; description: string | null; length_cm: number; width_cm: number; height_cm: number; boxes: number; est_weight_kg: number | null } & BoxTypeAllowances)[]
                   if (!got.length) return toast({ kind: 'error', title: `${s.shipment_ref} has no boxes yet` })
-                  setRows(got.map((g) => newRow({ label: g.box_code, l: String(g.length_cm), w: String(g.width_cm), h: String(g.height_cm), kg: g.est_weight_kg != null ? String(g.est_weight_kg) : '', count: String(g.boxes) })))
+                  setRows(got.map((g) => newRow({ label: g.box_code, l: String(g.length_cm), w: String(g.width_cm), h: String(g.height_cm), kg: g.est_weight_kg != null ? String(g.est_weight_kg) : '', count: String(g.boxes), ...rowAllowances(g) })))
+                  setShipmentId(s.id)
                   if (s.destination_airport) setDest(s.destination_airport)
                   setResult(null)
                   toast({ kind: 'success', title: `${s.shipment_ref}: ${got.reduce((n, g) => n + g.boxes, 0)} boxes in ${got.length} sizes` })
@@ -189,6 +217,7 @@ export function MixedPlanner() {
                     </Field>
                   ))}
                 </div>
+                <AllowanceFields r={r} set={(patch) => setRows(rows.map((x) => (x.key === r.key ? { ...x, ...patch } : x)))} />
               </li>
             ))}
           </ul>
@@ -202,7 +231,7 @@ export function MixedPlanner() {
               className="w-auto"
               onChange={(e) => {
                 const b = lookups.data?.boxTypes.find((x) => x.box_code === e.target.value)
-                if (b) setRows([...rows, newRow({ label: b.box_code, l: String(b.length_cm), w: String(b.width_cm), h: String(b.height_cm), kg: '', count: '10' })])
+                if (b) setRows([...rows, newRow({ label: b.box_code, l: String(b.length_cm), w: String(b.width_cm), h: String(b.height_cm), kg: '', count: '10', ...rowAllowances(b) })])
               }}
             >
               <option value="">Add a box type…</option>
@@ -306,6 +335,8 @@ export function MixedPlanner() {
               </Card>
             )}
             <AirlineTable result={result} dest={dest} rateFor={rateFor} current={airline} />
+            <AssumptionsPanel uld={plan.uld} specs={result.specs} options={{ ...plan.options, allowOnSide: result.allowOnSide }} rate={rateFor(airline)?.rate_per_kg ?? null} currency={rateFor(airline)?.currency ?? 'USD'} />
+            <LoadChecks plan={plan} specs={result.specs} airline={airline} shipmentId={result.shipmentId} />
           </>
         )}
       </div>
@@ -485,3 +516,41 @@ function RateEditor({ airline, dest, rate, onSaved }: { airline: string; dest: s
 }
 
 export type { Uld }
+
+/** Board thickness and bulge for one box line; the summary shows the space a box really takes. */
+function AllowanceFields({ r, set }: { r: Row; set: (patch: Partial<Row>) => void }) {
+  const l = num(r.l), w = num(r.w), h = num(r.h)
+  const sizes = l && w && h ? boxSizes({ length: l * 10, width: w * 10, height: h * 10 }, allowancesOf(r)) : null
+  const cm = (mm: number) => (mm / 10).toLocaleString('en-GB', { maximumFractionDigits: 1 })
+  return (
+    <details className="text-sm">
+      <summary className="cursor-pointer text-muted-foreground">
+        Thickness and bulge: {r.basis === 'inside' ? `inside sizes + ${r.wall} mm walls` : 'outside sizes'}, bulge {r.bulgeTop}/{r.bulgeSide}/{r.bulgeEnd} mm
+        {sizes ? ` → takes ${cm(sizes.space.length)} × ${cm(sizes.space.width)} × ${cm(sizes.space.height)} cm` : ''}
+      </summary>
+      <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+        <Field id={`${r.key}-basis`} label="Sizes are">
+          {(d) => (
+            <Select id={`${r.key}-basis`} value={r.basis} onChange={(e) => set({ basis: e.target.value as Row['basis'] })} aria-describedby={d} className="px-2">
+              <option value="outside">Outside</option>
+              <option value="inside">Inside</option>
+            </Select>
+          )}
+        </Field>
+        {(
+          [
+            ['wall', 'Wall mm'],
+            ['bulgeTop', 'Bulge top mm'],
+            ['bulgeSide', 'Bulge sides mm'],
+            ['bulgeEnd', 'Bulge ends mm'],
+          ] as const
+        ).map(([k, label]) => (
+          <Field key={k} id={`${r.key}-${k}`} label={label}>
+            {(d) => <Input id={`${r.key}-${k}`} inputMode="decimal" value={r[k]} onChange={(e) => set({ [k]: e.target.value })} aria-describedby={d} className="px-2" disabled={k === 'wall' && r.basis === 'outside'} />}
+          </Field>
+        ))}
+      </div>
+      <p className="mt-1 text-muted-foreground">Bulge is per face: a box takes its size plus the bulge on both faces. Walls only count when the sizes are measured inside.</p>
+    </details>
+  )
+}

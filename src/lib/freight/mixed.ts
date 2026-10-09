@@ -15,6 +15,8 @@ export interface BoxLine {
   height: number
   weightKg: number | null
   count: number
+  /** Outside size for volumetric weight when length/width/height above include bulge (mm). */
+  outside?: { length: number; width: number; height: number }
 }
 export interface MixedOptions {
   clearance: number
@@ -145,7 +147,7 @@ function fillOne(u: Uld, lines: BoxLine[], queue: number[], o: MixedOptions): { 
 }
 
 const vol = (l: BoxLine) => l.length * l.width * l.height
-const volKg = (l: BoxLine) => vol(l) / 1000 / 6000
+const volKg = (l: BoxLine) => (l.outside ? l.outside.length * l.outside.width * l.outside.height : vol(l)) / 1000 / 6000
 
 /** Every box of the shipment into as many containers of one kind as it takes (at most `maxUlds`). */
 export function planShipment(u: Uld, lines: BoxLine[], o: MixedOptions, maxUlds = 30): ShipmentPlan {
@@ -200,16 +202,16 @@ export function planShipment(u: Uld, lines: BoxLine[], o: MixedOptions, maxUlds 
   }
 }
 
-/** Better plan first: everything loaded, fewer containers, then fuller ones. */
+/** Better plan first: everything loaded, the least container space booked, fewer containers, then the tightest. */
 export function comparePlans(a: ShipmentPlan, b: ShipmentPlan) {
   const ua = a.unplaced.reduce((s, n) => s + n, 0)
   const ub = b.unplaced.reduce((s, n) => s + n, 0)
   if (ua !== ub) return ua - ub
+  // Least space booked (containers × their size): 3 lower-deck PMCs before 2 main-deck ones half empty.
+  const ca = a.loads.length * usableVolume(a.uld, a.options.clearance)
+  const cb = b.loads.length * usableVolume(b.uld, b.options.clearance)
+  if (Math.abs(ca - cb) > 1e6) return ca - cb
   if (a.loads.length !== b.loads.length) return a.loads.length - b.loads.length
-  // Same number of containers: the smaller container (less space paid for and booked) first.
-  const ca = usableVolume(a.uld, a.options.clearance)
-  const cb = usableVolume(b.uld, b.options.clearance)
-  if (Math.abs(ca - cb) > 1) return ca - cb
   // Same container: the one that leaves the last container emptiest is the tightest pack.
   const la = a.loads.at(-1)?.fill ?? 0
   const lb = b.loads.at(-1)?.fill ?? 0
@@ -242,7 +244,7 @@ export function suggestBestFit(ulds: Uld[], lines: BoxLine[], clearance: number,
     const l = one[0]!
     for (const u of ulds)
       for (const side of allowOnSide ? [false, true] : [false]) {
-        const p = packUld(u, { length: l.length, width: l.width, height: l.height }, { clearance, allowOnSide: side, boxWeightKg: l.weightKg })
+        const p = packUld(u, { length: l.length, width: l.width, height: l.height }, { clearance, allowOnSide: side, boxWeightKg: l.weightKg, outside: l.outside })
         if (!p.total) continue
         const li = lines.indexOf(l)
         const perUld = p.total

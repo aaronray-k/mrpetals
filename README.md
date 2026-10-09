@@ -408,6 +408,24 @@ boxes on their side gains. **Airlines** (EK, QR, ET, TK, KQ to start; table `air
 flies) are compared on their best fit and freight at their rate per kg to the destination (entered from the freight
 agent's quotes into `freight_rates`, NBO → airport, from the day it is saved).
 
+**Real boxes: thickness and bulging.** Each box type (Box types page, Edit) says whether its sizes are measured
+outside (as the airline measures) or inside, its board thickness (added on both sides only for inside sizes), and
+how far a full box bulges in the middle of each face (top/bottom, long sides, ends; mm per face). The planner packs
+each box at its outside size plus the bulge on both faces, turned with the box; volumetric weight stays on the
+outside size. Starting figures: 5 mm walls, bulge 10/5/0 mm. Space works in steps: a small bulge costs nothing
+until a layer or row no longer fits, then it costs the whole row.
+
+**Assumptions and their effect** (under every plan): each assumption (bulge, thickness, space kept free, laying on
+the side, weight limit) with how many boxes a full container of the mix holds without it, as a percentage. Stems:
+with the usual stems per box and how many more a bulging box holds, it compares stems shipped and freight per stem
+against ideal flat boxes. Factors not modelled yet (crush limit, cooling gaps, farm box variation, wet weight, ULD
+pivot weight, aircraft contour, loading by hand) are listed with their risk.
+
+**What really went in** (load checks): after loading, enter how many boxes each container took. The planner shows
+its accuracy over recent loads, the loading factor (real ÷ planned; "expect about N boxes in a full container"),
+and the top and side bulge that would have matched the real loads, which Admin or Consolidator can apply to the
+box types. Bulge corrects whole rows; the loading factor corrects the small gaps of loading by hand.
+
 ## Payment terms
 
 Terms are Prepaid, Net 7, Net 15, Net 30 and **15th of following month** (everything for a month's orders is due
